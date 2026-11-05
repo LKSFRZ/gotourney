@@ -26,12 +26,14 @@ class WallError(Exception):
 # ---------------------------------------------------------------- places
 
 def ranking(t: Tournament, after_round: int | None = None) -> list[int]:
-    """Player IDs in order of place: higher TGoR (rounded), then lower starting GoR, then random."""
+    """Player IDs in order of place: higher TGoR (rounded), then lower starting GoR, then random.
+
+    The tie-break uses the real starting GoR (not capped at the top bar)."""
     r = t.last_round if after_round is None else after_round
     ratings = t.ratings[r]
     rng = rng_for(t.cfg, r, "final-tiebreak")
     draw = {pid: rng.random() for pid in sorted(t.players)}
-    return sorted(t.players, key=lambda pid: (-round(ratings[pid]), t.start[pid], draw[pid]))
+    return sorted(t.players, key=lambda pid: (-round(ratings[pid]), t.start_gor[pid], draw[pid]))
 
 
 def format_wins(w: float) -> str:
@@ -43,7 +45,7 @@ def format_wins(w: float) -> str:
 def standings_rows(t: Tournament, after_round: int) -> tuple[list[Column], list[list]]:
     order = ranking(t, after_round)
     cols = [Column("Place", 1.4), Column("ID", 1.2), Column("Name", 5.5), Column("Rank", 1.4),
-            Column("Club", 1.6), Column("Start GoR", 2.0)]
+            Column("Club", 1.6), Column("GoR", 1.6), Column("Start TGoR", 2.2)]
     cols += [Column(f"after R{r}", 2.0) for r in range(1, after_round + 1)]
     cols += [Column("Games", 1.6), Column("Wins", 1.4), Column("TGoR", 1.8)]
     rows = []
@@ -52,7 +54,8 @@ def standings_rows(t: Tournament, after_round: int) -> tuple[list[Column], list[
         games = sum(1 for h in t.history[pid] if h.round <= after_round and h.counts_as_played)
         wins = sum(h.score for h in t.history[pid]
                    if h.round <= after_round and h.counts_as_played and h.score is not None)
-        rows.append([place, pid, p.name, str(p.rank or ""), p.club, round(t.start[pid])]
+        rows.append([place, pid, p.name, str(p.rank or ""), p.club, round(t.start_gor[pid]),
+                     round(t.start[pid])]
                     + [round(t.ratings[r][pid]) for r in range(1, after_round + 1)]
                     + [games, wins, round(t.ratings[after_round][pid])])
     return cols, rows
@@ -100,12 +103,12 @@ def write_wall_list(t: Tournament) -> Path:
     rows = []
     for pid in order:
         p = t.players[pid]
-        rank = p.rank or Rank.from_gor(t.start[pid])
+        rank = p.rank or Rank.from_gor(t.start_gor[pid])
         rows.append([place_of[pid], p.surname, p.first_name, str(rank), p.country, p.club,
-                     t.wins(pid), round(t.start[pid]), round(final[pid])]
+                     t.wins(pid), round(t.start_gor[pid]), round(final[pid])]
                     + [round_cell(t, pid, r, place_of) for r in range(1, n + 1)]
                     + [p.pin])
-    hist_cols = [Column("Place", 1.4), Column("Name", 5.5), Column("Start", 1.8)] + \
+    hist_cols = [Column("Place", 1.4), Column("Name", 5.5), Column("Start TGoR", 2.2)] + \
         [Column(f"after R{r}", 2.0) for r in range(1, n + 1)]
     hist = [[place_of[pid], t.players[pid].name, round(t.start[pid])]
             + [round(t.ratings[r][pid]) for r in range(1, n + 1)] for pid in order]

@@ -140,6 +140,12 @@ def check_players(players: list[Player], cfg: Config, today: dt.date | None = No
         if name and len(ps) > 1:
             warn(f"same name for IDs {', '.join(str(p.id) for p in ps)} ({ps[0].name})")
 
+    bar = cfg.rating.top_bar
+    if bar is not None:
+        above = [p for p in players if p.gor is not None and p.gor > bar]
+        if above:
+            info(f"top bar {bar:.0f}: {len(above)} player(s) start with TGoR {bar:.0f} "
+                 f"({', '.join(p.name for p in above[:6])}{', ...' if len(above) > 6 else ''})")
     for r in range(1, cfg.tournament.rounds + 1):
         playing = [p for p in players if p.plays(r)]
         if len(playing) % 2 == 1:

@@ -25,6 +25,7 @@ rounds  = {rounds}                 # number of rounds; R1..Rn columns in players
 
 [rating]
 k_factor = 3.0               # multiplies the EGD 'con' factor (bonus term is not used)
+top_bar  = "3d"              # starting TGoR is capped here: a rank ("3d" = 2300) or a GoR number; "none" = no bar
 
 [handicap]
 reduction     = 0            # "full minus N": written as HA[h<reduction>]; h0 = full, h9 = no handicap
@@ -57,9 +58,13 @@ class TournamentInfo:
     rounds: int = 5
 
 
+DEFAULT_TOP_BAR = 2300.0     # 3 dan
+
+
 @dataclass
 class RatingSettings:
     k_factor: float = 3.0
+    top_bar: float | None = DEFAULT_TOP_BAR     # cap for the starting TGoR; None = no bar
 
 
 @dataclass
@@ -108,6 +113,24 @@ def _get(section: dict, key: str, typ, default, where: str):
     raise ConfigError(f"{where}.{key}: expected {typ.__name__}, got {value!r}")
 
 
+def _top_bar(value) -> float | None:
+    """'3d' -> 2300, 2350 -> 2350, 'none' / '' / false -> None."""
+    from .rank import Rank, RankError
+    if value is None or value is False or (isinstance(value, str) and value.strip().lower() in ("", "none", "no", "off")):
+        return None
+    if isinstance(value, bool):
+        raise ConfigError("rating.top_bar: expected a rank like \"3d\", a GoR number or \"none\"")
+    if isinstance(value, (int, float)):
+        return float(value)
+    try:
+        return float(Rank.parse(str(value)).to_gor())
+    except RankError:
+        try:
+            return float(str(value).strip())
+        except ValueError:
+            raise ConfigError(f"rating.top_bar: {value!r} is not a rank (e.g. \"3d\"), a GoR number or \"none\"") from None
+
+
 def parse_config(data: dict) -> Config:
     t = data.get("tournament", {})
     r = data.get("rating", {})
@@ -125,7 +148,8 @@ def parse_config(data: dict) -> Config:
             comment=_get(t, "comment", str, "", "tournament"),
             rounds=_get(t, "rounds", int, 5, "tournament"),
         ),
-        rating=RatingSettings(k_factor=_get(r, "k_factor", float, 3.0, "rating")),
+        rating=RatingSettings(k_factor=_get(r, "k_factor", float, 3.0, "rating"),
+                              top_bar=_top_bar(r.get("top_bar", DEFAULT_TOP_BAR))),
         handicap=HandicapSettings(
             reduction=_get(h, "reduction", int, 0, "handicap"),
             komi_even=_get(h, "komi_even", float, 6.5, "handicap"),

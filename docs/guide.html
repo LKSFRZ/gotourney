@@ -77,7 +77,8 @@
 <ul>
   <li><b>Start:</b> the TGoR starts at the player's current EGD GoR on registration day. Players without a
   GoR start at the value of their declared rank (1k = 2000, 1d = 2100, 100 points per rank). The
-  director may correct a starting GoR, for example when it is clearly outdated.</li>
+  director may correct a starting GoR, for example when it is clearly outdated. The starting TGoR is
+  capped at the <b>top bar</b> (default 3 dan = 2300): stronger players all start at the bar.</li>
   <li><b>After every round</b>, all TGoRs are updated with the EGD rating formula, with two changes. The
   formula's <code>con</code> factor is multiplied by the tournament's <b>k-factor</b>, so ratings move faster
   than in the EGD. The EGD's anti-deflation bonus is not used. All games of a round are rated from the TGoRs
@@ -89,7 +90,8 @@
   difference. A reduction ("full minus N") can be set. Players may agree on a different handicap for their
   game.</li>
   <li><b>Winner:</b> the player with the highest final TGoR wins. If two players have the same final TGoR,
-  the one with the <i>lower</i> starting GoR ranks higher. If that is also equal, a random draw decides.</li>
+  the one with the <i>lower</i> starting GoR ranks higher (the real GoR, not capped at the top bar). If that
+  is also equal, a random draw decides.</li>
 </ul>
 
 <h2>2. Overview of the workflow</h2>
@@ -152,6 +154,7 @@ in every terminal without activating anything.</p>
   <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds (also <code>init --rounds</code>).</td></tr>
   <tr><td colspan="3"><b>[rating]</b></td></tr>
   <tr><td><code>k_factor</code></td><td>3.0</td><td>Multiplies the EGD <code>con</code> factor. Higher values make ratings move faster during the tournament.</td></tr>
+  <tr><td><code>top_bar</code></td><td>"3d"</td><td>Cap for the starting TGoR: a rank (<code>"3d"</code> = 2300) or a GoR number (<code>2350</code>). <code>"none"</code> switches the bar off. Only the start is capped; during the tournament the TGoR can rise above the bar.</td></tr>
   <tr><td colspan="3"><b>[handicap]</b></td></tr>
   <tr><td><code>reduction</code></td><td>0</td><td>"Full minus N" handicap. Written to the .h9 as <code>HA[h&lt;N&gt;]</code>: h0 = full handicap, h2 = reduced by 2 stones, h9 = no handicap.</td></tr>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in even games: 6.5, 7 or 7.5 (Chinese rules).</td></tr>
@@ -249,7 +252,8 @@ not play a round keeps their TGoR unchanged.</p>
   </ul></li>
   <li><b>Warnings</b> should be checked: rank and GoR far apart, GoR possibly outdated, a player registered
   for no round, two players with the same name.</li>
-  <li><b>Info</b> is for your knowledge only, for example which jokers can sit out in odd rounds.</li>
+  <li><b>Info</b> is for your knowledge only, for example which jokers can sit out in odd rounds, or which
+  players start at the top bar.</li>
 </ul>
 <p>The command ends with an error status if there are errors, so it can also be used in scripts.</p>
 
@@ -371,7 +375,7 @@ rounded to whole numbers.</p>
 <h3>8.1 Wall list</h3>
 <pre>gotourney wall</pre>
 <p>Calculates the final TGoR and the places, and writes <code>wall_list.ods</code>. Places are ordered by
-final TGoR (rounded), then lower starting GoR, then a random draw. A second sheet, <i>TGoR history</i>, shows
+final TGoR (rounded), then lower real starting GoR, then a random draw. A second sheet, <i>TGoR history</i>, shows
 every player's TGoR after each round. You can still correct the wall list by hand, for example a name
 spelling. All results must be entered before the wall list can be made.</p>
 
@@ -396,7 +400,8 @@ corrections are included. Send this file to the EGD. Header (TC stays empty, the
   <li>Place, name (spaces inside a name part become <code>_</code>, e.g. <code>van_den_Broek</code>),
   rank, country (<code>XX</code> if unknown), club (<code>XXXX</code> if none). Names are spelled as in the
   EGD.</li>
-  <li>Wins (jigo = ½), starting GoR, final TGoR. There are no McMahon columns.</li>
+  <li>Wins (jigo = ½), starting GoR (the real GoR, not capped at the top bar), final TGoR. There are no
+  McMahon columns.</li>
   <li>One field per round: <code>opponent's place</code>, <code>+</code> win / <code>-</code> loss /
   <code>=</code> jigo, <code>/w</code> or <code>/b</code> for the colour, then the handicap (omitted if 0).
   <code>0=</code> means not played: joker round, absent, or forfeit.</li>

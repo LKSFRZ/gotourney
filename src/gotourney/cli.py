@@ -460,7 +460,7 @@ def standings(
     typer.echo(f"Standings after round {r}:" if r else "Starting ratings:")
     typer.echo(f"{'Pl':>3}  {'Name':<28} {'Rank':>4} {'Start':>5}  {'Games':>5} {'Wins':>4}  {'TGoR':>5}")
     for row in rows:
-        place, pid, name, rank, club, start = row[:6]
+        place, pid, name, rank, club, gor, start = row[:7]
         games, wins, tgor = row[-3:]
         typer.echo(f"{place:>3}  {name[:28]:<28} {rank:>4} {start:>5}  {games:>5} {wins:>4g}  {tgor:>5}")
     path = write_standings(t, r)

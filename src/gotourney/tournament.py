@@ -42,8 +42,9 @@ class Tournament:
     cfg: Config
     players: dict[int, Player]
     rounds: dict[int, RoundGames]
-    start: dict[int, float]
+    start: dict[int, float]                         # starting TGoR (GoR capped at the top bar)
     ratings: list[dict[int, float]]                 # ratings[r] = TGoR after round r (ratings[0] = start)
+    start_gor: dict[int, float] = field(default_factory=dict)   # real starting GoR (not capped)
     history: dict[int, list[PlayedGame]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
@@ -57,12 +58,14 @@ class Tournament:
         players = {p.id: p for p in pl.players}
         warnings = list(pl.warnings)
         errors = []
-        start = {}
+        start_gor = {}
         for p in players.values():
             try:
-                start[p.id] = starting_rating(p)
+                start_gor[p.id] = starting_rating(p)
             except ValueError as e:
                 errors.append(str(e))
+        bar = cfg.rating.top_bar
+        start = {pid: (min(g, bar) if bar is not None else g) for pid, g in start_gor.items()}
         rounds: dict[int, RoundGames] = {}
         for r in range(1, cfg.tournament.rounds + 1):
             if not round_file(directory, r).exists():
@@ -82,7 +85,8 @@ class Tournament:
         if existing and existing != list(range(1, existing[-1] + 1)):
             missing = sorted(set(range(1, existing[-1] + 1)) - set(existing))
             raise TournamentError(f"round file(s) missing for round(s) {', '.join(map(str, missing))}")
-        t = cls(directory, cfg, players, rounds, start, [dict(start)], warnings=warnings)
+        t = cls(directory, cfg, players, rounds, start, [dict(start)], start_gor=start_gor,
+                warnings=warnings)
         t._compute()
         return t
 
