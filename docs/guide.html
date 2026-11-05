@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>gotourney – Tournament Director's Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root { --accent: #1f4e79; --muted: #5f6b76; --planned: #b35c00; --ok: #2e7d32; --line: #d6dbe0; }
+  body { font-family: "DejaVu Sans", "Noto Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #1c232b; }
+  h1 { font-size: 24pt; color: var(--accent); margin: 0 0 4pt 0; }
+  h2 { font-size: 15pt; color: var(--accent); border-bottom: 1.5pt solid var(--accent); padding-bottom: 2pt;
+       margin: 20pt 0 8pt 0; break-after: avoid; }
+  h3 { font-size: 11.5pt; color: var(--accent); margin: 14pt 0 4pt 0; break-after: avoid; }
+  p { margin: 4pt 0 6pt 0; }
+  ul, ol { margin: 4pt 0 6pt 0; padding-left: 18pt; }
+  li { margin: 2pt 0; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f1f3f5; padding: 0 2pt; border-radius: 2pt; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #f4f6f8; border: 0.6pt solid var(--line);
+        border-left: 3pt solid var(--accent); padding: 6pt 8pt; margin: 6pt 0 8pt 0; white-space: pre-wrap; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt 0; font-size: 9pt; break-inside: auto; }
+  th, td { border: 0.6pt solid var(--line); padding: 3pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #e8eef4; color: #16324d; }
+  tr { break-inside: avoid; }
+  .badge { display: inline-block; font-size: 7.5pt; font-weight: bold; padding: 0.5pt 4pt; border-radius: 3pt;
+           vertical-align: 1pt; letter-spacing: 0.2pt; white-space: nowrap; }
+  .now { background: #e3f1e4; color: var(--ok); border: 0.6pt solid #9fcfa3; }
+  .planned { background: #fbeee0; color: var(--planned); border: 0.6pt solid #e8b98a; }
+  .note { background: #f3f7fb; border: 0.6pt solid #c6d6e6; border-left: 3pt solid var(--accent); padding: 5pt 8pt; margin: 8pt 0; break-inside: avoid; }
+  .warn { background: #fdf5ec; border: 0.6pt solid #ecc9a3; border-left: 3pt solid var(--planned); padding: 5pt 8pt; margin: 8pt 0; break-inside: avoid; }
+  .subtitle { color: var(--muted); font-size: 11pt; margin-bottom: 14pt; }
+  .cover { border-bottom: 1pt solid var(--line); padding-bottom: 10pt; margin-bottom: 6pt; }
+  .toc { columns: 2; column-gap: 20pt; font-size: 9.5pt; }
+  .toc ol { margin: 0; }
+  .flow { break-inside: avoid; display: flex; gap: 4pt; align-items: stretch; margin: 8pt 0 10pt 0; }
+  .flow div { flex: 1; border: 0.8pt solid var(--accent); border-radius: 4pt; padding: 4pt 5pt; font-size: 8.3pt; background: #f6f9fc; }
+  .flow div b { display: block; color: var(--accent); font-size: 8.8pt; margin-bottom: 1pt; }
+  .flow .arrow { flex: 0 0 auto; border: none; background: none; align-self: center; font-size: 13pt; color: var(--accent); padding: 0; }
+  figure { margin: 8pt 0 10pt 0; text-align: center; break-inside: avoid; }
+  figure img { width: 88%; border: 0.6pt solid var(--line); }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
+  .pagebreak { break-before: page; }
+  thead { display: table-header-group; }
+  pre.wide { white-space: pre; font-size: 7.3pt; }
+  h2 + table, h3 + table { break-before: avoid; }
+  .small { font-size: 8.5pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>gotourney</h1>
+  <div class="subtitle">Tournament Director's Guide – running a TGoR Go tournament with the command line tools<br>
+  Version 0.1 · November 2026</div>
+  <p>This guide describes the whole tournament, from registration to the EGD upload. Some features already
+  exist and others are still being built. Every feature is marked:</p>
+  <p><span class="badge now">AVAILABLE</span> works in the current version &nbsp;&nbsp;
+     <span class="badge planned">PLANNED</span> designed and described here, but not implemented yet;
+     details may still change.</p>
+</div>
+
+<div class="toc">
+<ol>
+  <li>The tournament format</li>
+  <li>Overview of the workflow</li>
+  <li>Installation</li>
+  <li>Setting up a tournament</li>
+  <li>Registering players</li>
+  <li>Pairing a round</li>
+  <li>Entering results and standings</li>
+  <li>The wall list and the EGD upload</li>
+  <li>How the ratings are calculated</li>
+  <li>Editing files by hand</li>
+  <li>Troubleshooting</li>
+  <li>Command reference</li>
+</ol>
+</div>
+
+<h2>1. The tournament format</h2>
+<p>Instead of McMahon scores, every player has a <b>tournament rating (TGoR)</b>:</p>
+<ul>
+  <li><b>Start:</b> the TGoR starts at the player's current EGD GoR on registration day. Players without a
+  GoR start at the value of their declared rank (1k = 2000, 1d = 2100, 100 points per rank). The
+  director may correct a starting GoR, for example when it is clearly outdated.</li>
+  <li><b>After every round</b>, all TGoRs are updated with the EGD rating formula, with two changes. The
+  formula's <code>con</code> factor is multiplied by the tournament's <b>k-factor</b>, so ratings move faster
+  than in the EGD. The EGD's anti-deflation bonus is not used. All games of a round are rated from the TGoRs
+  <i>before</i> that round.</li>
+  <li><b>Pairing:</b> players are paired so that the TGoR differences are as small as possible, using the
+  blossom algorithm. Two players never meet twice through automatic pairing, and pairs from the same club
+  are avoided where possible.</li>
+  <li><b>Handicap:</b> games are played with <b>full handicap</b> by default, one stone per 100 TGoR points of
+  difference. A reduction ("full minus N") can be set. Players may agree on a different handicap for their
+  game.</li>
+  <li><b>Winner:</b> the player with the highest final TGoR wins. If two players have the same final TGoR,
+  the one with the <i>lower</i> starting GoR ranks higher. If that is also equal, a random draw decides.</li>
+</ul>
+
+<h2>2. Overview of the workflow</h2>
+<p>Each step reads and writes LibreOffice Calc files (<code>.ods</code>). You can open, check and change
+them by hand between the steps. The files are the only record of the tournament: there is no hidden
+database.</p>
+
+<div class="flow">
+  <div><b>1. Set up</b><code>gotourney init</code><br>tournament.toml</div><div class="arrow">→</div>
+  <div><b>2. Register</b><code>gotourney gui</code><br>players.ods</div><div class="arrow">→</div>
+  <div><b>3. Pair round r</b><code>gotourney pair r</code><br>round_r.ods</div><div class="arrow">→</div>
+  <div><b>4. Results</b>enter in round_r.ods<br><code>results check</code></div><div class="arrow">→</div>
+  <div><b>5. Wall list</b><code>gotourney wall</code><br>wall_list.ods</div><div class="arrow">→</div>
+  <div><b>6. EGD upload</b><code>gotourney h9</code><br>&lt;name&gt;.h9</div>
+</div>
+<p class="small">Steps 3 and 4 are repeated for every round.</p>
+
+<p>All files of one tournament live in one folder:</p>
+<pre>my_tournament/
+  tournament.toml     settings                                   <span>(step 1)</span>
+  players.ods         registered players                          (step 2)
+  round_1.ods         pairing of round 1; results are entered here (steps 3, 4)
+  round_2.ods         ...
+  standings.ods       TGoR after each round                       (step 4)
+  wall_list.ods       final wall list, editable                   (step 5)
+  &lt;name&gt;.h9           result file for the EGD                     (step 6)</pre>
+
+<p>All commands take the option <code>-d &lt;folder&gt;</code> to choose the tournament folder. Without it,
+the current folder is used. So you can either <code>cd my_tournament</code> once, or add
+<code>-d my_tournament</code> to every command.</p>
+
+<h2>3. Installation <span class="badge now">AVAILABLE</span></h2>
+<p>The tools need Python 3.11 or newer. On Ubuntu also install <code>python3-venv</code> and
+<code>python3-tk</code> (the latter for the registration window):</p>
+<pre>sudo apt install python3-venv python3-tk
+cd ~/Go/TournamentOrgaTool
+python3 -m venv .venv
+.venv/bin/pip install -e '.[test]'
+source .venv/bin/activate        # afterwards 'gotourney' is available in this terminal
+gotourney --help</pre>
+<p>Alternatively, <code>pipx install -e ~/Go/TournamentOrgaTool</code> makes <code>gotourney</code> available
+in every terminal without activating anything.</p>
+
+<h2>4. Setting up a tournament <span class="badge now">AVAILABLE</span></h2>
+<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht"</pre>
+<p>This creates the folder with <code>tournament.toml</code> and an empty <code>players.ods</code>. Open
+<code>tournament.toml</code> in a text editor and fill in the settings <b>before</b> registering players:</p>
+
+<table>
+  <thead><tr><th style="width:24%">Setting</th><th style="width:14%">Example</th><th>Meaning</th></tr></thead>
+  <tr><td colspan="3"><b>[tournament]</b> – EGD metadata, written to the header of the .h9 file</td></tr>
+  <tr><td><code>code</code></td><td><code>""</code></td><td>EGD tournament code. Leave empty: the EGD assigns it after the upload.</td></tr>
+  <tr><td><code>name</code></td><td>"21. Schweriner…"</td><td>Tournament name (EV).</td></tr>
+  <tr><td><code>place</code></td><td>"DE, Schwerin"</td><td>Country and city (PC).</td></tr>
+  <tr><td><code>dates</code></td><td>["2026-09-26", "2026-09-27"]</td><td>First and last day (DT).</td></tr>
+  <tr><td><code>class</code></td><td>"A"</td><td>EGD tournament class (CL).</td></tr>
+  <tr><td><code>time</code></td><td>75</td><td>Basic thinking time in minutes (TM).</td></tr>
+  <tr><td><code>comment</code></td><td>"(submitted by …)"</td><td>Comment (CM).</td></tr>
+  <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds.</td></tr>
+  <tr><td colspan="3"><b>[rating]</b></td></tr>
+  <tr><td><code>k_factor</code></td><td>3.0</td><td>Multiplies the EGD <code>con</code> factor. Higher values make ratings move faster during the tournament.</td></tr>
+  <tr><td colspan="3"><b>[handicap]</b></td></tr>
+  <tr><td><code>reduction</code></td><td>0</td><td>"Full minus N" handicap. Written to the .h9 as <code>HA[h&lt;N&gt;]</code>: h0 = full handicap, h2 = reduced by 2 stones, h9 = no handicap.</td></tr>
+  <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in even games: 6.5, 7 or 7.5 (Chinese rules).</td></tr>
+  <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in handicap games.</td></tr>
+  <tr><td colspan="3"><b>[pairing]</b></td></tr>
+  <tr><td><code>club_penalty</code></td><td>150</td><td>Pairs from the same club are treated as if their TGoR difference were this many points larger, so the pairing avoids them where possible.</td></tr>
+  <tr><td><code>random_seed</code></td><td>12345</td><td>Seed for random decisions (colours, choosing a joker, final tie-breaks). The same seed always gives the same result.</td></tr>
+  <tr><td colspan="3"><b>[registration]</b></td></tr>
+  <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warn if a player's last EGD tournament is older than this.</td></tr>
+  <tr><td><code>rank_gor_tolerance</code></td><td>300</td><td>Warn if declared rank and GoR differ by more than this.</td></tr>
+</table>
+<div class="note">Invalid settings are reported with the setting's name, for example
+<code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. You can change settings later. Changing
+<code>rounds</code> adds or removes round columns the next time <code>players.ods</code> is written.</div>
+
+<h2 class="pagebreak">5. Registering players</h2>
+
+<h3>5.1 The registration window <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney gui -d my_tournament</pre>
+<figure>
+  <img src="img/gui.png" alt="Registration window">
+  <figcaption>The registration window: EGD search (top), player form (middle), registered players (bottom).</figcaption>
+</figure>
+<ol>
+  <li><b>Search:</b> type part of the name in the search field. Name parts can be in any order
+  (<i>"erik broek"</i> finds <i>van den Broek Erik</i>) and umlaut spellings are treated alike
+  (<i>"Lüthke"</i> finds <i>Luethke</i>). Typing digits searches by EGD PIN. Players who are already
+  registered are marked <i>(registered)</i>.</li>
+  <li><b>Choose a player:</b> press <b>↓</b> and <b>Enter</b>, or double-click. <b>Enter</b> in the search
+  field takes the first match. The form is filled with name, rank, GoR, PIN, country and club. The window
+  then fetches the player's latest data live from the EGD and updates the GoR if it changed.</li>
+  <li><b>Check and complete the form:</b> untick rounds the player will not play, tick
+  <b>Joker</b> if the player may sit out odd rounds, and add notes. Hints in orange appear under the form for:
+  <ul>
+    <li>a PIN that is already registered;</li>
+    <li>a rank and GoR that differ by more than <code>rank_gor_tolerance</code>;</li>
+    <li>a last EGD tournament older than <code>gor_outdated_years</code>, meaning the GoR may be outdated.
+    Correct the GoR field if needed.</li>
+  </ul></li>
+  <li><b>Add player</b> (or Enter in a form field) writes the player to <code>players.ods</code>
+  immediately.</li>
+</ol>
+<ul>
+  <li><b>Players who are not in the EGD:</b> type their data into the form without searching. A rank is
+  enough: the GoR is then taken from the rank.</li>
+  <li><b>Editing:</b> click a player in the bottom table. The form switches to <i>Edit ID n</i>. Use
+  <b>Save changes</b> or <b>Remove player</b>. <b>New / clear</b> goes back to adding.</li>
+  <li><b>Check registration</b> runs the registration check (see 5.4).</li>
+  <li><b>Update EGD list</b> downloads a fresh copy of the EGD player list.</li>
+</ul>
+<div class="note"><b>The EGD player list.</b> Searching uses a local copy of the complete EGD player list
+(about 56,500 players). It is stored in <code>~/.cache/gotourney/</code> and downloaded again when it is more
+than a day old. If there is no internet at the venue, the last downloaded list is used. Run
+<code>gotourney egd update</code> the evening before the tournament to be safe.</div>
+
+<h3>5.2 Registering on the command line <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney players add --pin 10774412                       # everything else from the EGD
+gotourney players add --pin 20633162 --gor 2500 --rounds 1-3
+gotourney players add Doe John --rank 5k --club HH --country DE --joker
+gotourney players list
+gotourney egd search "luethke h"                           # find a PIN</pre>
+<p>Options of <code>players add</code>: <code>--rank</code>, <code>--gor</code>, <code>--pin</code>,
+<code>--country</code>, <code>--club</code>, <code>--rounds</code> (<code>all</code>, <code>none</code>,
+<code>1,2,4</code>, <code>1-3</code>), <code>--joker</code>, <code>--notes</code>. Values you give explicitly
+win over the EGD data.</p>
+
+<h3>5.3 The file players.ods <span class="badge now">AVAILABLE</span></h3>
+<table>
+  <thead><tr><th style="width:22%">Column</th><th>Meaning</th></tr></thead>
+  <tr><td>ID</td><td>Running number. It identifies the player in the round files. Never change or reuse it.</td></tr>
+  <tr><td>Surname, First name</td><td>As in the EGD.</td></tr>
+  <tr><td>Rank</td><td>Declared rank (<code>5k</code>, <code>1d</code>, …).</td></tr>
+  <tr><td>GoR</td><td><b>Starting TGoR.</b> Filled from the EGD, or from the rank. You may overwrite it.</td></tr>
+  <tr><td>EGD PIN, Country, Club</td><td>EGD data. Club is used for the club penalty in the pairing.</td></tr>
+  <tr><td>Joker</td><td><code>x</code> = may sit out rounds with an odd number of players.</td></tr>
+  <tr><td>R1 … Rn</td><td><code>x</code> = plays this round. Empty = does not play.</td></tr>
+  <tr><td>EGD GoR, Last EGD tournament</td><td>Information only: the GoR and last tournament in the EGD on registration day.</td></tr>
+  <tr><td>Notes</td><td>Free text.</td></tr>
+</table>
+<p>Players who arrive late, leave early or skip a round: change their round columns. A player who does
+not play a round keeps their TGoR unchanged.</p>
+
+<h3>5.4 Checking the registration <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney players check</pre>
+<p>Problems are reported at three levels:</p>
+<ul>
+  <li><b>Errors</b> must be fixed before pairing:
+  <ul>
+    <li>the same PIN registered twice;</li>
+    <li>a player with neither GoR nor rank;</li>
+    <li>a round with an odd number of players and no joker. Nominate a joker by marking one of that
+    round's players in the Joker column.</li>
+  </ul></li>
+  <li><b>Warnings</b> should be checked: rank and GoR far apart, GoR possibly outdated, a player registered
+  for no round, two players with the same name.</li>
+  <li><b>Info</b> is for your knowledge only, for example which jokers can sit out in odd rounds.</li>
+</ul>
+<p>The command ends with an error status if there are errors, so it can also be used in scripts.</p>
+
+<h3>5.5 Refreshing EGD data <span class="badge planned">PLANNED</span></h3>
+<pre>gotourney players sync</pre>
+<p>Will fetch the current EGD data for all registered players and report what changed: name, country,
+club, EGD GoR and last tournament. The GoR column (starting TGoR) is only filled when it is empty, so your
+corrections are never overwritten. Once round 1 has been paired, the starting GoRs are frozen.</p>
+
+<h2>6. Pairing a round <span class="badge planned">PLANNED</span></h2>
+
+<h3>6.1 Workflow</h3>
+<ol>
+  <li><b>Optional – manual pairings first.</b> If you want to fix certain games yourself (for example a
+  rematch, or players who must play early), run <code>gotourney pair 3 --template</code>. It creates an
+  empty <code>round_3.ods</code>. Enter those boards with the two player IDs and mark them <code>x</code> in
+  the <i>Manual</i> column. Handicap and komi may be left empty; they are then filled with the defaults.
+  Manual pairings may be rematches.</li>
+  <li><b>Automatic pairing:</b> <code>gotourney pair 3</code> keeps all manual boards and pairs all
+  remaining players of round 3.</li>
+  <li><b>Check and print</b> <code>round_3.ods</code>. Players may agree on a different handicap; just
+  change the Handicap/Komi cells of that board. The tools always use what is written in the file.</li>
+</ol>
+<div class="warn"><code>gotourney pair</code> refuses to overwrite a round file that already contains
+results. Use <code>--force</code> only if you really want to pair the round again.</div>
+
+<h3>6.2 How the automatic pairing works</h3>
+<ul>
+  <li><b>Participants:</b> the players with an <code>x</code> in this round's column who are not on a
+  manual board.</li>
+  <li><b>Odd number of players:</b> one joker sits out, namely the joker with the <b>most games already
+  played</b>, chosen at random if tied. If no joker is available, the tool stops and asks you to nominate
+  one.</li>
+  <li><b>Pair cost:</b> each possible pair gets the cost
+  <code>(|TGoR difference| + club_penalty if same club)²</code>. Pairs who already played each other in
+  this tournament, including forfeited games, are excluded.</li>
+  <li><b>Optimal pairing:</b> the blossom algorithm (maximum weight matching) chooses the pairing with the
+  smallest total cost. Squaring the cost prefers several medium differences over a single very uneven
+  pair.</li>
+  <li><b>No pairing possible:</b> if rematches make a complete pairing impossible (possible with very few
+  players), the tool stops. Pair the problematic players by hand as manual boards and run it again.</li>
+</ul>
+
+<h3>6.3 Handicap, komi and colours</h3>
+<table>
+  <thead><tr><th style="width:30%">TGoR difference</th><th style="width:20%">Full handicap</th><th>Game</th></tr></thead>
+  <tr><td>0 – 50</td><td>0</td><td>Even game, komi <code>komi_even</code>, colours balanced</td></tr>
+  <tr><td>51 – 150</td><td>1</td><td>Weaker player takes black, no stones, komi <code>komi_handicap</code></td></tr>
+  <tr><td>151 – 250</td><td>2</td><td>Weaker player black with 2 stones, komi <code>komi_handicap</code></td></tr>
+  <tr><td>…</td><td>…</td><td>…</td></tr>
+  <tr><td>851 and more</td><td>9</td><td>Maximum</td></tr>
+</table>
+<ul>
+  <li>The difference is divided by 100 and rounded, with exact halves rounded <b>down</b> (150 → 1,
+  151 → 2).</li>
+  <li>With a reduction N, the handicap is <code>min(full, 9) − N</code>, but never below 0. In an h2
+  tournament the default handicap is therefore at most 7. A result of 1 after the reduction is a handicap-1
+  game, not an even game.</li>
+  <li><b>Colours in even games</b> are balanced over the tournament: the player who has had white more
+  often in even games gets black. If both are equal, the colour is drawn at random. Handicap games do not
+  count for the balance.</li>
+  <li><b>Board order:</b> board 1 is the pair with the highest TGoR. Manual boards are sorted in as well.</li>
+</ul>
+
+<h3>6.4 The round file round_r.ods</h3>
+<table>
+  <thead><tr><th>Board</th><th>White ID</th><th>White name</th><th>White TGoR</th><th>Black ID</th><th>Black name</th><th>Black TGoR</th><th>Handicap</th><th>Komi</th><th>Manual</th><th>Result</th></tr></thead>
+  <tr><td>1</td><td>1</td><td>Maekawa Kaku</td><td>2543</td><td>3</td><td>Lewerenz Bernd</td><td>2361</td><td>2</td><td>0.5</td><td></td><td></td></tr>
+</table>
+<p>Black always receives the handicap stones. Players sitting out the round are listed below the boards.</p>
+
+<h2>7. Entering results and standings</h2>
+<h3>7.1 Results <span class="badge now">AVAILABLE</span> (notation) <span class="badge planned">PLANNED</span> (round files)</h3>
+<p>Type the results into the <b>Result</b> column of <code>round_r.ods</code>:</p>
+<table>
+  <thead><tr><th style="width:28%">Enter</th><th>Meaning</th><th style="width:30%">Rating</th></tr></thead>
+  <tr><td><code>1-0</code> (or <code>w+</code>)</td><td>White wins</td><td>rated</td></tr>
+  <tr><td><code>0-1</code> (or <code>b+</code>)</td><td>Black wins</td><td>rated</td></tr>
+  <tr><td><code>jigo</code>, <code>½-½</code>, <code>0.5-0.5</code></td><td>Draw (jigo)</td><td>rated, ½ point each</td></tr>
+  <tr><td><code>1-0!</code>, <code>0-1!</code>, <code>0-0!</code></td><td>Forfeit: white wins, black wins, both lose</td><td>not rated – as if the game had not taken place (but counts as "played" for the rematch rule)</td></tr>
+</table>
+<div class="warn">LibreOffice may turn <code>1:0</code> into a time. Use <code>1-0</code> and
+<code>0-1</code>.</div>
+
+<h3>7.2 Checking results <span class="badge planned">PLANNED</span></h3>
+<pre>gotourney results check 3</pre>
+<p>Reports boards without a valid result, players appearing twice, players who are not registered for the
+round, and (as a warning) rematches.</p>
+
+<h3>7.3 Standings <span class="badge planned">PLANNED</span></h3>
+<pre>gotourney standings            # all rounds played so far
+gotourney standings --round 2  # after round 2</pre>
+<p>Calculates the TGoR of every player after each round and writes <code>standings.ods</code>, for checking
+and for announcing the standings between rounds. TGoRs are calculated with full precision and shown
+rounded to whole numbers.</p>
+
+<h2>8. The wall list and the EGD upload <span class="badge planned">PLANNED</span></h2>
+<h3>8.1 Wall list</h3>
+<pre>gotourney wall</pre>
+<p>Calculates the final TGoR and the places, and writes <code>wall_list.ods</code>. Places are ordered by
+final TGoR, then lower starting GoR, then a random draw. You can still correct the file by hand, for example
+a name spelling.</p>
+
+<h3>8.2 EGD result file</h3>
+<pre>gotourney h9</pre>
+<p>Generates the result file in the EGD's <code>.h9</code> format from <code>wall_list.ods</code>, so your hand
+corrections are included. Send this file to the EGD. Header (TC stays empty, the EGD fills it in):</p>
+<pre>; TC[]
+; CL[A]
+; EV[21. Schweriner Drachenschlacht]
+; PC[DE, Schwerin]
+; DT[2026-09-26,2026-09-27]
+; HA[h0]
+; KM[6.5]
+; TM[75]
+; CM[(submitted by ...)]
+;.</pre>
+<p>One line per player:</p>
+<pre class="wide"> 1 Maekawa Kaku          5d DE  K     4  2543  2611  5+/b    6+/w    3+/w2   2+/w    4-/w     |20633162</pre>
+<ul>
+  <li>Place, name (spaces inside a name part become <code>_</code>, e.g. <code>van_den_Broek</code>),
+  rank, country, club.</li>
+  <li>Wins (jigo = ½), starting GoR, final TGoR. There are no McMahon columns.</li>
+  <li>One field per round: <code>opponent's place</code>, <code>+</code> win / <code>-</code> loss /
+  <code>=</code> jigo, <code>/w</code> or <code>/b</code> for the colour, then the handicap (omitted if 0).
+  <code>0=</code> means not played: joker round, absent, or forfeit.</li>
+  <li><code>|PIN</code> at the end. Players without a PIN have nothing there.</li>
+</ul>
+
+<h2>9. How the ratings are calculated <span class="badge now">AVAILABLE</span></h2>
+<p>The TGoR update follows the EGF rating system as revised in 2021. For a game between A and B
+(Black receives <i>H</i> handicap stones):</p>
+<pre>h(H)      = 0 if H = 0, otherwise 100 · (H − 0.5)
+            (handicap 1 is worth 50 points, 2 stones 150, 3 stones 250, ...)
+β(r)      = −7 · ln(3300 − r − h)
+            (h only for the player who receives the stones)
+SE_A      = 1 / (1 + exp(β_B − β_A))              expected score of A
+con(r)    = ((3300 − r) / 200) ^ 1.6
+r_A'      = r_A + k_factor · con(r_A) · (S_A − SE_A)
+            S = 1 win, ½ jigo, 0 loss; never below −900;
+            the EGD bonus term is not used; komi does not enter the formula</pre>
+<p><b>Example</b> with <code>k_factor = 3</code>. In the EGD (k = 1) the changes would be a third of
+these.</p>
+<table>
+  <thead><tr><th>Game</th><th>Expected score of White</th><th>Result</th><th>Change White</th><th>Change Black</th></tr></thead>
+  <tr><td>White 2000 – Black 1900, even</td><td>0.63</td><td>White wins</td><td>+22.4</td><td>−25.2</td></tr>
+  <tr><td>White 2000 – Black 1900, even</td><td>0.63</td><td>Black wins</td><td>−37.6</td><td>+42.3</td></tr>
+  <tr><td>White 2000 – Black 1750, 2 stones</td><td>0.63</td><td>Black wins</td><td>−37.6</td><td>+49.8</td></tr>
+</table>
+<p class="small">The 2 stones are worth 150 points, so the 250-point game in the last row is rated like a
+100-point even game. Lower-rated players have a larger <code>con</code> and gain or lose more points per game.
+The formula was checked against the reference values of an independent implementation of the EGF
+system.</p>
+
+<h2>10. Editing files by hand</h2>
+<ul>
+  <li>Open the <code>.ods</code> files in LibreOffice Calc, change what you need, <b>save in .ods
+  format</b> and <b>close the file</b>.</li>
+  <li>Keep the header row. You may add your own columns (they are ignored), reorder columns, or change
+  formatting. Formatting is lost when a tool rewrites the file.</li>
+  <li><b>Close the file before running a command that writes it.</b> The tools refuse to write a file that
+  is open in LibreOffice, because one of the two versions would otherwise be lost.</li>
+  <li>Never change a player's <b>ID</b> once rounds have been paired. Round files refer to players by ID.</li>
+  <li>The registration window notices when <code>players.ods</code> changes on disk and reloads it within two
+  seconds.</li>
+  <li>Error messages name the file and row, for example
+  <code>players.ods, row 7: invalid rank 'xx'</code>.</li>
+</ul>
+
+<h2 class="pagebreak">11. Troubleshooting</h2>
+<table>
+  <thead><tr><th style="width:38%">Message / problem</th><th>What to do</th></tr></thead>
+  <tr><td><code>… is open in LibreOffice</code></td><td>Save and close the file in LibreOffice, then run the command again. If LibreOffice crashed, delete the leftover lock file <code>.~lock.players.ods#</code> in the tournament folder.</td></tr>
+  <tr><td><code>tournament.toml not found</code></td><td>You are not in the tournament folder. Use <code>-d &lt;folder&gt;</code> or <code>cd</code> into it.</td></tr>
+  <tr><td><code>round r: … players (odd) and no joker</code></td><td>Mark a player of that round as joker, or change who plays that round.</td></tr>
+  <tr><td>EGD list not available</td><td>No internet and no downloaded list yet. Register players by typing their data, and run <code>gotourney egd update</code> when online.</td></tr>
+  <tr><td><code>externally-managed-environment</code> when installing</td><td>Install into the project's virtual environment (<code>.venv/bin/pip</code>), see section 3. Do not use <code>--break-system-packages</code>.</td></tr>
+  <tr><td>Wrong result in an earlier round</td><td>Correct it in that <code>round_r.ods</code>. Standings and wall list are always recalculated from all round files. Rounds that are already paired keep their pairing.</td></tr>
+</table>
+
+<h2>12. Command reference</h2>
+<table>
+  <thead><tr><th style="width:38%">Command</th><th>Purpose</th><th style="width:13%">Status</th></tr></thead>
+  <tr><td><code>gotourney init &lt;dir&gt; [--name]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney gui [--update-list]</code></td><td>Registration window with EGD autocomplete</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney players add …</code></td><td>Register a player (with <code>--pin</code>: data from the EGD)</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney players list</code></td><td>Show registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney players check</code></td><td>Check the registration</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney players sync</code></td><td>Refresh EGD data of registered players</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney egd update</code></td><td>Download the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney egd search &lt;query&gt;</code></td><td>Search the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Pair round r (keeps manual boards)</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney h9</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney version</code></td><td>Show the version</td><td><span class="badge now">AVAILABLE</span></td></tr>
+</table>
+<p class="small">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>
+
+</body>
+</html>
