@@ -1,0 +1,6 @@
+It's a new tournament format that works as follows:
+    There is a tournament rating TGoR that is initially set to the actual GoR of the player
+    After each round the GoR is updated according to the GoR-update rules, except with a higher k-factor that usual. This factor is part of the tournament parameters.
+    rounds are paired according to the current tournament GoR difference, but two players will not be matched twice against each other in the tournament. And you can define a pairing-penalty for players of the same club, so that the algorithm preferrably pairs players that are not in the same club
+    Tournament winner is the player with the highest Tournament-rating.
+    Rounds can be played with any handicap, but full handicap is default
