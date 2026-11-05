@@ -69,3 +69,17 @@ def test_cli_add_by_pin_offline_falls_back_to_list(tmp_path, monkeypatch, index)
     assert r.exit_code == 0, r.output
     p = load_players(tmp_path, 5).players[0]
     assert p.name == "Maekawa Kaku" and p.gor == 2500   # explicit GoR wins over EGD
+
+
+def test_sync_player_keeps_corrected_gor(index):
+    from gotourney.models import Player
+    from gotourney.registration import sync_player
+    p = Player(1, "Luethke", "Hans", None, 1900.0, pin="10774412", club="")
+    changes = sync_player(p, index.by_pin["10774412"], fill_gor=True)
+    assert p.gor == 1900.0 and p.club == "SN" and p.first_name == "Hans-Eckart" and p.egd_gor == 2064
+    assert any("club" in c for c in changes)
+    q = Player(2, "Maekawa", "Kaku", None, None, pin="20633162")
+    sync_player(q, index.by_pin["20633162"], fill_gor=False)
+    assert q.gor is None
+    sync_player(q, index.by_pin["20633162"], fill_gor=True)
+    assert q.gor == 2543

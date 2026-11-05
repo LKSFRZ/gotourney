@@ -11,7 +11,9 @@ from .config import CONFIG_FILE, Config, ConfigError, load_config, write_templat
 from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
 from .rank import RankError
-from .registration import RegistrationError, check_players, new_player, parse_rounds
+from .registration import RegistrationError, check_players, new_player, parse_rounds, sync_player
+from .rounds import load_round, round_file, save_round
+from .tournament import Tournament, TournamentError
 
 app = typer.Typer(
     help="Tools for organising a Go tournament with tournament ratings (TGoR).",
@@ -22,6 +24,8 @@ players_app = typer.Typer(help="Player registration (players.ods).", no_args_is_
 app.add_typer(players_app, name="players")
 egd_app = typer.Typer(help="European Go Database: player list and lookups.", no_args_is_help=True)
 app.add_typer(egd_app, name="egd")
+results_app = typer.Typer(help="Results of a round.", no_args_is_help=True)
+app.add_typer(results_app, name="results")
 
 DIR_HELP = "Tournament directory."
 
@@ -40,6 +44,20 @@ def ensure_not_open(path: Path) -> None:
     lock = path.with_name(f".~lock.{path.name}#")
     if lock.exists():
         fail(f"{path} is open in LibreOffice. Save and close it first, then run the command again.")
+
+
+def load_tournament(directory: Path) -> Tournament:
+    try:
+        t = Tournament.load(directory)
+    except (ConfigError, OdsError, TournamentError) as e:
+        fail(str(e))
+    return t
+
+
+def show_warnings(t: Tournament, skip: tuple[str, ...] = ()) -> None:
+    for w in t.warnings:
+        if not any(s in w for s in skip):
+            warn(w)
 
 
 def load(directory: Path) -> tuple[Config, PlayerList]:
@@ -225,3 +243,234 @@ def egd_search(
                    f"{p.gor:>5}  {p.last_appearance}")
     if not hits:
         typer.echo("No players found.")
+
+
+@players_app.command("sync")
+def players_sync(
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+    offline: bool = typer.Option(False, "--offline", help="Use only the cached EGD player list."),
+) -> None:
+    """Refresh EGD data (name, country, club, EGD GoR, last tournament) of all players with a PIN.
+
+    The GoR column is only filled where it is empty, and only before round 1 is paired.
+    The declared rank is never changed.
+    """
+    cfg, pl = load(directory)
+    ensure_not_open(directory / PLAYERS_FILE)
+    frozen = round_file(directory, 1).exists()
+    index = None
+    try:
+        index = egd.PlayerIndex.load(refresh=False if offline else None)
+    except egd.EGDError as e:
+        if offline:
+            fail(str(e))
+        warn(str(e))
+    changed = 0
+    for p in pl.players:
+        if not p.pin:
+            continue
+        data = None
+        if not offline:
+            try:
+                data = egd.fetch_by_pin(p.pin)
+            except egd.EGDError:
+                pass
+        if data is None and index is not None:
+            data = index.by_pin.get(p.pin)
+        if data is None:
+            warn(f"ID {p.id} {p.name}: PIN {p.pin} not found in the EGD")
+            continue
+        changes = sync_player(p, data, fill_gor=not frozen)
+        if changes:
+            changed += 1
+            typer.echo(f"ID {p.id} {p.name}: " + "; ".join(changes))
+    if changed:
+        save_players(directory, pl.players, cfg.tournament.rounds)
+    typer.echo(f"{changed} player(s) updated.")
+    if frozen:
+        typer.echo("Round 1 is already paired: starting GoRs were not changed.")
+    issues = [i for i in check_players(pl.players, cfg) if i.level == "warning"]
+    for i in issues:
+        warn(i.message)
+
+
+# ---------------------------------------------------------------- pairing
+
+def _print_round(t: Tournament, games, ratings, sitting_out) -> None:
+    for g in games:
+        res = g.result.value if g.result else ""
+        hk = f"H{g.handicap} komi {g.komi:g}"
+        typer.echo(f"{g.board:>3}  {t.players[g.white].name[:24]:<24} {ratings[g.white]:5.0f}  -  "
+                   f"{t.players[g.black].name[:24]:<24} {ratings[g.black]:5.0f}   {hk:<14}"
+                   f"{'manual' if g.manual else '':<7}{res}")
+    for pid, reason in sitting_out:
+        if "joker" in reason:
+            typer.echo(f"     Not playing: {t.players[pid].name} ({reason})")
+
+
+@app.command()
+def pair(
+    round_no: int = typer.Argument(..., metavar="ROUND", help="Round number."),
+    template: bool = typer.Option(False, "--template", help="Only write an empty round file for manual pairings."),
+    force: bool = typer.Option(False, "--force", help="Overwrite a round file that already has results."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Pair a round. Boards marked 'x' in the Manual column of an existing round file are kept."""
+    from .pairing import PairingError, pair_round, rng_for, setup_game
+
+    t = load_tournament(directory)
+    show_warnings(t, skip=(f"round {round_no}:",))
+    path = round_file(directory, round_no)
+    ensure_not_open(path)
+    if not 1 <= round_no <= t.cfg.tournament.rounds:
+        fail(f"the tournament has rounds 1 to {t.cfg.tournament.rounds}")
+    if round_no > t.last_round + 1:
+        fail(f"round {t.last_round + 1} has to be paired first")
+    later = [r for r in t.rounds if r > round_no]
+    if later:
+        fail(f"round {later[0]} already exists; re-pairing round {round_no} is not possible")
+    existing = t.rounds.get(round_no)
+    if existing and existing.has_results and not force:
+        fail(f"{path.name} already contains results. Use --force to pair the round again.")
+    try:
+        ratings = t.rating_before(round_no)
+    except TournamentError as e:
+        fail(str(e))
+    names = {pid: p.name for pid, p in t.players.items()}
+
+    if template:
+        if path.exists() and not force:
+            fail(f"{path.name} already exists. Use --force to replace it with an empty template.")
+        parts = [(pid, p.name, ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
+                 if p.plays(round_no)]
+        save_round(path, [], names, ratings, participants=parts)
+        typer.echo(f"Wrote {path}. Enter manual boards (White ID, Black ID, Manual = x), save, close, "
+                   f"then run 'gotourney pair {round_no}'. Players of the round are listed on the "
+                   f"'Participants' sheet.")
+        return
+
+    manual = []
+    if existing:
+        rng = rng_for(t.cfg, round_no, "manual")
+        for i, g in enumerate(existing.games):
+            if not g.manual:
+                continue
+            if i in existing.missing_handicap:
+                d = setup_game(t, round_no, g.white, g.black, ratings, rng, manual=True)
+                g.white, g.black, g.handicap, g.komi = d.white, d.black, d.handicap, d.komi
+            elif i in existing.missing_komi:
+                g.komi = t.cfg.handicap.komi_handicap if g.handicap > 0 else t.cfg.handicap.komi_even
+            g.result = None if force else g.result
+            manual.append(g)
+            if frozenset(g.players()) in t.played_pairs(before_round=round_no):
+                warn(f"manual board: {names[g.white]} and {names[g.black]} already played each other")
+        dropped = len(existing.games) - len(manual)
+        if dropped:
+            typer.echo(f"{dropped} board(s) without 'x' in the Manual column are paired again.")
+    try:
+        result = pair_round(t, round_no, manual)
+    except PairingError as e:
+        fail(str(e))
+    save_round(path, result.games, names, ratings, not_playing=[
+        (pid, names[pid], reason) for pid, reason in result.sitting_out])
+    _print_round(t, result.games, ratings, result.sitting_out)
+    typer.echo(f"Wrote {path} ({len(result.games)} boards).")
+
+
+# ---------------------------------------------------------------- results and standings
+
+@results_app.command("check")
+def results_check(
+    round_no: int = typer.Argument(..., metavar="ROUND"),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Check the results of a round (missing or invalid results, rematches, players)."""
+    t = load_tournament(directory)
+    rg = t.rounds.get(round_no)
+    if rg is None:
+        fail(f"{round_file(directory, round_no).name} not found")
+    problems = 0
+    for g in rg.games:
+        if g.result is None:
+            problems += 1
+            typer.secho(f"Board {g.board}: result missing ({t.players[g.white].name} - "
+                        f"{t.players[g.black].name})", fg=typer.colors.RED)
+    earlier = t.played_pairs(before_round=round_no)
+    for g in rg.games:
+        if frozenset(g.players()) in earlier:
+            warn(f"board {g.board}: rematch of {t.players[g.white].name} and {t.players[g.black].name}")
+    on_board = {pid for g in rg.games for pid in g.players()}
+    for pid, p in sorted(t.players.items()):
+        if p.plays(round_no) and pid not in on_board and not p.joker:
+            warn(f"{p.name} (ID {pid}) is registered for round {round_no} but not paired")
+    for w in t.warnings:
+        if w.startswith(f"round {round_no}, ") :
+            warn(w)
+    done = len(rg.games) - problems
+    typer.echo(f"Round {round_no}: {done} of {len(rg.games)} results entered.")
+    if problems:
+        raise typer.Exit(1)
+
+
+@app.command()
+def standings(
+    round_no: int = typer.Option(None, "--round", "-r", help="Standings after this round (default: last)."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Show the TGoR standings and write standings.ods."""
+    from .wall import STANDINGS_FILE, standings_rows, write_standings
+
+    t = load_tournament(directory)
+    show_warnings(t)
+    r = t.last_round if round_no is None else round_no
+    if not 0 <= r <= t.last_round:
+        fail(f"round {r} has not been played (last round: {t.last_round})")
+    ensure_not_open(directory / STANDINGS_FILE)
+    cols, rows = standings_rows(t, r)
+    typer.echo(f"Standings after round {r}:" if r else "Starting ratings:")
+    typer.echo(f"{'Pl':>3}  {'Name':<28} {'Rank':>4} {'Start':>5}  {'Games':>5} {'Wins':>4}  {'TGoR':>5}")
+    for row in rows:
+        place, pid, name, rank, club, start = row[:6]
+        games, wins, tgor = row[-3:]
+        typer.echo(f"{place:>3}  {name[:28]:<28} {rank:>4} {start:>5}  {games:>5} {wins:>4g}  {tgor:>5}")
+    path = write_standings(t, r)
+    typer.echo(f"Wrote {path}.")
+
+
+@app.command()
+def wall(directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP)) -> None:
+    """Compute the final places and write wall_list.ods (editable; used by 'gotourney h9')."""
+    from .wall import WALL_FILE, WallError, write_wall_list
+
+    t = load_tournament(directory)
+    ensure_not_open(directory / WALL_FILE)
+    try:
+        path = write_wall_list(t)
+    except WallError as e:
+        fail(str(e))
+    show_warnings(t)
+    typer.echo(f"Wrote {path} ({len(t.players)} players, {t.last_round} rounds).")
+
+
+@app.command()
+def h9(
+    output: Path = typer.Option(None, "--output", "-o", help="Output file (default: <code or name>.h9)."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Write the EGD result file (.h9) from wall_list.ods."""
+    from .wall import WallError, h9_filename, h9_text, read_wall_list
+
+    try:
+        cfg = load_config(directory)
+        lines, warnings = read_wall_list(directory)
+    except (ConfigError, OdsError, WallError) as e:
+        fail(str(e))
+    for w in warnings:
+        warn(w)
+    for field, value in [("name", cfg.tournament.name), ("place", cfg.tournament.place),
+                         ("dates", cfg.tournament.dates)]:
+        if not value:
+            warn(f"tournament.{field} is empty in {CONFIG_FILE}")
+    path = output or directory / h9_filename(cfg)
+    path.write_text(h9_text(cfg, lines), encoding="utf-8")
+    typer.echo(f"Wrote {path} ({len(lines)} players).")

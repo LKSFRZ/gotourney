@@ -267,9 +267,9 @@ One line per player, fixed-width columns:
    `skillratings` EGF implementation (the EGD site blocks automated access to its calculator).
 4. ✅ **Registration**: `init`, `players add/list/check` without EGD.
 5. **EGD client**: ✅ lookup by PIN, player list cache and search, `players add --pin`,
-   ✅ registration window `gotourney gui`; ⬜ `players sync`.
-6. **Results and standings**: parse round files, `results check`, `standings`.
-7. **Wall list and EGD export**: `wall_list.ods`, `.h9`; test by re-creating the example layout.
-8. **Pairing**: manual boards, cost function, blossom matching, joker, handicap, colours,
+   ✅ registration window `gotourney gui`; ✅ `players sync`.
+6. ✅ **Results and standings**: parse round files, `results check`, `standings`.
+7. ✅ **Wall list and EGD export**: `wall_list.ods`, `.h9`; test by re-creating the example layout.
+8. ✅ **Pairing**: manual boards, cost function, blossom matching, joker, handicap, colours,
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.

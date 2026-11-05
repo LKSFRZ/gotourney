@@ -109,7 +109,9 @@ def _read_rows(table) -> list[list[Cell]]:
     return rows
 
 
-def read_sheet(path: Path, sheet: str | None = None) -> Sheet:
+def read_sheet(path: Path, sheet: str | None = None, fallback_first: bool = False) -> Sheet:
+    """Read a sheet by name (or the first sheet). With fallback_first, a missing sheet name
+    falls back to the first sheet (e.g. after a hand-made file got a different sheet name)."""
     path = Path(path)
     if not path.exists():
         raise OdsError(f"{path} not found")
@@ -124,9 +126,9 @@ def read_sheet(path: Path, sheet: str | None = None) -> Sheet:
         table = tables[0]
     else:
         matches = [t for t in tables if t.getAttribute("name").lower() == sheet.lower()]
-        if not matches:
+        if not matches and not fallback_first:
             raise OdsError(f"{path}: sheet '{sheet}' not found")
-        table = matches[0]
+        table = matches[0] if matches else tables[0]
     name = table.getAttribute("name")
     raw = _read_rows(table)
     if not raw:

@@ -50,12 +50,9 @@
 <div class="cover">
   <h1>gotourney</h1>
   <div class="subtitle">Tournament Director's Guide – running a TGoR Go tournament with the command line tools<br>
-  Version 0.1 · November 2026</div>
-  <p>This guide describes the whole tournament, from registration to the EGD upload. Some features already
-  exist and others are still being built. Every feature is marked:</p>
-  <p><span class="badge now">AVAILABLE</span> works in the current version &nbsp;&nbsp;
-     <span class="badge planned">PLANNED</span> designed and described here, but not implemented yet;
-     details may still change.</p>
+  Version 0.2 · November 2026</div>
+  <p>This guide describes the whole tournament, from registration to the EGD upload. All features
+  described here are available in version 0.2.</p>
 </div>
 
 <div class="toc">
@@ -255,28 +252,33 @@ not play a round keeps their TGoR unchanged.</p>
 </ul>
 <p>The command ends with an error status if there are errors, so it can also be used in scripts.</p>
 
-<h3>5.5 Refreshing EGD data <span class="badge planned">PLANNED</span></h3>
-<pre>gotourney players sync</pre>
-<p>Will fetch the current EGD data for all registered players and report what changed: name, country,
-club, EGD GoR and last tournament. The GoR column (starting TGoR) is only filled when it is empty, so your
+<h3>5.5 Refreshing EGD data <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney players sync              # live from the EGD
+gotourney players sync --offline    # only the downloaded player list</pre>
+<p>Fetches the current EGD data for all registered players and reports what changed: name, country,
+club, EGD GoR and last tournament. The declared rank is never changed. The GoR column (starting TGoR) is only filled when it is empty, so your
 corrections are never overwritten. Once round 1 has been paired, the starting GoRs are frozen.</p>
 
-<h2>6. Pairing a round <span class="badge planned">PLANNED</span></h2>
+<h2>6. Pairing a round <span class="badge now">AVAILABLE</span></h2>
 
 <h3>6.1 Workflow</h3>
 <ol>
   <li><b>Optional – manual pairings first.</b> If you want to fix certain games yourself (for example a
   rematch, or players who must play early), run <code>gotourney pair 3 --template</code>. It creates an
   empty <code>round_3.ods</code>. Enter those boards with the two player IDs and mark them <code>x</code> in
-  the <i>Manual</i> column. Handicap and komi may be left empty; they are then filled with the defaults.
-  Manual pairings may be rematches.</li>
-  <li><b>Automatic pairing:</b> <code>gotourney pair 3</code> keeps all manual boards and pairs all
-  remaining players of round 3.</li>
+  the <i>Manual</i> column. The sheet <i>Participants</i> lists the players of the round with their TGoR to
+  help you. If you leave <b>Handicap</b> empty, the default handicap, komi and colours are filled in (White
+  and Black may be swapped so that the weaker player gets black). If you enter a handicap, your colours and
+  handicap are kept as they are. Manual pairings may be rematches; you get a warning.</li>
+  <li><b>Automatic pairing:</b> <code>gotourney pair 3</code> keeps all boards marked <code>x</code> in
+  the <i>Manual</i> column and pairs all remaining players of round 3. Boards without the mark are
+  paired again, so running <code>pair</code> twice gives a fresh pairing.</li>
   <li><b>Check and print</b> <code>round_3.ods</code>. Players may agree on a different handicap; just
   change the Handicap/Komi cells of that board. The tools always use what is written in the file.</li>
 </ol>
 <div class="warn"><code>gotourney pair</code> refuses to overwrite a round file that already contains
-results. Use <code>--force</code> only if you really want to pair the round again.</div>
+results. Use <code>--force</code> only if you really want to pair the round again. A round can only be
+paired when all results of the previous rounds are entered, and not after a later round exists.</div>
 
 <h3>6.2 How the automatic pairing works</h3>
 <ul>
@@ -321,10 +323,10 @@ results. Use <code>--force</code> only if you really want to pair the round agai
   <thead><tr><th>Board</th><th>White ID</th><th>White name</th><th>White TGoR</th><th>Black ID</th><th>Black name</th><th>Black TGoR</th><th>Handicap</th><th>Komi</th><th>Manual</th><th>Result</th></tr></thead>
   <tr><td>1</td><td>1</td><td>Maekawa Kaku</td><td>2543</td><td>3</td><td>Lewerenz Bernd</td><td>2361</td><td>2</td><td>0.5</td><td></td><td></td></tr>
 </table>
-<p>Black always receives the handicap stones. Players sitting out the round are listed below the boards.</p>
+<p>Black always receives the handicap stones. The second sheet, <i>Not playing</i>, lists the players who sit out the round (joker, not registered). The TGoR shown is the TGoR before the round.</p>
 
 <h2>7. Entering results and standings</h2>
-<h3>7.1 Results <span class="badge now">AVAILABLE</span> (notation) <span class="badge planned">PLANNED</span> (round files)</h3>
+<h3>7.1 Results</h3>
 <p>Type the results into the <b>Result</b> column of <code>round_r.ods</code>:</p>
 <table>
   <thead><tr><th style="width:28%">Enter</th><th>Meaning</th><th style="width:30%">Rating</th></tr></thead>
@@ -336,27 +338,29 @@ results. Use <code>--force</code> only if you really want to pair the round agai
 <div class="warn">LibreOffice may turn <code>1:0</code> into a time. Use <code>1-0</code> and
 <code>0-1</code>.</div>
 
-<h3>7.2 Checking results <span class="badge planned">PLANNED</span></h3>
+<h3>7.2 Checking results <span class="badge now">AVAILABLE</span></h3>
 <pre>gotourney results check 3</pre>
 <p>Reports boards without a valid result, players appearing twice, players who are not registered for the
 round, and (as a warning) rematches.</p>
 
-<h3>7.3 Standings <span class="badge planned">PLANNED</span></h3>
+<h3>7.3 Standings <span class="badge now">AVAILABLE</span></h3>
 <pre>gotourney standings            # all rounds played so far
 gotourney standings --round 2  # after round 2</pre>
 <p>Calculates the TGoR of every player after each round and writes <code>standings.ods</code>, for checking
 and for announcing the standings between rounds. TGoRs are calculated with full precision and shown
 rounded to whole numbers.</p>
 
-<h2>8. The wall list and the EGD upload <span class="badge planned">PLANNED</span></h2>
+<h2>8. The wall list and the EGD upload <span class="badge now">AVAILABLE</span></h2>
 <h3>8.1 Wall list</h3>
 <pre>gotourney wall</pre>
 <p>Calculates the final TGoR and the places, and writes <code>wall_list.ods</code>. Places are ordered by
-final TGoR, then lower starting GoR, then a random draw. You can still correct the file by hand, for example
-a name spelling.</p>
+final TGoR (rounded), then lower starting GoR, then a random draw. A second sheet, <i>TGoR history</i>, shows
+every player's TGoR after each round. You can still correct the wall list by hand, for example a name
+spelling. All results must be entered before the wall list can be made.</p>
 
 <h3>8.2 EGD result file</h3>
-<pre>gotourney h9</pre>
+<pre>gotourney h9                      # writes &lt;tournament code or name&gt;.h9
+gotourney h9 -o drachenschlacht.h9</pre>
 <p>Generates the result file in the EGD's <code>.h9</code> format from <code>wall_list.ods</code>, so your hand
 corrections are included. Send this file to the EGD. Header (TC stays empty, the EGD fills it in):</p>
 <pre>; TC[]
@@ -373,7 +377,8 @@ corrections are included. Send this file to the EGD. Header (TC stays empty, the
 <pre class="wide"> 1 Maekawa Kaku          5d DE  K     4  2543  2611  5+/b    6+/w    3+/w2   2+/w    4-/w     |20633162</pre>
 <ul>
   <li>Place, name (spaces inside a name part become <code>_</code>, e.g. <code>van_den_Broek</code>),
-  rank, country, club.</li>
+  rank, country (<code>XX</code> if unknown), club (<code>XXXX</code> if none). Names are spelled as in the
+  EGD.</li>
   <li>Wins (jigo = ½), starting GoR, final TGoR. There are no McMahon columns.</li>
   <li>One field per round: <code>opponent's place</code>, <code>+</code> win / <code>-</code> loss /
   <code>=</code> jigo, <code>/w</code> or <code>/b</code> for the colour, then the handicap (omitted if 0).
@@ -440,14 +445,14 @@ system.</p>
   <tr><td><code>gotourney players add …</code></td><td>Register a player (with <code>--pin</code>: data from the EGD)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players list</code></td><td>Show registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players check</code></td><td>Check the registration</td><td><span class="badge now">AVAILABLE</span></td></tr>
-  <tr><td><code>gotourney players sync</code></td><td>Refresh EGD data of registered players</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney players sync [--offline]</code></td><td>Refresh EGD data of registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd update</code></td><td>Download the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd search &lt;query&gt;</code></td><td>Search the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
-  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Pair round r (keeps manual boards)</td><td><span class="badge planned">PLANNED</span></td></tr>
-  <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge planned">PLANNED</span></td></tr>
-  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
-  <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
-  <tr><td><code>gotourney h9</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge planned">PLANNED</span></td></tr>
+  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Pair round r (keeps manual boards)</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney h9 [-o file]</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney version</code></td><td>Show the version</td><td><span class="badge now">AVAILABLE</span></td></tr>
 </table>
 <p class="small">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>

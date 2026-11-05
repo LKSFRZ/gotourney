@@ -151,3 +151,30 @@ def check_players(players: list[Player], cfg: Config, today: dt.date | None = No
                 err(f"round {r}: {len(playing)} players (odd) and no joker registered for this round "
                     f"- nominate a joker")
     return issues
+
+
+# ---------------------------------------------------------------- EGD sync
+
+def sync_player(player: Player, data, fill_gor: bool) -> list[str]:
+    """Update a player from EGD data (an egd.EGDPlayer). Returns a description of the changes.
+
+    Name, country, club, EGD GoR and last tournament are refreshed. The GoR column (starting
+    TGoR) is only filled when empty and ``fill_gor`` is set; the declared rank is never changed.
+    """
+    changes = []
+
+    def update(attr, value, label):
+        old = getattr(player, attr)
+        if value != old and value not in (None, ""):
+            changes.append(f"{label}: {old if old not in (None, '') else '-'} -> {value}")
+            setattr(player, attr, value)
+
+    update("surname", data.surname, "surname")
+    update("first_name", data.first_name, "first name")
+    update("country", data.country, "country")
+    update("club", data.club, "club")
+    update("egd_gor", float(data.gor), "EGD GoR")
+    update("egd_last_tournament", data.last_appearance, "last EGD tournament")
+    if player.gor is None and fill_gor:
+        update("gor", float(data.gor), "GoR")
+    return changes
