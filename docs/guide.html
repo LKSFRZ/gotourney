@@ -137,7 +137,7 @@ gotourney --help</pre>
 in every terminal without activating anything.</p>
 
 <h2>4. Setting up a tournament <span class="badge now">AVAILABLE</span></h2>
-<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht"</pre>
+<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht" --rounds 5</pre>
 <p>This creates the folder with <code>tournament.toml</code> and an empty <code>players.ods</code>. Open
 <code>tournament.toml</code> in a text editor and fill in the settings <b>before</b> registering players:</p>
 
@@ -151,7 +151,7 @@ in every terminal without activating anything.</p>
   <tr><td><code>class</code></td><td>"A"</td><td>EGD tournament class (CL).</td></tr>
   <tr><td><code>time</code></td><td>75</td><td>Basic thinking time in minutes (TM).</td></tr>
   <tr><td><code>comment</code></td><td>"(submitted by …)"</td><td>Comment (CM).</td></tr>
-  <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds.</td></tr>
+  <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds (also <code>init --rounds</code>).</td></tr>
   <tr><td colspan="3"><b>[rating]</b></td></tr>
   <tr><td><code>k_factor</code></td><td>3.0</td><td>Multiplies the EGD <code>con</code> factor. Higher values make ratings move faster during the tournament.</td></tr>
   <tr><td colspan="3"><b>[handicap]</b></td></tr>
@@ -166,8 +166,10 @@ in every terminal without activating anything.</p>
   <tr><td><code>rank_gor_tolerance</code></td><td>300</td><td>Warn if declared rank and GoR differ by more than this.</td></tr>
 </table>
 <div class="note">Invalid settings are reported with the setting's name, for example
-<code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. You can change settings later. Changing
-<code>rounds</code> adds or removes round columns the next time <code>players.ods</code> is written.</div>
+<code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. You can change settings later, including
+<code>rounds</code>. New rounds count as played by all registered players until you change that in
+<code>players.ods</code>. Columns of removed rounds are ignored and disappear the next time
+<code>players.ods</code> is written.</div>
 
 <h2 class="pagebreak">5. Registering players</h2>
 
@@ -433,7 +435,7 @@ system.</p>
 <h2>12. Command reference</h2>
 <table>
   <thead><tr><th style="width:38%">Command</th><th>Purpose</th><th style="width:13%">Status</th></tr></thead>
-  <tr><td><code>gotourney init &lt;dir&gt; [--name]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney init &lt;dir&gt; [--name] [--rounds]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney gui [--update-list]</code></td><td>Registration window with EGD autocomplete</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players add …</code></td><td>Register a player (with <code>--pin</code>: data from the EGD)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players list</code></td><td>Show registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>

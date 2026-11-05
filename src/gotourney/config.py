@@ -21,7 +21,7 @@ dates   = []                 # DT, e.g. ["2026-09-26", "2026-09-27"]
 class   = "A"                # CL
 time    = 60                 # TM, basic thinking time in minutes
 comment = ""                 # CM, e.g. "(submitted by ...)"
-rounds  = 5
+rounds  = {rounds}                 # number of rounds; R1..Rn columns in players.ods follow this
 
 [rating]
 k_factor = 3.0               # multiplies the EGD 'con' factor (bonus term is not used)
@@ -174,7 +174,9 @@ def load_config(directory: Path) -> Config:
         raise ConfigError(f"{path}: {e}") from e
 
 
-def write_template(directory: Path, name: str) -> Path:
+def write_template(directory: Path, name: str, rounds: int = 5) -> Path:
+    if rounds < 1:
+        raise ConfigError("the number of rounds must be at least 1")
     path = Path(directory) / CONFIG_FILE
-    path.write_text(TEMPLATE.format(name=name.replace('"', "'")), encoding="utf-8")
+    path.write_text(TEMPLATE.format(name=name.replace('"', "'"), rounds=rounds), encoding="utf-8")
     return path

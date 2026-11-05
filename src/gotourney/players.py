@@ -83,6 +83,8 @@ def load_players(directory: Path, rounds: int) -> PlayerList:
         warnings.append(
             f"{path.name}: column(s) {', '.join(extra)} ignored, the tournament has {rounds} rounds"
         )
+    # Rounds added later (no column in the file yet) count as played by everyone.
+    new_rounds = {i for i in range(1, rounds + 1) if round_column(i) not in headers}
     for row in sheet.rows:
         where = f"{path.name}, row {row.line}"
         try:
@@ -110,6 +112,7 @@ def load_players(directory: Path, rounds: int) -> PlayerList:
             if pin and not (pin.isdigit() and len(pin) == 8):
                 warnings.append(f"{where}: EGD PIN {pin!r} does not look like an 8-digit PIN")
             player_rounds = {i for i in range(1, rounds + 1) if _flag(row.text(round_column(i)))}
+            player_rounds |= new_rounds
             players.append(
                 Player(
                     id=pid,

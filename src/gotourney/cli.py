@@ -81,19 +81,21 @@ def version() -> None:
 def init(
     directory: Path = typer.Argument(..., help="Directory for the new tournament (created if needed)."),
     name: str = typer.Option("", "--name", "-n", help="Tournament name."),
+    rounds: int = typer.Option(5, "--rounds", "-r", min=1, help="Number of rounds."),
 ) -> None:
     """Create a new tournament: tournament.toml and an empty players.ods."""
     directory.mkdir(parents=True, exist_ok=True)
     existing = [f for f in (CONFIG_FILE, PLAYERS_FILE) if (directory / f).exists()]
     if existing:
         fail(f"{directory} already contains {', '.join(existing)}; not overwriting.")
-    write_template(directory, name or directory.resolve().name)
+    write_template(directory, name or directory.resolve().name, rounds)
     try:
         cfg = load_config(directory)
         save_players(directory, [], cfg.tournament.rounds)
     except (ConfigError, OdsError) as e:
         fail(str(e))
-    typer.echo(f"Created {directory / CONFIG_FILE} and {directory / PLAYERS_FILE}.")
+    typer.echo(f"Created {directory / CONFIG_FILE} and {directory / PLAYERS_FILE} "
+               f"({cfg.tournament.rounds} rounds).")
     typer.echo(f"Edit {CONFIG_FILE} (name, place, dates, rounds, k_factor, ...) before registering players.")
 
 
