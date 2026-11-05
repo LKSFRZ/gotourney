@@ -148,12 +148,21 @@ handicap reduction (h0 = full handicap, h2 = reduced by 2 stones, h9 = no handic
 - Declared rank differs from GoR by more than `rank_gor_tolerance` (300 points).
 - Odd number of players in a round and no joker available → nominate a joker.
 
-### 5.4 EGD access
+### 5.4 Registration window (`gotourney gui`)
+- Tkinter window: search field with autocomplete over the local EGD player list
+  (name parts in any order, umlaut spellings unified, or PIN), results table, player form
+  (rank, GoR, PIN, country, club, joker, rounds, notes), table of registered players.
+- Choosing an EGD player fills the form, then fetches the latest data live by PIN.
+- Registered players can be edited or removed; every change is written to `players.ods`
+  at once (refused while the file is open in LibreOffice); the window reloads the file when
+  it changes on disk. Hints for duplicate PIN, rank/GoR mismatch and outdated GoR.
+
+### 5.5 EGD access
 - `GetPlayerDataByPIN.php?pin=<PIN>` and `GetPlayerDataByData.php?lastname=…&name=…`
-  on `www.europeangodatabase.eu/EGD/` (to verify; the server blocks some automated
-  requests, so we may need a proper User-Agent or the offline file).
-- Offline fallback: downloaded full EGD player list.
-- Responses cached in the tournament directory.
+  on `www.europeangodatabase.eu/EGD/` (verified; needs a User-Agent header).
+- Full player list `allworld_lp.zip` (≈56,500 players, updated daily by the EGD), cached in
+  `~/.cache/gotourney/` and refreshed when older than a day; used for search and offline lookups.
+- `gotourney egd update`, `gotourney egd search <query>`.
 
 ## 6. Step 2 – Pairing (`gotourney pair <round>`)
 
@@ -257,7 +266,8 @@ One line per player, fixed-width columns:
 3. ✅ **Rating engine**: formula of §1.1; verified against the reference values of the
    `skillratings` EGF implementation (the EGD site blocks automated access to its calculator).
 4. ✅ **Registration**: `init`, `players add/list/check` without EGD.
-5. **EGD client**: lookup by PIN and name, `players sync`, warnings, cache, offline list.
+5. **EGD client**: ✅ lookup by PIN, player list cache and search, `players add --pin`,
+   ✅ registration window `gotourney gui`; ⬜ `players sync`.
 6. **Results and standings**: parse round files, `results check`, `standings`.
 7. **Wall list and EGD export**: `wall_list.ods`, `.h9`; test by re-creating the example layout.
 8. **Pairing**: manual boards, cost function, blossom matching, joker, handicap, colours,

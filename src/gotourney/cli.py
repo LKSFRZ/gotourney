@@ -6,7 +6,7 @@ from pathlib import Path
 
 import typer
 
-from . import __version__
+from . import __version__, egd
 from .config import CONFIG_FILE, Config, ConfigError, load_config, write_template
 from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
@@ -20,6 +20,8 @@ app = typer.Typer(
 )
 players_app = typer.Typer(help="Player registration (players.ods).", no_args_is_help=True)
 app.add_typer(players_app, name="players")
+egd_app = typer.Typer(help="European Go Database: player list and lookups.", no_args_is_help=True)
+app.add_typer(egd_app, name="egd")
 
 DIR_HELP = "Tournament directory."
 
@@ -49,6 +51,19 @@ def load(directory: Path) -> tuple[Config, PlayerList]:
     for w in players.warnings:
         warn(w)
     return cfg, players
+
+
+def lookup_pin(pin: str) -> "egd.EGDPlayer | None":
+    """Latest data for a PIN: live from the EGD, else from the cached player list."""
+    try:
+        return egd.fetch_by_pin(pin)
+    except egd.EGDError as e:
+        warn(f"{e}; trying the cached EGD player list")
+    try:
+        return egd.PlayerIndex.load(refresh=False).by_pin.get(pin)
+    except egd.EGDError as e:
+        warn(str(e))
+        return None
 
 
 @app.callback()
@@ -86,7 +101,7 @@ def init(
 
 @players_app.command("add")
 def players_add(
-    surname: str = typer.Argument(..., help="Surname (family name)."),
+    surname: str = typer.Argument("", help="Surname (family name). Optional with --pin."),
     first_name: str = typer.Argument("", help="First name."),
     rank: str = typer.Option(None, "--rank", "-r", help="Declared rank, e.g. 5k or 1d."),
     gor: float = typer.Option(None, "--gor", "-g", help="Starting GoR. Default: value of the rank."),
@@ -98,10 +113,27 @@ def players_add(
     notes: str = typer.Option("", "--notes", help="Free text."),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Register a player in players.ods."""
+    """Register a player in players.ods.
+
+    With --pin, missing data (name, rank, GoR, country, club) is taken from the EGD.
+    """
     cfg, pl = load(directory)
     path = directory / PLAYERS_FILE
     ensure_not_open(path)
+    egd_player = None
+    if pin:
+        egd_player = lookup_pin(pin.strip())
+        if egd_player is None:
+            warn(f"PIN {pin} not found in the EGD")
+        else:
+            surname = surname or egd_player.surname
+            first_name = first_name or egd_player.first_name
+            rank = rank or egd_player.grade
+            gor = egd_player.gor if gor is None else gor
+            country = country or egd_player.country
+            club = club or egd_player.club
+    if not surname:
+        fail("Give the player's surname, or an EGD PIN.")
     try:
         player = new_player(
             pl.players, surname=surname, first_name=first_name, rank=rank, gor=gor, pin=pin,
@@ -110,6 +142,9 @@ def players_add(
         )
     except (RegistrationError, RankError) as e:
         fail(str(e))
+    if egd_player is not None:
+        player.egd_gor = float(egd_player.gor)
+        player.egd_last_tournament = egd_player.last_appearance
     save_players(directory, pl.players + [player], cfg.tournament.rounds)
     rounds_text = ",".join(map(str, sorted(player.rounds))) or "none"
     typer.echo(f"Added ID {player.id}: {player.name}, {player.rank}, GoR {player.gor:.0f}, "
@@ -146,3 +181,45 @@ def players_check(directory: Path = typer.Option(Path("."), "--dir", "-d", help=
     typer.echo(f"{len(pl.players)} players, {errors} error(s), {warnings} warning(s).")
     if errors:
         raise typer.Exit(1)
+
+
+@app.command()
+def gui(
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+    update_list: bool = typer.Option(False, "--update-list", help="Download a fresh EGD player list first."),
+) -> None:
+    """Open the registration window (search the EGD with autocomplete)."""
+    cfg, _ = load(directory)
+    from . import gui as gui_module  # Tkinter is only needed here
+    gui_module.run(directory, cfg, refresh_list=True if update_list else None)
+
+
+# ---------------------------------------------------------------- egd
+
+@egd_app.command("update")
+def egd_update() -> None:
+    """Download the current EGD player list (used for search and offline lookups)."""
+    try:
+        path = egd.download_player_list()
+    except egd.EGDError as e:
+        fail(str(e))
+    index = egd.PlayerIndex.load(refresh=False)
+    typer.echo(f"Saved {len(index.players)} players to {path}.")
+
+
+@egd_app.command("search")
+def egd_search(
+    query: str = typer.Argument(..., help="Name (parts, e.g. 'luethke h') or PIN."),
+    limit: int = typer.Option(20, "--limit", "-n"),
+) -> None:
+    """Search the EGD player list."""
+    try:
+        index = egd.PlayerIndex.load()
+    except egd.EGDError as e:
+        fail(str(e))
+    hits = index.search(query, limit=limit)
+    for p in hits:
+        typer.echo(f"{p.pin}  {p.name[:30]:<30} {p.country:<3} {p.club or '-':<6} {p.grade:>4} "
+                   f"{p.gor:>5}  {p.last_appearance}")
+    if not hits:
+        typer.echo("No players found.")
