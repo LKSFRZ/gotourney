@@ -106,3 +106,15 @@ def test_cli_template_and_manual_board(make_tournament):
     manual = next(g for g in games if g.manual)
     assert (manual.white, manual.black, manual.handicap, manual.komi) == (1, 4, 3, 0.5)
     assert {frozenset(g.players()) for g in games} == {frozenset({1, 4}), frozenset({2, 3})}
+
+
+def test_pairing_pdf(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1700,), (1690,)], rounds=1)
+    r = runner.invoke(app, ["pair", "1", "-d", str(d)])
+    assert r.exit_code == 0, r.output
+    pdf = d / "round_1.pdf"
+    assert pdf.exists() and pdf.read_bytes().startswith(b"%PDF")
+    pdf.unlink()
+    r = runner.invoke(app, ["pairing-pdf", "1", "-d", str(d)])
+    assert r.exit_code == 0 and pdf.exists()
+    assert runner.invoke(app, ["pairing-pdf", "2", "-d", str(d)]).exit_code == 1

@@ -377,6 +377,31 @@ def pair(
         (pid, labels[pid], reason) for pid, reason in result.sitting_out])
     _print_round(t, result.games, ratings, result.sitting_out)
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
+    _write_pairing_pdf(directory, round_no)
+
+
+def _write_pairing_pdf(directory: Path, round_no: int) -> None:
+    from .printing import PrintError, pairing_pdf, pdf_path
+
+    t = load_tournament(directory)
+    rg = t.rounds.get(round_no)
+    if rg is None:
+        fail(f"{round_file(directory, round_no).name} not found")
+    try:
+        path = pairing_pdf(t, rg, pdf_path(directory, round_no))
+    except (PrintError, OSError) as e:
+        warn(f"PDF not written: {e}")
+        return
+    typer.echo(f"Wrote {path} (printable pairing).")
+
+
+@app.command("pairing-pdf")
+def pairing_pdf_command(
+    round_no: int = typer.Argument(..., metavar="ROUND"),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Write a printable PDF of a round's pairing (round_<r>.pdf), e.g. after editing round_<r>.ods."""
+    _write_pairing_pdf(directory, round_no)
 
 
 # ---------------------------------------------------------------- results and standings

@@ -112,6 +112,7 @@ database.</p>
   tournament.toml     settings                                   <span>(step 1)</span>
   players.ods         registered players                          (step 2)
   round_1.ods         pairing of round 1; results are entered here (steps 3, 4)
+  round_1.pdf         printable pairing of round 1                (step 3)
   round_2.ods         ...
   standings.ods       TGoR after each round                       (step 4)
   wall_list.ods       final wall list, editable                   (step 5)
@@ -273,8 +274,12 @@ corrections are never overwritten. Once round 1 has been paired, the starting Go
   <li><b>Automatic pairing:</b> <code>gotourney pair 3</code> keeps all boards marked <code>x</code> in
   the <i>Manual</i> column and pairs all remaining players of round 3. Boards without the mark are
   paired again, so running <code>pair</code> twice gives a fresh pairing.</li>
-  <li><b>Check and print</b> <code>round_3.ods</code>. Players may agree on a different handicap; just
-  change the Handicap/Komi cells of that board. The tools always use what is written in the file.</li>
+  <li><b>Check and print.</b> <code>pair</code> also writes <code>round_3.pdf</code>, a printable pairing
+  with only the board numbers, the players (colour stone, rank, name) and the result columns, ready to
+  post or to collect results on paper. Players may agree on a different handicap; just change the
+  Handicap/Komi cells of that board in <code>round_3.ods</code>. The tools always use what is written in
+  the file. After editing the pairing by hand, run <code>gotourney pairing-pdf 3</code> to update the
+  PDF.</li>
 </ol>
 <div class="warn"><code>gotourney pair</code> refuses to overwrite a round file that already contains
 results. Use <code>--force</code> only if you really want to pair the round again. A round can only be
@@ -461,6 +466,7 @@ system.</p>
   <tr><td><code>gotourney egd update</code></td><td>Download the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd search &lt;query&gt;</code></td><td>Search the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Pair round r (keeps manual boards)</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Printable pairing → round_r.pdf (also written by <code>pair</code>)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
