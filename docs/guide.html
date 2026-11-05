@@ -320,23 +320,35 @@ paired when all results of the previous rounds are entered, and not after a late
 
 <h3>6.4 The round file round_r.ods</h3>
 <table>
-  <thead><tr><th>Board</th><th>White ID</th><th>White name</th><th>White TGoR</th><th>Black ID</th><th>Black name</th><th>Black TGoR</th><th>Handicap</th><th>Komi</th><th>Manual</th><th>Result</th></tr></thead>
-  <tr><td>1</td><td>1</td><td>Maekawa Kaku</td><td>2543</td><td>3</td><td>Lewerenz Bernd</td><td>2361</td><td>2</td><td>0.5</td><td></td><td></td></tr>
+  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
+  <tr><td>1</td><td>1</td><td>2543</td><td>○ 5d Maekawa Kaku</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Lewerenz Bernd</td><td>2297</td><td>3</td><td>2</td><td>0.5</td><td></td></tr>
+  <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Wolff Martin</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Moldovan Christian</td><td>2158</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
 </table>
-<p>Black always receives the handicap stones. The second sheet, <i>Not playing</i>, lists the players who sit out the round (joker, not registered). The TGoR shown is the TGoR before the round.</p>
+<ul>
+  <li>The player columns show the colour (○ white, ● black), the registered rank and the name. They are
+  for reading only. The tools identify the players by <b>White ID</b> and <b>Black ID</b>.</li>
+  <li>Black always receives the handicap stones. The TGoR shown is the TGoR before the round.</li>
+  <li>The second sheet, <i>Not playing</i>, lists the players who sit out the round (joker, not
+  registered).</li>
+  <li>The file prints in landscape, scaled to the page width, so a pairing can be printed and posted
+  directly.</li>
+</ul>
 
 <h2>7. Entering results and standings</h2>
 <h3>7.1 Results</h3>
-<p>Type the results into the <b>Result</b> column of <code>round_r.ods</code>:</p>
+<p>Enter the result in <code>round_r.ods</code> with an <b>x</b> in one of the three columns between the
+player names: <b>White win</b>, <b>Draw</b> or <b>Black win</b>.</p>
 <table>
-  <thead><tr><th style="width:28%">Enter</th><th>Meaning</th><th style="width:30%">Rating</th></tr></thead>
-  <tr><td><code>1-0</code> (or <code>w+</code>)</td><td>White wins</td><td>rated</td></tr>
-  <tr><td><code>0-1</code> (or <code>b+</code>)</td><td>Black wins</td><td>rated</td></tr>
-  <tr><td><code>jigo</code>, <code>½-½</code>, <code>0.5-0.5</code></td><td>Draw (jigo)</td><td>rated, ½ point each</td></tr>
-  <tr><td><code>1-0!</code>, <code>0-1!</code>, <code>0-0!</code></td><td>Forfeit: white wins, black wins, both lose</td><td>not rated – as if the game had not taken place (but counts as "played" for the rematch rule)</td></tr>
+  <thead><tr><th style="width:12%">White win</th><th style="width:10%">Draw</th><th style="width:12%">Black win</th><th>Meaning</th><th style="width:30%">Rating</th></tr></thead>
+  <tr><td><code>x</code></td><td></td><td></td><td>White wins</td><td>rated</td></tr>
+  <tr><td></td><td></td><td><code>x</code></td><td>Black wins</td><td>rated</td></tr>
+  <tr><td></td><td><code>x</code></td><td></td><td>Draw (jigo)</td><td>rated, ½ point each</td></tr>
+  <tr><td><code>x!</code></td><td></td><td></td><td>White wins by forfeit (<code>x!</code> under Black win: Black wins by forfeit)</td><td rowspan="2">not rated – as if the game had not taken place (but counts as "played" for the rematch rule)</td></tr>
+  <tr><td><code>!</code></td><td></td><td><code>!</code></td><td>Both lose by forfeit</td></tr>
+  <tr><td></td><td></td><td></td><td>No result yet</td><td>–</td></tr>
 </table>
-<div class="warn">LibreOffice may turn <code>1:0</code> into a time. Use <code>1-0</code> and
-<code>0-1</code>.</div>
+<p>Upper case <code>X</code> and check marks (✓) are accepted as well. Anything else, for example marks in
+two columns, is reported with the row number.</p>
 
 <h3>7.2 Checking results <span class="badge now">AVAILABLE</span></h3>
 <pre>gotourney results check 3</pre>

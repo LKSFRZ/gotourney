@@ -1,6 +1,9 @@
 """Loading and saving round files ``round_<r>.ods``.
 
-Sheet "Pairing": one row per board. Sheet "Not playing": players of the tournament who do not
+Sheet "Pairing": one row per board. Results are entered with an ``x`` in the "White win",
+"Draw" or "Black win" column. Forfeits: ``x!`` for the winner, ``!`` in both win columns if
+both lose. Only the IDs are read back; the player columns
+(colour circle, rank and name) are for reading only. Sheet "Not playing": players of the tournament who do not
 play this round (joker, not registered) - for information only, it is not read back.
 A third sheet "Participants" (written by ``pair --template``) lists the players of the round
 to help with manual pairings; it is not read back either.
@@ -11,18 +14,63 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from .models import Game, Result, ResultError
+from .models import Game, Player, Result, ResultError
 from .ods import Column, OdsError, read_sheet, require_columns, write_sheets
+from .rank import Rank
 
 PAIRING_SHEET = "Pairing"
-REQUIRED = ["White ID", "Black ID", "Result"]
+REQUIRED = ["White ID", "Black ID", "White win", "Draw", "Black win"]
+WHITE_STONE = "\u25cb"   # ○
+BLACK_STONE = "\u25cf"   # ●
 
 COLUMNS = [
-    Column("Board", 1.4), Column("White ID", 1.8), Column("White name", 5.0),
-    Column("White TGoR", 2.1), Column("Black ID", 1.8), Column("Black name", 5.0),
-    Column("Black TGoR", 2.1), Column("Handicap", 1.9), Column("Komi", 1.4),
-    Column("Manual", 1.6), Column("Result", 2.0),
+    Column("Board", 1.4, "center"), Column("White ID", 1.8), Column("White TGoR", 2.1),
+    Column("White", 5.8), Column("White win", 2.0, "center"), Column("Draw", 1.6, "center"),
+    Column("Black win", 2.0, "center"),
+    Column("Black", 5.8), Column("Black TGoR", 2.1), Column("Black ID", 1.8),
+    Column("Handicap", 1.9, "center"), Column("Komi", 1.4, "center"), Column("Manual", 1.6, "center"),
 ]
+
+# result -> (white win, draw, black win) marks
+MARKS = {
+    Result.WHITE_WINS: ("x", "", ""),
+    Result.BLACK_WINS: ("", "", "x"),
+    Result.JIGO: ("", "x", ""),
+    Result.WHITE_WINS_FORFEIT: ("x!", "", ""),
+    Result.BLACK_WINS_FORFEIT: ("", "", "x!"),
+    Result.BOTH_LOSE_FORFEIT: ("!", "", "!"),
+}
+_FROM_MARKS = {v: k for k, v in MARKS.items()}
+_ALIASES = {"x": "x", "\u2713": "x", "\u2714": "x", "x!": "x!", "!x": "x!", "!": "!"}
+
+
+def player_label(p: Player) -> str:
+    """'5d Maekawa Kaku' - registered rank in front of the name."""
+    rank = p.rank
+    if rank is None and p.gor is not None:
+        rank = Rank.from_gor(p.gor)
+    return f"{rank or ''} {p.name}".strip()
+
+
+def parse_marks(white_cell, draw_cell, black_cell) -> Result | None:
+    """Result from the White win / Draw / Black win columns; None if all are empty."""
+    marks = []
+    for cell in (white_cell, draw_cell, black_cell):
+        if isinstance(cell, float):
+            raise ResultError(f"result column contains a number ({cell:g}); mark with x")
+        t = str(cell or "").strip().lower().replace(" ", "")
+        if t and t not in _ALIASES:
+            raise ResultError(f"invalid mark {cell!r} (use x; x! / ! for forfeits)")
+        marks.append(_ALIASES.get(t, ""))
+    if marks == ["", "", ""]:
+        return None
+    result = _FROM_MARKS.get(tuple(marks))
+    if result is None:
+        shown = " / ".join(m or "empty" for m in marks)
+        raise ResultError(
+            f"marks {shown} (White win / Draw / Black win) do not give a result: put one x in "
+            f"White win, Draw or Black win; forfeits: x! for the winner, ! in both win columns if both lose")
+    return result
 
 
 def round_file(directory: Path, r: int) -> Path:
@@ -86,7 +134,7 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
             except ValueError:
                 raise OdsError(f"{where}: komi {komi_text!r} is not a number") from None
             try:
-                result = _parse_result(row.get("Result"))
+                result = parse_marks(row.get("White win"), row.get("Draw"), row.get("Black win"))
             except ResultError as e:
                 raise OdsError(f"{where}: {e}") from None
             board = _int(row.text("Board"), "Board", where)
@@ -116,22 +164,20 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
     return RoundGames(r, games, path, missing_h, missing_k)
 
 
-def _parse_result(value) -> Result | None:
-    if isinstance(value, float):
-        # LibreOffice may turn "1:0" into a time or "1-0" into a number; reject clearly
-        raise ResultError(f"result cell contains a number ({value:g}); enter e.g. 1-0 as text")
-    return Result.parse(value or "")
-
-
-def save_round(path: Path, games: list[Game], names: dict[int, str], tgor: dict[int, float],
+def save_round(path: Path, games: list[Game], labels: dict[int, str], tgor: dict[int, float],
                not_playing: list[tuple[int, str, str]] = (),
                participants: list[tuple[int, str, float, str]] | None = None) -> None:
+    """Write a round file. ``labels`` = player ID -> 'rank name' (see player_label)."""
     rows = []
     for g in games:
+        w_mark, d_mark, b_mark = MARKS[g.result] if g.result else ("", "", "")
         rows.append([
-            g.board, g.white, names.get(g.white, "?"), round(tgor[g.white]) if g.white in tgor else None,
-            g.black, names.get(g.black, "?"), round(tgor[g.black]) if g.black in tgor else None,
-            g.handicap, g.komi, "x" if g.manual else "", g.result.value if g.result else "",
+            g.board,
+            g.white, round(tgor[g.white]) if g.white in tgor else None,
+            f"{WHITE_STONE} {labels.get(g.white, '?')}", w_mark, d_mark,
+            b_mark, f"{BLACK_STONE} {labels.get(g.black, '?')}",
+            round(tgor[g.black]) if g.black in tgor else None, g.black,
+            g.handicap, g.komi, "x" if g.manual else "",
         ])
     sheets = [(PAIRING_SHEET, COLUMNS, rows)]
     sheets.append(("Not playing", [Column("ID", 1.4), Column("Name", 5.5), Column("Reason", 5.0)],
@@ -140,4 +186,4 @@ def save_round(path: Path, games: list[Game], names: dict[int, str], tgor: dict[
         sheets.append(("Participants",
                        [Column("ID", 1.4), Column("Name", 5.5), Column("TGoR", 2.0), Column("Club", 2.0)],
                        [[pid, name, round(t), club] for pid, name, t, club in participants]))
-    write_sheets(path, sheets)
+    write_sheets(path, sheets, landscape=True)

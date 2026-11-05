@@ -12,8 +12,9 @@ from pathlib import Path
 from typing import Any, Sequence
 
 from odf.opendocument import OpenDocumentSpreadsheet, load
-from odf.style import ParagraphProperties, Style, TableColumnProperties, TextProperties
-from odf.table import Table, TableCell, TableColumn, TableRow
+from odf.style import (MasterPage, PageLayout, PageLayoutProperties, ParagraphProperties, Style,
+                       TableColumnProperties, TableProperties, TextProperties)
+from odf.table import Table, TableCell, TableColumn, TableHeaderRows, TableRow
 from odf.text import P, S
 
 Cell = str | float | int | None
@@ -160,6 +161,7 @@ def require_columns(sheet: Sheet, path: Path, columns: Sequence[str]) -> None:
 class Column:
     title: str
     width_cm: float = 2.5
+    align: str | None = None      # "center", "end", ... (None = LibreOffice default)
 
 
 def _add_text(p: P, text: str) -> None:
@@ -206,9 +208,37 @@ def _make_cell(value: Any, style=None) -> TableCell:
     return cell
 
 
-def write_sheets(path: Path, sheets: Sequence[tuple[str, Sequence[Column], Sequence[Sequence[Any]]]]) -> None:
-    """Write one or more sheets. Each sheet is (name, columns, rows)."""
+def write_sheets(path: Path, sheets: Sequence[tuple[str, Sequence[Column], Sequence[Sequence[Any]]]],
+                 landscape: bool = False) -> None:
+    """Write one or more sheets. Each sheet is (name, columns, rows).
+
+    The header row is repeated on every printed page. With ``landscape``, sheets print in
+    landscape orientation, scaled to the page width.
+    """
     doc = OpenDocumentSpreadsheet()
+    table_style = None
+    if landscape:
+        layout = PageLayout(name="LandscapeLayout")
+        layout.addElement(PageLayoutProperties(
+            printorientation="landscape", pagewidth="29.7cm", pageheight="21cm",
+            margintop="1cm", marginbottom="1cm", marginleft="1cm", marginright="1cm", scaletox="1"))
+        doc.automaticstyles.addElement(layout)
+        doc.masterstyles.addElement(MasterPage(name="Landscape", pagelayoutname=layout))
+        table_style = Style(name="ta1", family="table", masterpagename="Landscape")
+        table_style.addElement(TableProperties(display="true"))
+        doc.automaticstyles.addElement(table_style)
+    align_styles: dict[str, Style] = {}
+
+    def align_style(align: str | None):
+        if align is None:
+            return None
+        if align not in align_styles:
+            st = Style(name=f"al{len(align_styles) + 1}", family="table-cell")
+            st.addElement(ParagraphProperties(textalign=align))
+            doc.automaticstyles.addElement(st)
+            align_styles[align] = st
+        return align_styles[align]
+
     header_style = Style(name="Header", family="table-cell")
     header_style.addElement(TextProperties(fontweight="bold"))
     header_style.addElement(ParagraphProperties(textalign="center"))
@@ -225,18 +255,21 @@ def write_sheets(path: Path, sheets: Sequence[tuple[str, Sequence[Column], Seque
         return col_styles[width]
 
     for name, columns, rows in sheets:
-        table = Table(name=name)
+        table = Table(name=name, **({"stylename": table_style} if table_style else {}))
         for c in columns:
             table.addElement(TableColumn(stylename=col_style(c.width_cm)))
+        header_rows = TableHeaderRows()
         tr = TableRow()
         for c in columns:
             tr.addElement(_make_cell(c.title, header_style))
-        table.addElement(tr)
+        header_rows.addElement(tr)
+        table.addElement(header_rows)
+        styles = [align_style(c.align) for c in columns]
         for row in rows:
             tr = TableRow()
             values = list(row) + [None] * (len(columns) - len(row))
-            for v in values:
-                tr.addElement(_make_cell(v))
+            for v, st in zip(values, styles + [None] * (len(values) - len(styles))):
+                tr.addElement(_make_cell(v, st))
             table.addElement(tr)
         doc.spreadsheet.addElement(table)
 

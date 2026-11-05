@@ -12,7 +12,7 @@ from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
 from .rank import RankError
 from .registration import RegistrationError, check_players, new_player, parse_rounds, sync_player
-from .rounds import load_round, round_file, save_round
+from .rounds import player_label, round_file, save_round
 from .tournament import Tournament, TournamentError
 
 app = typer.Typer(
@@ -297,12 +297,13 @@ def players_sync(
 # ---------------------------------------------------------------- pairing
 
 def _print_round(t: Tournament, games, ratings, sitting_out) -> None:
+    from .rounds import BLACK_STONE, WHITE_STONE
     for g in games:
-        res = g.result.value if g.result else ""
         hk = f"H{g.handicap} komi {g.komi:g}"
-        typer.echo(f"{g.board:>3}  {t.players[g.white].name[:24]:<24} {ratings[g.white]:5.0f}  -  "
-                   f"{t.players[g.black].name[:24]:<24} {ratings[g.black]:5.0f}   {hk:<14}"
-                   f"{'manual' if g.manual else '':<7}{res}")
+        w, b = player_label(t.players[g.white]), player_label(t.players[g.black])
+        typer.echo(f"{g.board:>3}  {WHITE_STONE} {w[:28]:<28} {ratings[g.white]:5.0f}  -  "
+                   f"{BLACK_STONE} {b[:28]:<28} {ratings[g.black]:5.0f}   {hk:<14}"
+                   f"{'manual' if g.manual else ''}")
     for pid, reason in sitting_out:
         if "joker" in reason:
             typer.echo(f"     Not playing: {t.players[pid].name} ({reason})")
@@ -337,14 +338,15 @@ def pair(
     except TournamentError as e:
         fail(str(e))
     names = {pid: p.name for pid, p in t.players.items()}
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
 
     if template:
         if path.exists() and not force:
             fail(f"{path.name} already exists. Use --force to replace it with an empty template.")
-        parts = [(pid, p.name, ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
+        parts = [(pid, labels[pid], ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
                  if p.plays(round_no)]
-        save_round(path, [], names, ratings, participants=parts)
-        typer.echo(f"Wrote {path}. Enter manual boards (White ID, Black ID, Manual = x), save, close, "
+        save_round(path, [], labels, ratings, participants=parts)
+        typer.echo(f"Wrote {path}. Enter manual boards (White ID, Black ID, 'x' in Manual), save, close, "
                    f"then run 'gotourney pair {round_no}'. Players of the round are listed on the "
                    f"'Participants' sheet.")
         return
@@ -371,8 +373,8 @@ def pair(
         result = pair_round(t, round_no, manual)
     except PairingError as e:
         fail(str(e))
-    save_round(path, result.games, names, ratings, not_playing=[
-        (pid, names[pid], reason) for pid, reason in result.sitting_out])
+    save_round(path, result.games, labels, ratings, not_playing=[
+        (pid, labels[pid], reason) for pid, reason in result.sitting_out])
     _print_round(t, result.games, ratings, result.sitting_out)
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
 

@@ -98,7 +98,7 @@ def test_cli_template_and_manual_board(make_tournament):
     s = str(d)
     assert runner.invoke(app, ["pair", "1", "--template", "-d", s]).exit_code == 0
     # director pairs 1 vs 4 by hand, handicap left empty
-    write_sheets(d / "round_1.ods", [("Pairing", COLUMNS, [[None, 1, "", None, 4, "", None, None, None, "x", None]])])
+    write_sheets(d / "round_1.ods", [("Pairing", COLUMNS, [[None, 1, None, "", None, None, None, "", None, 4, None, None, "x"]])])
     r = runner.invoke(app, ["pair", "1", "-d", s])
     assert r.exit_code == 0, r.output
     t = Tournament.load(d)
