@@ -400,7 +400,10 @@ def pairing_pdf_command(
     round_no: int = typer.Argument(..., metavar="ROUND"),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Write a printable PDF of a round's pairing (round_<r>.pdf), e.g. after editing round_<r>.ods."""
+    """Write a printable PDF of a round's pairing (round_<r>.pdf), e.g. after editing round_<r>.ods.
+
+    Contains board, players (colour stone, rank, name), result columns and handicap.
+    """
     _write_pairing_pdf(directory, round_no)
 
 

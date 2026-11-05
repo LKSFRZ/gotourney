@@ -275,7 +275,7 @@ corrections are never overwritten. Once round 1 has been paired, the starting Go
   the <i>Manual</i> column and pairs all remaining players of round 3. Boards without the mark are
   paired again, so running <code>pair</code> twice gives a fresh pairing.</li>
   <li><b>Check and print.</b> <code>pair</code> also writes <code>round_3.pdf</code>, a printable pairing
-  with only the board numbers, the players (colour stone, rank, name) and the result columns, ready to
+  with only the board numbers, the players (colour stone, rank, name), the result columns and the handicap, ready to
   post or to collect results on paper. Players may agree on a different handicap; just change the
   Handicap/Komi cells of that board in <code>round_3.ods</code>. The tools always use what is written in
   the file. After editing the pairing by hand, run <code>gotourney pairing-pdf 3</code> to update the

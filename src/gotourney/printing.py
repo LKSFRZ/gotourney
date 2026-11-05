@@ -1,4 +1,5 @@
-"""Printable PDF of a round's pairing: board, players (colour stone, rank, name), result columns."""
+"""Printable PDF of a round's pairing: board, players (colour stone, rank, name), result columns,
+handicap."""
 
 from __future__ import annotations
 
@@ -44,7 +45,7 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
     regular, bold = _register_fonts()
     games = sorted(rg.games, key=lambda g: g.board)
 
-    header = ["Board", "White", "White\nwin", "Draw", "Black\nwin", "Black"]
+    header = ["Board", "White", "White\nwin", "Draw", "Black\nwin", "Black", "Handi-\ncap"]
     data = [header]
     for g in games:
         marks = MARKS[g.result] if g.result else ("", "", "")
@@ -53,21 +54,35 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
             f"{WHITE_STONE}  {player_label(t.players[g.white])}",
             *marks,
             f"{BLACK_STONE}  {player_label(t.players[g.black])}",
+            str(g.handicap),
         ])
 
     page_w, _ = A4
     margin = 15 * mm
     usable = page_w - 2 * margin
-    mark_w = 15 * mm
-    board_w = 14 * mm
-    name_w = (usable - board_w - 3 * mark_w) / 2
-    table = Table(data, colWidths=[board_w, name_w, mark_w, mark_w, mark_w, name_w], repeatRows=1)
+    mark_w = 13 * mm
+    board_w = 13 * mm
+    handicap_w = 14 * mm
+    name_w = (usable - board_w - 3 * mark_w - handicap_w) / 2
+    # largest font size (11 down to 7 pt) at which the longest player cell fits
+    longest = max((max(pdfmetrics.stringWidth(row[1], regular, 1), pdfmetrics.stringWidth(row[5], regular, 1))
+                   for row in data[1:]), default=0)
+    body_size = 11.0
+    while body_size > 7 and longest * body_size > name_w - 8:
+        body_size -= 0.5
+    for row in data[1:]:
+        for col in (1, 5):
+            row[col] = _fit(row[col], regular, body_size, name_w - 8)
+    table = Table(data, colWidths=[board_w, name_w, mark_w, mark_w, mark_w, name_w, handicap_w],
+                  repeatRows=1)
     style = [
         ("FONT", (0, 0), (-1, 0), bold, 9.5),
-        ("FONT", (0, 1), (-1, -1), regular, 11),
-        ("FONT", (0, 1), (0, -1), bold, 11),
+        ("FONT", (0, 1), (-1, -1), regular, body_size),
+        ("FONT", (0, 1), (0, -1), bold, body_size),
         ("ALIGN", (0, 0), (0, -1), "CENTER"),
         ("ALIGN", (2, 0), (4, -1), "CENTER"),
+        ("ALIGN", (6, 0), (6, -1), "CENTER"),
+        ("FONT", (6, 1), (6, -1), bold, body_size),
         ("ALIGN", (1, 0), (1, 0), "LEFT"),
         ("ALIGN", (5, 0), (5, 0), "LEFT"),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
@@ -80,7 +95,7 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
     ]
     for i in range(2, len(data), 2):
         style.append(("BACKGROUND", (0, i), (1, i), colors.HexColor("#f3f6f9")))
-        style.append(("BACKGROUND", (5, i), (5, i), colors.HexColor("#f3f6f9")))
+        style.append(("BACKGROUND", (5, i), (6, i), colors.HexColor("#f3f6f9")))
     table.setStyle(TableStyle(style))
 
     title_style = ParagraphStyle("title", fontName=bold, fontSize=16, leading=20, spaceAfter=2)
@@ -106,6 +121,15 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
                             title=f"{name} – Round {rg.number}")
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return path
+
+
+def _fit(text: str, font: str, size: float, width: float) -> str:
+    """Shorten text with an ellipsis if it is still too wide at the smallest font size."""
+    if pdfmetrics.stringWidth(text, font, size) <= width:
+        return text
+    while text and pdfmetrics.stringWidth(text + "…", font, size) > width:
+        text = text[:-1]
+    return text + "…"
 
 
 def _esc(text: str) -> str:
