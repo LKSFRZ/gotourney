@@ -3,6 +3,7 @@ handicap."""
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -17,29 +18,86 @@ from .i18n import Translator, builtin
 from .rounds import BLACK_STONE, MARKS, WHITE_STONE, RoundGames, player_label
 from .tournament import Tournament
 
-FONT_CANDIDATES = [
-    # (regular, bold) - fonts that contain the stone symbols ○ ●
-    ("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
-    ("/usr/share/fonts/TTF/DejaVuSans.ttf", "/usr/share/fonts/TTF/DejaVuSans-Bold.ttf"),
-    ("/usr/share/fonts/dejavu/DejaVuSans.ttf", "/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"),
-    ("/Library/Fonts/Arial Unicode.ttf", "/Library/Fonts/Arial Unicode.ttf"),
-    ("C:/Windows/Fonts/arial.ttf", "C:/Windows/Fonts/arialbd.ttf"),
-]
+FONT_ENV = "GOTOURNEY_FONT"
+REQUIRED_CHARS = "\u25cb\u25cf\u2212\u2013\u00b7"     # ○ ● − – ·
+STAR = "\u2605"                                         # ★ (award slides; optional)
+
+
+def font_candidates() -> list[tuple[Path, Path]]:
+    """(regular, bold) font files to try, in order. GOTOURNEY_FONT overrides:
+    "regular.ttf" or "regular.ttf<path separator>bold.ttf"."""
+    cands: list[tuple[Path, Path]] = []
+    env = os.environ.get(FONT_ENV, "").strip()
+    if env:
+        parts = env.split(os.pathsep)
+        cands.append((Path(parts[0]), Path(parts[1] if len(parts) > 1 and parts[1] else parts[0])))
+    dejavu_dirs = [
+        Path("/usr/share/fonts/truetype/dejavu"), Path("/usr/share/fonts/TTF"), Path("/usr/share/fonts/dejavu"),
+        Path.home() / ".local/share/fonts", Path.home() / ".fonts",                          # Linux
+        Path.home() / "Library/Fonts", Path("/Library/Fonts"), Path("/opt/homebrew/share/fonts"),  # macOS
+    ]
+    for var in ("LOCALAPPDATA",):                                                           # Windows
+        if os.environ.get(var):
+            dejavu_dirs.append(Path(os.environ[var]) / "Microsoft/Windows/Fonts")
+    windir = Path(os.environ.get("WINDIR", "C:/Windows")) / "Fonts"
+    dejavu_dirs.append(windir)
+    cands += [(d / "DejaVuSans.ttf", d / "DejaVuSans-Bold.ttf") for d in dejavu_dirs]
+    cands += [
+        (Path("/System/Library/Fonts/Supplemental/Arial Unicode.ttf"),
+         Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf")),                       # macOS
+        (Path("/Library/Fonts/Arial Unicode.ttf"), Path("/Library/Fonts/Arial Unicode.ttf")),
+        (Path("/System/Library/Fonts/Supplemental/Arial.ttf"),
+         Path("/System/Library/Fonts/Supplemental/Arial Bold.ttf")),
+        (windir / "arial.ttf", windir / "arialbd.ttf"),                                     # Windows
+        (windir / "segoeui.ttf", windir / "segoeuib.ttf"),
+    ]
+    return cands
+
+
+def _chars(path: Path) -> set[int]:
+    try:
+        return set(TTFont(f"probe-{abs(hash(str(path)))}", str(path)).face.charToGlyph)
+    except Exception:            # unreadable or unsupported font file
+        return set()
+
+
+def find_fonts() -> tuple[Path, Path, bool]:
+    """(regular, bold, has_star): the first candidate that has all required symbols."""
+    for regular, bold in font_candidates():
+        if not regular.is_file():
+            continue
+        chars = _chars(regular)
+        if not all(ord(c) in chars for c in REQUIRED_CHARS):
+            continue
+        if not bold.is_file() or not all(ord(c) in _chars(bold) for c in REQUIRED_CHARS):
+            bold = regular
+        return regular, bold, ord(STAR) in _chars(bold)
+    raise PrintError(
+        "no font with the symbols \u25cb \u25cf found. Install the free DejaVu fonts "
+        "(Linux: sudo apt install fonts-dejavu-core; macOS / Windows: https://dejavu-fonts.github.io, "
+        f"install DejaVuSans.ttf) or set the environment variable {FONT_ENV} to a .ttf file.")
 
 
 class PrintError(Exception):
     pass
 
 
+_FONTS: dict[str, object] = {}
+
+
 def _register_fonts() -> tuple[str, str]:
-    for regular, bold in FONT_CANDIDATES:
-        if Path(regular).exists():
-            if "GT-Regular" not in pdfmetrics.getRegisteredFontNames():
-                pdfmetrics.registerFont(TTFont("GT-Regular", regular))
-                pdfmetrics.registerFont(TTFont("GT-Bold", bold if Path(bold).exists() else regular))
-            return "GT-Regular", "GT-Bold"
-    raise PrintError("no font with the stone symbols found (install the DejaVu fonts: "
-                     "sudo apt install fonts-dejavu-core)")
+    if "regular" not in _FONTS:
+        regular, bold, has_star = find_fonts()
+        pdfmetrics.registerFont(TTFont("GT-Regular", str(regular)))
+        pdfmetrics.registerFont(TTFont("GT-Bold", str(bold)))
+        _FONTS.update(regular=regular, bold=bold, star=has_star)
+    return "GT-Regular", "GT-Bold"
+
+
+def star_symbol() -> str:
+    """★ if the chosen font has it, otherwise a plain asterisk."""
+    _register_fonts()
+    return STAR if _FONTS.get("star") else "*"
 
 
 def pairing_pdf(t: Tournament, rg: RoundGames, path: Path, tr: Translator | None = None) -> Path:

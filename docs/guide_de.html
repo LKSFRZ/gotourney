@@ -130,16 +130,85 @@ Ohne sie wird der aktuelle Ordner verwendet. Sie können also einmal <code>cd me
 oder bei jedem Befehl <code>-d mein_turnier</code> angeben.</p>
 
 <h2>3. Installation</h2>
-<p>Die Werkzeuge brauchen Python 3.11 oder neuer. Unter Ubuntu installieren Sie außerdem
-<code>python3-venv</code> und <code>python3-tk</code> (Letzteres für das Anmeldefenster):</p>
-<pre>sudo apt install python3-venv python3-tk
-cd ~/Go/TournamentOrgaTool
+<p><b>Voraussetzungen auf jedem System:</b> Python 3.11 oder neuer (mit Tkinter für das Anmeldefenster),
+LibreOffice zum Bearbeiten der <code>.ods</code>-Dateien und der Projektordner <code>TournamentOrgaTool</code>
+auf Ihrem Rechner. Für die Installation und die EGD-Abfragen wird eine Internetverbindung gebraucht. In den
+Beispielen liegt der Projektordner in Ihrem Benutzerordner; passen Sie den Pfad an, wenn er woanders liegt.</p>
+
+<h3>3.1 Linux</h3>
+<p>Ubuntu / Debian:</p>
+<pre>sudo apt install python3 python3-venv python3-tk fonts-dejavu-core libreoffice-calc
+cd ~/TournamentOrgaTool
 python3 -m venv .venv
-.venv/bin/pip install -e '.[test]'
-source .venv/bin/activate        # danach ist 'gotourney' in diesem Terminal verfügbar
+.venv/bin/pip install -e .
+source .venv/bin/activate        # danach funktioniert 'gotourney' in diesem Terminal
 gotourney --help</pre>
-<p>Alternativ macht <code>pipx install -e ~/Go/TournamentOrgaTool</code> den Befehl <code>gotourney</code> in
-jedem Terminal verfügbar, ohne etwas aktivieren zu müssen.</p>
+<p>Andere Distributionen brauchen dieselben Pakete unter anderen Namen, zum Beispiel Fedora:
+<code>sudo dnf install python3 python3-tkinter dejavu-sans-fonts libreoffice-calc</code>, Arch:
+<code>sudo pacman -S python tk ttf-dejavu libreoffice-fresh</code>.</p>
+
+<h3>3.2 macOS</h3>
+<ol>
+  <li>Installieren Sie <b>Python 3.12</b> (oder neuer) mit dem Installationsprogramm von
+  <code>python.org</code>; Tkinter ist enthalten. Das <code>python3</code> aus Apples Entwicklerwerkzeugen ist
+  zu alt. Alternativ mit Homebrew: <code>brew install python@3.12 python-tk@3.12</code>.</li>
+  <li>Installieren Sie <b>LibreOffice</b> von <code>libreoffice.org</code> (oder
+  <code>brew install --cask libreoffice</code>).</li>
+  <li>Öffnen Sie das Programm <i>Terminal</i> und führen Sie aus:
+<pre>cd ~/TournamentOrgaTool
+python3 -m venv .venv
+.venv/bin/pip install -e .
+source .venv/bin/activate
+gotourney --help</pre></li>
+  <li><b>Schriften:</b> Nichts zu tun. Die PDFs verwenden die Schrift DejaVu, wenn sie installiert ist,
+  sonst Arial Unicode bzw. Arial, die macOS mitbringt. Für genau dasselbe Aussehen wie unter Linux installieren
+  Sie DejaVu: <code>brew install --cask font-dejavu</code>.</li>
+</ol>
+
+<h3>3.3 Windows</h3>
+<ol>
+  <li>Installieren Sie <b>Python 3.12</b> (oder neuer) mit dem Installationsprogramm von
+  <code>python.org</code>. Kreuzen Sie im ersten Fenster <b>„Add python.exe to PATH“</b> an. Lassen Sie die
+  Option <i>tcl/tk and IDLE</i> ausgewählt (Standard); sie wird für das Anmeldefenster gebraucht.</li>
+  <li>Installieren Sie <b>LibreOffice</b> von <code>libreoffice.org</code>.</li>
+  <li>Öffnen Sie die <i>PowerShell</i> (oder die Eingabeaufforderung) und führen Sie aus:
+<pre>cd $HOME\TournamentOrgaTool          # Eingabeaufforderung: cd %USERPROFILE%\TournamentOrgaTool
+py -m venv .venv
+.venv\Scripts\pip install -e .
+.venv\Scripts\activate
+gotourney --help</pre>
+  Verweigert die PowerShell <code>activate</code> („Ausführung von Skripts ist deaktiviert“), führen Sie
+  einmal <code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code> aus oder verwenden Sie das Werkzeug
+  ohne Aktivieren: <code>.venv\Scripts\gotourney --help</code>.</li>
+  <li><b>Schriften:</b> Ohne weitere Schritte verwenden die PDFs Arial; der Stern auf den Folien der
+  Siegerehrung wird dann zu <code>*</code>. Für alle Symbole installieren Sie die freien DejaVu-Schriften: von
+  <code>dejavu-fonts.github.io</code> herunterladen, entpacken, <code>DejaVuSans.ttf</code> und
+  <code>DejaVuSans-Bold.ttf</code> mit der rechten Maustaste → <i>Installieren</i>.</li>
+  <li>Ordnerpfade verwenden umgekehrte Schrägstriche, z. B.
+  <code>gotourney gui -d C:\Turniere\Fruehjahr</code>. Pfade mit Leerzeichen brauchen Anführungszeichen.</li>
+</ol>
+
+<h3>3.4 Nach der Installation (alle Systeme)</h3>
+<ul>
+  <li><b>In jedem neuen Terminal</b> aktivieren Sie die Umgebung erneut (<code>source .venv/bin/activate</code>,
+  Windows: <code>.venv\Scripts\activate</code>) oder rufen das Werkzeug mit vollem Pfad auf
+  (<code>.venv/bin/gotourney</code>, Windows: <code>.venv\Scripts\gotourney</code>). Bei aktiver Umgebung
+  funktioniert auch <code>python -m gotourney</code>.</li>
+  <li>Alternativ macht <code>pipx install -e ~/TournamentOrgaTool</code> den Befehl <code>gotourney</code> in jedem
+  Terminal ohne Aktivieren verfügbar (vorher <code>pipx</code> installieren, z. B.
+  <code>sudo apt install pipx</code>, <code>brew install pipx</code> oder <code>py -m pip install --user pipx</code>).</li>
+  <li>Führen Sie einmal <code>gotourney egd update</code> aus, um die EGD-Spielerliste herunterzuladen. Sie liegt
+  im Ordner <code>.cache/gotourney</code> in Ihrem Benutzerordner (Windows:
+  <code>C:\Users\&lt;Name&gt;\.cache\gotourney</code>).</li>
+  <li><b>Schrift selbst wählen:</b> Setzen Sie die Umgebungsvariable <code>GOTOURNEY_FONT</code> auf eine
+  <code>.ttf</code>-Datei (optional gefolgt vom Pfadtrenner – <code>:</code> unter Linux/macOS, <code>;</code>
+  unter Windows – und einer fetten <code>.ttf</code>). Die Schrift muss die Steinsymbole ○ und ● enthalten,
+  sonst wird die nächste geeignete Schrift verwendet.</li>
+  <li><b>Aktualisieren:</b> Ersetzen Sie den Projektordner durch die neue Version und führen Sie die Zeile
+  <code>pip install -e .</code> erneut aus. Turnierordner sind davon nicht betroffen.</li>
+  <li><b>Für Entwickler:</b> <code>pip install -e '.[test]'</code> (Windows: <code>".[test]"</code>) installiert
+  die Testwerkzeuge; <code>pytest</code> führt die Tests aus.</li>
+</ul>
 
 <h2>4. Ein Turnier anlegen</h2>
 <pre>gotourney init mein_turnier --name "Frühjahrsturnier 2026" --rounds 5 --language de</pre>
@@ -647,7 +716,11 @@ Referenzwerten einer unabhängigen Umsetzung des EGF-Systems geprüft.</p>
   <tr><td><code>tournament.toml not found</code></td><td>Sie sind nicht im Turnierordner. Verwenden Sie <code>-d &lt;Ordner&gt;</code> oder wechseln Sie mit <code>cd</code> hinein.</td></tr>
   <tr><td><code>round r: … players (odd) and no joker</code></td><td>Markieren Sie einen Spieler dieser Runde als Joker oder ändern Sie, wer diese Runde spielt.</td></tr>
   <tr><td>EGD list not available</td><td>Kein Internet und noch keine heruntergeladene Liste. Melden Sie Spieler durch Eintippen ihrer Daten an und führen Sie <code>gotourney egd update</code> aus, sobald Sie online sind.</td></tr>
-  <tr><td><code>externally-managed-environment</code> bei der Installation</td><td>In die virtuelle Umgebung des Projekts installieren (<code>.venv/bin/pip</code>), siehe Abschnitt 3. Nicht <code>--break-system-packages</code> verwenden.</td></tr>
+  <tr><td><code>externally-managed-environment</code> bei der Installation</td><td>In die virtuelle Umgebung des Projekts installieren (<code>.venv/bin/pip</code>, Windows: <code>.venv\Scripts\pip</code>), siehe Abschnitt 3. Nicht <code>--break-system-packages</code> verwenden.</td></tr>
+  <tr><td><code>no font with the symbols ○ ● found</code></td><td>DejaVu-Schriften installieren (siehe 3.1–3.3) oder <code>GOTOURNEY_FONT</code> setzen (siehe 3.4).</td></tr>
+  <tr><td><code>No module named 'tkinter'</code> / <code>_tkinter</code></td><td>Python wurde ohne Tkinter installiert. Linux: <code>sudo apt install python3-tk</code>; macOS mit Homebrew: <code>brew install python-tk@3.12</code>; Windows: das Python-Installationsprogramm erneut starten, <i>Modify</i> wählen und <i>tcl/tk and IDLE</i> auswählen. Danach die <code>.venv</code> neu anlegen.</td></tr>
+  <tr><td><code>'gotourney' is not recognized …</code> / <code>command not found</code></td><td>Die Umgebung ist in diesem Terminal nicht aktiv. Aktivieren (3.4) oder den vollen Pfad verwenden: <code>.venv/bin/gotourney</code> (Windows: <code>.venv\Scripts\gotourney</code>).</td></tr>
+  <tr><td><code>UnicodeEncodeError</code> unter Windows</td><td>Tritt auf, wenn die Ausgabe in eine Datei umgeleitet wird. Setzen Sie die Umgebungsvariable <code>PYTHONUTF8=1</code>, z. B. in der PowerShell: <code>$env:PYTHONUTF8 = 1</code>.</td></tr>
   <tr><td>Falsches Ergebnis in einer früheren Runde</td><td>In der betreffenden <code>round_r.ods</code> korrigieren. Tabelle und Wandtabelle werden immer aus allen Rundendateien neu berechnet. Bereits ausgeloste Runden behalten ihre Auslosung.</td></tr>
   <tr><td><code>translation.toml: '…' missing, using English</code></td><td>Ihre eigene Übersetzungsdatei ist älter als ein neuer Text. Ergänzen Sie den Eintrag oder schreiben Sie die Datei mit <code>gotourney translation-file --force</code> neu (das überschreibt Ihre Änderungen).</td></tr>
 </table>

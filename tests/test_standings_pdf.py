@@ -51,3 +51,17 @@ def test_standings_pdf(played):
     assert "TGoR" in text and "R1" in text and "R2" not in text
     assert "(+" in text and "(-" in text                 # TGoR change since the start
     assert "Fee paid" not in text and "Age group" not in text
+
+
+def test_font_override_and_symbol_check(tmp_path, monkeypatch):
+    import reportlab
+    from pathlib import Path
+    from gotourney.printing import FONT_ENV, find_fonts
+    vera = Path(reportlab.__file__).parent / "fonts" / "Vera.ttf"     # has no ○ ●
+    dejavu, _, _ = find_fonts()
+    monkeypatch.setenv(FONT_ENV, str(vera))
+    regular, bold, _ = find_fonts()
+    assert regular != vera                                             # skipped: symbols missing
+    monkeypatch.setenv(FONT_ENV, str(dejavu))
+    regular, bold, star = find_fonts()
+    assert regular == dejavu and bold == dejavu and star

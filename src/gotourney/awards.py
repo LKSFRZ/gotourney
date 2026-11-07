@@ -12,7 +12,7 @@ from reportlab.pdfgen import canvas as pdfcanvas
 from .config import Prize
 from .i18n import Translator, builtin
 from .players import field_value
-from .printing import _register_fonts
+from .printing import _register_fonts, star_symbol
 from .rank import Rank
 from .tournament import Tournament
 from .wall import format_wins, ranking
@@ -180,7 +180,7 @@ def _medal(c, cx: float, cy: float, award: Award, bold: str) -> None:
     if award.prize_type == "place" and award.place in MEDAL:
         colour, label, size = MEDAL[award.place], str(award.place), 30
     else:
-        colour, label, size = ACCENT, "★", 28        # ★
+        colour, label, size = ACCENT, star_symbol(), 28     # ★ (or * if the font lacks it)
     c.setFillColor(colour)
     c.setStrokeColor(colors.HexColor("#ffffff"))
     c.setLineWidth(2)
