@@ -273,3 +273,73 @@ One line per player, fixed-width columns:
 8. ✅ **Pairing**: manual boards, cost function, blossom matching, joker, handicap, colours,
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
+
+## 11. Web interface (planned – not started)
+
+Goal: tournament directors can run a whole tournament **without supervision and without the
+terminal**. Decisions (2026-11-07):
+
+| Question | Decision |
+|---|---|
+| Who uses it | Other directors, without supervision |
+| Where it runs | Locally on the director's laptop, opened in the browser (`127.0.0.1` only). Sharing on the venue Wi-Fi (projector, players' phones, helpers) maybe later. |
+| LibreOffice / `.ods` | **Equal alternative**: directors may switch freely between browser and LibreOffice for any step |
+| Interface language | German and English, switchable |
+| Order of building | 1. Dashboard + next step, 2. Results by clicking, 3. Registration in the browser, 4. Settings form |
+| Command line | Stays; the web interface uses the same functions |
+
+### 11.1 Technology (proposal)
+
+- Python backend in the same package, started with `gotourney web` (later: a double-clickable program).
+  Small web framework (e.g. FastAPI or Flask) with server-rendered HTML pages and **htmx** for the
+  interactive parts: no JavaScript build step, easy to package, works offline.
+- Opens the browser automatically; listens on `127.0.0.1` only.
+- Texts of the interface in German and English (same mechanism as the PDF texts).
+- `tournament.toml` is written with a library that **keeps comments and order** (e.g. `tomlkit`),
+  so hand edits and the explanations in the file survive.
+
+### 11.2 Browser and LibreOffice side by side
+
+Because both may be used for the same step:
+
+- The `.ods` / `.toml` files stay the only record. The browser reads them fresh before showing
+  or changing anything; nothing is kept only in the browser.
+- Before writing, the browser checks for the LibreOffice lock file and refuses with a clear message
+  ("close round_2.ods in LibreOffice first"); writes stay atomic (temporary file + rename).
+- Open pages notice when a file changed on disk (e.g. saved in LibreOffice) and reload with a hint.
+- Every change made in the browser is saved immediately (no "save" button to forget).
+
+### 11.3 Phases
+
+Each phase is usable on its own; the command line keeps working throughout.
+
+- **W0 – Shared workflow layer.** Move workflow logic out of the command handlers (name lookup,
+  finalized boards, start, hints as structured data, confirmations as callbacks) into functions
+  that both the command line and the web interface call. No change in behaviour; covered by the
+  existing tests.
+- **W1 – Skeleton + dashboard.** `gotourney web`; choose or create a tournament folder; dashboard
+  showing the phase ("Round 2 running – 3 results missing") and a big button for the next step;
+  German/English switch; short help texts on every page.
+- **W2 – Results by clicking.** Board list of a round; per board *White / Jigo / Black* and forfeit
+  options; missing results highlighted; immediate saving to `round_r.ods`; results check built in.
+- **W2b – Pairing and starting.** Buttons for pair / start; the boards as a table; fix (finalize)
+  or release boards; pair two players by hand (also by name search); latecomers; PDF downloads
+  (by board, alphabetical); confirmation before anything that cannot be undone.
+- **W3 – Registration in the browser.** EGD search with autocomplete, player table with editing,
+  rounds, joker, extra fields with dropdowns, registration check. Replaces the Tk window
+  (`gotourney gui` then opens the browser page).
+- **W4 – Settings form.** All settings of `tournament.toml` with explanations and live checks,
+  including pairing rules, extra fields and prizes.
+- **W5 – End of the tournament.** Standings, wall list, `.h9`, award slides as pages with downloads;
+  automatic backup of the tournament folder before each round.
+- **W6 – Packaging.** One program per operating system (Windows, macOS, Linux) that needs no Python
+  installation; a short quick-start guide for directors.
+- **Later / optional.** Read-only view for projector and players' phones on the venue network;
+  helpers entering results on a second device.
+
+### 11.4 Open points
+
+- Default location for tournament folders of non-technical users (e.g. `Documents/Go tournaments`).
+- Unsigned programs trigger warnings on Windows and macOS; code signing costs money and effort.
+- Building the programs for Windows and macOS needs those systems (or a CI service).
+- Accessibility and use on small laptop screens.
