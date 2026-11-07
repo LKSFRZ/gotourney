@@ -2,6 +2,7 @@
 name = "gotourney"
 version = "0.2.0"
 description = "Command line tools for organising a TGoR Go tournament"
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
     "odfpy>=1.4",
