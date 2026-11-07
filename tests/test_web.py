@@ -558,3 +558,12 @@ def test_system_page_explains_the_floor(make_tournament):
     st.save_settings(d, {"handicap": {"floor": "none"}}, version)
     html = page(c.get("/system"))
     assert "Handicap floor:" not in html and "FLOOR = null" in html
+
+
+def test_tournament_name_is_the_headline(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(d)
+    for url in ("/dashboard", "/players", "/settings", "/system"):
+        assert 'class="tournament-name" href="/dashboard" title="Test">Test</a>' in page(c.get(url)), url
+    app, c = client_for(None)
+    assert "tournament-name" not in page(c.get("/"))

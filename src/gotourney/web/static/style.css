@@ -49,7 +49,14 @@ header.top {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 12px 24px; background: var(--card); border-bottom: 1px solid var(--line);
 }
-.brand { font-weight: 700; font-size: 18px; text-decoration: none; color: var(--text); }
+.masthead { display: flex; flex-direction: column; min-width: 0; }
+.brand { font-weight: 700; font-size: 18px; text-decoration: none; color: var(--text); white-space: nowrap; }
+.masthead.with-name .brand { font-size: 13px; font-weight: 600; color: var(--muted); }
+.masthead.with-name .stones { font-size: 12px; }
+.tournament-name { font-size: 28px; font-weight: 800; line-height: 1.15; color: var(--text); text-decoration: none;
+                   letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                   max-width: 52vw; }
+.tournament-name:hover { color: var(--accent); }
 .stones { letter-spacing: 1px; margin-right: 4px; font-size: 16px; }
 nav { display: flex; align-items: center; gap: 18px; }
 .lang a, .lang strong { margin-left: 6px; font-size: 14px; }
@@ -336,5 +343,6 @@ button.remove-row:hover { background: var(--err-soft); border-color: var(--err);
 }
 @media (max-width: 760px) {
   header.top { flex-wrap: wrap; padding: 10px 16px; gap: 6px; }
+  .tournament-name { font-size: 22px; white-space: normal; max-width: none; }
   nav { flex-wrap: wrap; gap: 6px 14px; font-size: 15px; }
 }

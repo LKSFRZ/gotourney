@@ -4,7 +4,6 @@
 {% block content %}
 <div class="title">
   <h1>{{ t("rp_title", r=r) }}</h1>
-  <p class="muted">{{ tour.cfg.tournament.name }}</p>
 </div>
 
 {% if locked %}<p class="msg error">{{ t("rp_locked", r=r) }}</p>{% endif %}

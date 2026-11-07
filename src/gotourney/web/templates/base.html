@@ -9,9 +9,14 @@
 </head>
 <body>
 <header class="top">
-  <a class="brand" href="{{ url_for('home', choose=1) }}">
-    <span class="stones" aria-hidden="true">&#x26AA;&#xFE0F;&#x26AB;&#xFE0F;</span> {{ t("app_title") }}
-  </a>
+  <div class="masthead {{ 'with-name' if tournament_name }}">
+    <a class="brand" href="{{ url_for('home', choose=1) }}">
+      <span class="stones" aria-hidden="true">&#x26AA;&#xFE0F;&#x26AB;&#xFE0F;</span> {{ t("app_title") }}
+    </a>
+    {% if tournament_name %}
+      <a class="tournament-name" href="{{ url_for('dashboard') }}" title="{{ tournament_name }}">{{ tournament_name }}</a>
+    {% endif %}
+  </div>
   <nav>
     {% if has_tournament %}
       {% set here = request.path %}

@@ -185,12 +185,24 @@ def create_app(directory: Path | None = None) -> Flask:
         if request.method == "POST" and request.form.get("csrf") != app.config["CSRF"]:
             abort(403)
 
+    def tournament_name() -> str:
+        """Name of the open tournament for the header ("" if none); the folder name if the settings are broken."""
+        from ..config import ConfigError, load_config
+        d = tdir()
+        if d is None:
+            return ""
+        try:
+            return load_config(d).tournament.name.strip() or d.name
+        except ConfigError:
+            return d.name
+
     @app.context_processor
     def helpers():
         l = lang()
         from ..i18n import builtin
         return {"t": lambda key, **kw: text(l, key, **kw), "lang": l, "languages": LANGUAGES,
                 "csrf": app.config["CSRF"], "version": __version__, "has_tournament": tdir() is not None,
+                "tournament_name": tournament_name(),
                 "dates": lambda ds: builtin(l).date_range(list(ds))}
 
     def say(category: str, key: str, **kw) -> None:

@@ -21,7 +21,7 @@
 {% block content %}
 {% if tour %}
 <div class="title">
-  <h1>{{ tour.cfg.tournament.name }}</h1>
+  <h1>{{ t("dashboard") }}</h1>
   <p class="muted">
     {{ [tour.cfg.tournament.place, dates(tour.cfg.tournament.dates), t("players_count", n=tour.players|length),
         t("rounds_count", n=tour.cfg.tournament.rounds)] | select | join(" · ") }}
