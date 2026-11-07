@@ -638,6 +638,17 @@ places = [3, 2, 1]</pre>
   e.g. so that the tournament winner does not also get the prize for the biggest gain.</li>
   <li>A prize that nobody qualifies for (e.g. nobody won all games) is skipped with a note.</li>
   <li>"Best" means best placed in the final standings, i.e. highest final TGoR.</li>
+  <li><b>Club names:</b> the slides show the club's full name instead of the EGD code where it is known,
+  e.g. <i>Köln</i> for <code>K</code> or <i>Badischer Go-Verein e. V., Klub Karlsruhe</i> for
+  <code>BGV1</code>. The list of about 500 clubs in Germany, Switzerland, the UK and Luxembourg comes with the
+  tool (taken from the club name list of the Karlsruher Go-Turnierhandbuch,
+  <code>info.go361.eu/wiki/EGD-Clubnamen</code>). Unknown clubs keep their code. To add or correct clubs,
+  e.g. French ones, put a <code>clubs.csv</code> into the tournament folder:
+<pre># my clubs
+country,code,name
+FR,67SE,Strasbourg - Collège Saint-Étienne
+DE,K,Go-Club Köln</pre>
+  Entries there override the built-in list (optional columns: <code>city</code>, <code>region</code>).</li>
 </ul>
 
 <h2>9. How the ratings are calculated <span class="badge now">AVAILABLE</span></h2>

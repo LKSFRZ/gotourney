@@ -17,7 +17,10 @@ by hand. Features:
 - **Results** are entered as `x` marks in the round file. Standings are written as `.ods` and as a
   printable cross table PDF.
 - **Wall list** and the **EGD result file** (`.h9`).
-- **Award ceremony** slides (PDF), with configurable prizes.
+- **Award ceremony** slides (PDF), with configurable prizes. Club codes are shown as full club names,
+  using the built-in `src/gotourney/data/clubs.csv` (from the
+  [EGD club name list](https://info.go361.eu/wiki/EGD-Clubnamen) of the Karlsruher Go-Turnierhandbuch).
+  A `clubs.csv` in the tournament folder can add or override clubs.
 - PDFs in English, German, French or a custom language.
 
 The full documentation is in [`Guide.pdf`](Guide.pdf) (English) and

@@ -9,6 +9,7 @@ from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas as pdfcanvas
 
+from .clubs import ClubList, ClubsError
 from .config import Prize
 from .i18n import Translator, builtin
 from .players import field_value
@@ -209,7 +210,7 @@ def _title_slide(c, t: Tournament, tr: Translator, regular: str, bold: str) -> N
 
 
 def _award_slide(c, t: Tournament, tr: Translator, a: Award, number: int, total: int,
-                 regular: str, bold: str) -> None:
+                 regular: str, bold: str, clubs: ClubList | None = None) -> None:
     _background(c)
     _header(c, t, tr, regular)
     p = t.players[a.player]
@@ -228,9 +229,10 @@ def _award_slide(c, t: Tournament, tr: Translator, a: Award, number: int, total:
     c.drawCentredString(cx, SLIDE_H / 2 - 20, name)
 
     rank = p.rank or (Rank.from_gor(t.start_gor[a.player]) if a.player in t.start_gor else None)
-    info = "  ·  ".join(x for x in [str(rank or ""), p.club, p.country] if x)
+    club = clubs.name(p.country, p.club) if clubs else p.club
+    info = "  ·  ".join(x for x in [str(rank or ""), club, p.country] if x)
     c.setFillColor(TEXT_SOFT)
-    c.setFont(regular, 22)
+    c.setFont(regular, _fit_size(info, regular, 22, SLIDE_W - 120))
     c.drawCentredString(cx, SLIDE_H / 2 - 62, info)
 
     stats = [tr.t("award_place", place=a.place),
@@ -252,11 +254,15 @@ def awards_pdf(t: Tournament, awards: list[Award], path: Path, tr: Translator | 
     c = pdfcanvas.Canvas(str(path), pagesize=(SLIDE_W, SLIDE_H))
     name = t.cfg.tournament.name or t.directory.resolve().name
     c.setTitle(f"{name} – {tr.t('awards_title')}")
+    try:
+        clubs = ClubList.load(t.directory)
+    except (ClubsError, OSError):
+        clubs = None                    # fall back to the club codes
     if t.cfg.awards.title_slide:
         _title_slide(c, t, tr, regular, bold)
         c.showPage()
     for i, a in enumerate(awards, start=1):
-        _award_slide(c, t, tr, a, i, len(awards), regular, bold)
+        _award_slide(c, t, tr, a, i, len(awards), regular, bold, clubs)
         c.showPage()
     if not awards and not t.cfg.awards.title_slide:
         _title_slide(c, t, tr, regular, bold)

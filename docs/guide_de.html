@@ -669,6 +669,18 @@ places = [3, 2, 1]</pre>
   <li>Ein Preis, für den sich niemand qualifiziert (z. B. weil niemand alle Partien gewonnen hat), wird mit
   einem Hinweis übersprungen.</li>
   <li>„Bester“ heißt bestplatziert in der Endtabelle, also höchste End-TGoR.</li>
+  <li><b>Vereinsnamen:</b> Die Folien zeigen statt des EGD-Kürzels den vollen Vereinsnamen, sofern er bekannt
+  ist, z. B. <i>Köln</i> für <code>K</code> oder <i>Badischer Go-Verein e. V., Klub Karlsruhe</i> für
+  <code>BGV1</code>. Die Liste mit etwa 500 Vereinen in Deutschland, der Schweiz, Großbritannien und Luxemburg
+  wird mit dem Werkzeug geliefert (übernommen aus der Clubnamen-Liste des Karlsruher Go-Turnierhandbuchs,
+  <code>info.go361.eu/wiki/EGD-Clubnamen</code>). Unbekannte Vereine behalten ihr Kürzel. Um Vereine zu
+  ergänzen oder zu korrigieren, z. B. französische, legen Sie eine <code>clubs.csv</code> in den Turnierordner:
+<pre># meine Vereine
+country,code,name
+FR,67SE,Strasbourg - Collège Saint-Étienne
+DE,K,Go-Club Köln</pre>
+  Einträge dort haben Vorrang vor der mitgelieferten Liste (optionale Spalten: <code>city</code>,
+  <code>region</code>).</li>
 </ul>
 
 <h2>9. So wird die Wertung berechnet</h2>

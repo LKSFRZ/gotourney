@@ -1,0 +1,516 @@
+# Club codes of the European Go Database and their full names.
+# Source: https://info.go361.eu/wiki/EGD-Clubnamen (Karlsruher Go-Turnierhandbuch), retrieved 2026-11-07.
+# German codes are mostly licence plate codes of the city or district.
+country,code,name,city,region
+DE,A,Augsburg,Augsburg,Bayern
+DE,AA,Ostalbkreis,Aalen,Baden-Württemberg
+DE,AB,Aschaffenburg,Aschaffenburg,Bayern
+DE,AC,Städteregion Aachen,Aachen,Nordrhein-Westfalen
+DE,AH,Ahaus,Ahaus,Nordrhein-Westfalen
+DE,AIB,Bad Aibling,Bad Aibling,Bayern
+DE,AK,Landkreis Altenkirchen (Westerwald),Altenkirchen,Rheinland-Pfalz
+DE,AM,Amberg,Amberg,Bayern
+DE,AN,Ansbach,Ansbach,Bayern
+DE,AU,Aue (Sachsen),Aue (Sachsen),Sachsen
+DE,AUR,Landkreis Aurich,Aurich,Niedersachsen
+DE,AW,Landkreis Ahrweiler,Bad Neuenahr-Ahrweiler,Rheinland-Pfalz
+DE,B,Berlin,Berlin,Berlin
+DE,BA,Bamberg,Bamberg,Bayern
+DE,BAR,Landkreis Barnim,Eberswalde,Brandenburg
+DE,BB,Böblingen,Böblingen,Baden-Württemberg
+DE,BCH,Buchen (Odenwald),Buchen (Odenwald),Baden-Württemberg
+DE,BE,Beckum,Beckum,Nordrhein-Westfalen
+DE,BI,Bielefeld,Bielefeld,Nordrhein-Westfalen
+DE,BK,Backnang,Backnang,Baden-Württemberg
+DE,BL,Zollernalbkreis,Balingen,Baden-Württemberg
+DE,BM,Rhein-Erft-Kreis,Bergheim,Nordrhein-Westfalen
+DE,BN,Bonn,Bonn,Nordrhein-Westfalen
+DE,BO,Bochum,Bochum,Nordrhein-Westfalen
+DE,BOR,Kreis Borken,Borken,Nordrhein-Westfalen
+DE,BOT,Bottrop,Bottrop,Nordrhein-Westfalen
+DE,BRB,Brandenburg an der Havel,Brandenburg an der Havel,Brandenburg
+DE,BS,Braunschweig,Braunschweig,Niedersachsen
+DE,BT,Bayreuth,Bayreuth,Bayern
+DE,BZ,Landkreis Bautzen,Bautzen,Sachsen
+DE,C,Chemnitz,Chemnitz,Sachsen
+DE,CAS,Castrop-Rauxel,Castrop-Rauxel,Nordrhein-Westfalen
+DE,CB,Cottbus,Cottbus,Brandenburg
+DE,CLP,Landkreis Cloppenburg,Cloppenburg,Niedersachsen
+DE,CLZ,Clausthal-Zellerfeld,Clausthal-Zellerfeld,Niedersachsen
+DE,CO,Coburg,Coburg,Bayern
+DE,D,Düsseldorf,Düsseldorf,Nordrhein-Westfalen
+DE,DA,Darmstadt,Darmstadt,Hessen
+DE,DAH,Dachau,Dachau,Bayern
+DE,DBR,Bad Doberan,Bad Doberan,Mecklenburg-Vorpommern
+DE,DD,Dresden,Dresden,Sachsen
+DE,DE,Dessau-Roßlau,Dessau-Roßlau,Sachsen-Anhalt
+DE,DGF,Landkreis Dingolfing-Landau,Dingolfing,Bayern
+DE,DH,Diepholz,Diepholz,Niedersachsen
+DE,DIZ,Diez,Diez,Rheinland-Pfalz
+DE,DL,Döbeln,Döbeln,Sachsen
+DE,DN,Düren,Düren,Nordrhein-Westfalen
+DE,DO,Dortmund,Dortmund,Nordrhein-Westfalen
+DE,DT,Detmold,Detmold,Nordrhein-Westfalen
+DE,DU,Duisburg,Duisburg,Nordrhein-Westfalen
+DE,DW,Sächsische Schweiz-Osterzgebirge,Dippoldiswalde,Sachsen
+DE,E,Essen,Essen,Nordrhein-Westfalen
+DE,EA,Eisenach,Eisenach,Thüringen
+DE,EBE,Ebersberg,Ebersberg,Bayern
+DE,ED,Erding,Erding,Bayern
+DE,EE,Landkreis Elbe-Elster,Herzberg (Elster),Brandenburg
+DE,EF,Erfurt,Erfurt,Thüringen
+DE,EH,Eisenhüttenstadt,Eisenhüttenstadt,Brandenburg
+DE,EMD,Emden,Emden,Niedersachsen
+DE,ER,Erlangen,Erlangen,Bayern
+DE,ERH,Landkreis Erlangen-Höchstadt,Erlangen,Bayern
+DE,ES,Esslingen,Esslingen am Neckar,Baden-Württemberg
+DE,EU,Euskirchen,Euskirchen,Nordrhein-Westfalen
+DE,EUT,Eutin,Eutin,Schleswig-Holstein
+DE,F,Frankfurt am Main,Frankfurt am Main,Hessen
+DE,FB,Wetteraukreis,Friedberg (Hessen),Hessen
+DE,FD,Fulda,Fulda,Hessen
+DE,FDS,Freudenstadt,Freudenstadt,Baden-Württemberg
+DE,FF,Frankfurt (Oder),Frankfurt (Oder),Brandenburg
+DE,FFB,Fürstenfeldbruck,Fürstenfeldbruck,Bayern
+DE,FG,Landkreis Mittelsachsen,Freiberg,Sachsen
+DE,FL,Flensburg,Flensburg,Schleswig-Holstein
+DE,FN,Bodenseekreis,Friedrichshafen,Baden-Württemberg
+DE,FR,Freiburg im Breisgau,Freiburg im Breisgau,Baden-Württemberg
+DE,FS,Freising,Freising,Bayern
+DE,FT,Frankenthal (Pfalz),Frankenthal (Pfalz),Rheinland-Pfalz
+DE,FTL,Freital,Freital,Sachsen
+DE,FUE,Fürth,Fürth,Bayern
+DE,GD,Schwäbisch Gmünd,Schwäbisch Gmünd,Baden-Württemberg
+DE,GE,Gelsenkirchen,Gelsenkirchen,Nordrhein-Westfalen
+DE,GF,Landkreis Gifhorn,Gifhorn,Niedersachsen
+DE,GI,Landkreis Gießen,Gießen,Hessen
+DE,GL,Rheinisch-Bergischer Kreis,Bergisch Gladbach,Nordrhein-Westfalen
+DE,GM,Gummersbach,Gummersbach,Nordrhein-Westfalen
+DE,GOE,Göttingen,Göttingen,Niedersachsen
+DE,GP,Göppingen,Göppingen,Baden-Württemberg
+DE,GR,Görlitz,Görlitz,Sachsen
+DE,GRH,Großenhain,Großenhain,Sachsen
+DE,GRZ,Landkreis Greiz,Greiz,Thüringen
+DE,GT,Gütersloh,Gütersloh,Nordrhein-Westfalen
+DE,H,Hannover,Hannover,Niedersachsen
+DE,HA,Hagen,Hagen,Nordrhein-Westfalen
+DE,HAL,Halle (Saale),Halle (Saale),Sachsen-Anhalt
+DE,HAM,Hamm,Hamm,Nordrhein-Westfalen
+DE,HB,Bremen,Bremen,Bremen
+DE,HCH,Hechingen,Hechingen,Baden-Württemberg
+DE,HD,Heidelberg/Rhein-Neckar-Kreis,Heidelberg,Baden-Württemberg
+DE,HDL,Haldensleben,Haldensleben,Sachsen-Anhalt
+DE,HE,Helmstedt,Helmstedt,Niedersachsen
+DE,HF,Kreis Herford,Herford,Nordrhein-Westfalen
+DE,HG,Hochtaunuskreis,Bad Homburg v. d. Höhe,Hessen
+DE,HGW,Greifswald,Greifswald,Mecklenburg-Vorpommern
+DE,HH,Hamburg,Hamburg,Hamburg
+DE,HI,Landkreis Hildesheim,Hildesheim,Niedersachsen
+DE,HK,Heidekreis,Bad Fallingbostel,Niedersachsen
+DE,HL,Lübeck,Lübeck,Schleswig-Holstein
+DE,HM,Landkreis Hameln-Pyrmont,Hameln,Niedersachsen
+DE,HN,Heilbronn,Heilbronn,Baden-Württemberg
+DE,HP,Landkreis Bergstraße,Heppenheim (Bergstraße),Hessen
+DE,HRO,Rostock,Rostock,Mecklenburg-Vorpommern
+DE,HSK,Hochsauerlandkreis,Meschede,Nordrhein-Westfalen
+DE,HST,Stralsund,Stralsund,Mecklenburg-Vorpommern
+DE,HU,Hanau,Hanau,Hessen
+DE,HVL,Landkreis Havelland,Rathenow,Brandenburg
+DE,HWI,Wismar,Wismar,Mecklenburg-Vorpommern
+DE,HX,Kreis Höxter,Höxter,Nordrhein-Westfalen
+DE,IL,Ilmenau,Ilmenau,Thüringen
+DE,IS,Iserlohn,Iserlohn,Nordrhein-Westfalen
+DE,IZ,Itzehoe,Itzehoe,Schleswig-Holstein
+DE,K,Köln,Köln,Nordrhein-Westfalen
+DE,KA,Karlsruhe,Karlsruhe,Baden-Württemberg
+DE,KB,Korbach,Korbach,Hessen
+DE,KE,Kempten (Allgäu),Kempten (Allgäu),Bayern
+DE,KF,Kaufbeuren,Kaufbeuren,Bayern
+DE,KG,Landkreis Bad Kissingen,Bad Kissingen,Bayern
+DE,KH,Landkreis Bad Kreuznach,Bad Kreuznach,Rheinland-Pfalz
+DE,KI,Kiel,Kiel,Schleswig-Holstein
+DE,KL,Kaiserslautern,Kaiserslautern,Rheinland-Pfalz
+DE,KM,Kamenz,Kamenz,Sachsen
+DE,KN,Landkreis Konstanz,Konstanz,Baden-Württemberg
+DE,KO,Koblenz,Koblenz,Rheinland-Pfalz
+DE,KR,Krefeld,Krefeld,Nordrhein-Westfalen
+DE,KS,Kassel,Kassel,Hessen
+DE,KT,Landkreis Kitzingen,Kitzingen,Bayern
+DE,KW,Königs Wusterhausen,Königs Wusterhausen,Brandenburg
+DE,L,Leipzig,Leipzig,Sachsen
+DE,LA,Landshut,Landshut,Bayern
+DE,LB,Landkreis Ludwigsburg,Ludwigsburg,Baden-Württemberg
+DE,LD,Landau in der Pfalz,Landau in der Pfalz,Rheinland-Pfalz
+DE,LDS,Landkreis Dahme-Spreewald,Lübben (Spreewald),Brandenburg
+DE,LE,Lemgo,Lemgo,Nordrhein-Westfalen
+DE,LER,Landkreis Leer,Leer (Ostfriesland),Niedersachsen
+DE,LEV,Leverkusen,Leverkusen,Nordrhein-Westfalen
+DE,LG,Landkreis Lüneburg,Lüneburg,Niedersachsen
+DE,LIN,Lingen (Ems),Lingen (Ems),Niedersachsen
+DE,LIP,Kreis Lippe,Detmold,Nordrhein-Westfalen
+DE,LOE,Landkreis Lörrach,Lörrach,Baden-Württemberg
+DE,LP,Lippstadt,Lippstadt,Nordrhein-Westfalen
+DE,LU,Ludwigshafen am Rhein,Ludwigshafen am Rhein,Rheinland-Pfalz
+DE,M,München,München,Bayern
+DE,MA,Mannheim,Mannheim,Baden-Württemberg
+DE,MD,Magdeburg,Magdeburg,Sachsen-Anhalt
+DE,ME,Kreis Mettmann,Mettmann,Nordrhein-Westfalen
+DE,MG,Mönchengladbach,Mönchengladbach,Nordrhein-Westfalen
+DE,MGN,Landkreis Schmalkalden-Meiningen,Meiningen,Thüringen
+DE,MH,Mülheim an der Ruhr,Mülheim an der Ruhr,Nordrhein-Westfalen
+DE,MHL,Unstrut-Hainich-Kreis,Mühlhausen/Thüringen,Thüringen
+DE,MI,Kreis Minden-Lübbecke,Minden,Nordrhein-Westfalen
+DE,MR,Landkreis Marburg-Biedenkopf,Marburg,Hessen
+DE,MS,Münster,Münster,Nordrhein-Westfalen
+DE,MSH,Landkreis Mansfeld-Südharz,Sangerhausen,Sachsen-Anhalt
+DE,MTK,Main-Taunus-Kreis,Hofheim am Taunus,Hessen
+DE,MTL,Grimma,Grimma,Sachsen
+DE,MUe,Landkreis Mühldorf am Inn,Mühldorf a.Inn,Bayern
+DE,MUER,Landkreis Müritz,Waren (Müritz),Mecklenburg-Vorpommern
+DE,MW,Mittweida,Mittweida,Sachsen
+DE,MZ,Mainz,Mainz,Rheinland-Pfalz
+DE,MZG,Landkreis Merzig-Wadern,Merzig,Saarland
+DE,N,Nürnberg,Nürnberg,Bayern
+DE,NB,Neubrandenburg,Neubrandenburg,Mecklenburg-Vorpommern
+DE,NDH,Landkreis Nordhausen,Nordhausen,Thüringen
+DE,NE,Rhein-Kreis Neuss,Neuss,Nordrhein-Westfalen
+DE,NES,Landkreis Rhön-Grabfeld,Bad Neustadt a.d.Saale,Bayern
+DE,NI,Landkreis Nienburg/Weser,Nienburg/Weser,Niedersachsen
+DE,NK,Neunkirchen (Saar),Neunkirchen (Saar),Saarland
+DE,NM,Landkreis Neumarkt in der Oberpfalz,Neumarkt i.d.OPf.,Bayern
+DE,NR,Landkreis Neuwied,Neuwied,Rheinland-Pfalz
+DE,NT,Nürtingen,Nürtingen,Baden-Württemberg
+DE,NU,Landkreis Neu-Ulm,Neu-Ulm,Bayern
+DE,NWM,Landkreis Nordwestmecklenburg,Wismar,Mecklenburg-Vorpommern
+DE,OB,Oberhausen,Oberhausen,Nordrhein-Westfalen
+DE,OD,Bad Oldesloe,Bad Oldesloe,Schleswig-Holstein
+DE,OE,Kreis Olpe,Olpe,Nordrhein-Westfalen
+DE,OF,Offenbach am Main,Offenbach am Main,Hessen
+DE,OG,Ortenaukreis,Offenburg,Baden-Württemberg
+DE,OHV,Landkreis Oberhavel,Oranienburg,Brandenburg
+DE,OL,Oldenburg (Oldb),Oldenburg (Oldb),Niedersachsen
+DE,OPR,Landkreis Ostprignitz-Ruppin,Neuruppin,Brandenburg
+DE,OS,Landkreis Osnabrück,Osnabrück,Niedersachsen
+DE,P,Potsdam,Potsdam,Brandenburg
+DE,PA,Landkreis Passau,Passau,Bayern
+DE,PB,Kreis Paderborn,Paderborn,Nordrhein-Westfalen
+DE,PE,Landkreis Peine,Peine,Niedersachsen
+DE,PF,Pforzheim,Pforzheim,Baden-Württemberg
+DE,PI,Kreis Pinneberg,Elmshorn,Schleswig-Holstein
+DE,PLOE,Kreis Plön,Plön,Schleswig-Holstein
+DE,PM,Landkreis Potsdam-Mittelmark,Bad Belzig,Brandenburg
+DE,RD,Kreis Rendsburg-Eckernförde,Rendsburg,Schleswig-Holstein
+DE,RE,Kreis Recklinghausen,Recklinghausen,Nordrhein-Westfalen
+DE,RH,Landkreis Roth,Roth,Bayern
+DE,RO,Landkreis Rosenheim,Rosenheim,Bayern
+DE,RT,Landkreis Reutlingen,Reutlingen,Baden-Württemberg
+DE,RV,Landkreis Ravensburg,Ravensburg,Baden-Württemberg
+DE,RZ,Ratzeburg,Ratzeburg,Schleswig-Holstein
+DE,S,Stuttgart,Stuttgart,Baden-Württemberg
+DE,SAW,Altmarkkreis Salzwedel,Salzwedel,Sachsen-Anhalt
+DE,SB,Regionalverband Saarbrücken,Saarbrücken,Saarland
+DE,SC,Schwabach,Schwabach,Bayern
+DE,SDL,Landkreis Stendal,Stendal,Sachsen-Anhalt
+DE,SDT,Schwedt/Oder,Schwedt/Oder,Brandenburg
+DE,SE,Kreis Segeberg,Bad Segeberg,Schleswig-Holstein
+DE,SG,Solingen,Solingen,Nordrhein-Westfalen
+DE,SHG,Landkreis Schaumburg,Stadthagen,Niedersachsen
+DE,SI,Kreis Siegen-Wittgenstein,Siegen,Nordrhein-Westfalen
+DE,SIG,Landkreis Sigmaringen,Sigmaringen,Baden-Württemberg
+DE,SL,Kreis Schleswig-Flensburg,Schleswig,Schleswig-Holstein
+DE,SLF,Landkreis Saalfeld-Rudolstadt,Saalfeld/Saale,Thüringen
+DE,SLS,Landkreis Saarlouis,Saarlouis,Saarland
+DE,SN,Schwerin,Schwerin,Mecklenburg-Vorpommern
+DE,SOK,Saale-Orla-Kreis,Schleiz,Thüringen
+DE,SPN,Landkreis Spree-Neiße,Forst (Lausitz),Brandenburg
+DE,SRB,Strausberg,Strausberg,Brandenburg
+DE,ST,Kreis Steinfurt,Steinfurt,Nordrhein-Westfalen
+DE,STD,Landkreis Stade,Stade,Niedersachsen
+DE,SU,Rhein-Sieg-Kreis,Siegburg,Nordrhein-Westfalen
+DE,SW,Landkreis Schweinfurt,Schweinfurt,Bayern
+DE,SY,Syke,Syke,Niedersachsen
+DE,SZ,Salzgitter,Salzgitter,Niedersachsen
+DE,TF,Landkreis Teltow-Fläming,Luckenwalde,Brandenburg
+DE,TG,Torgau,Torgau,Sachsen
+DE,TOEL,Landkreis Bad Tölz-Wolfratshausen,Bad Tölz,Bayern
+DE,TR,Trier,Trier,Rheinland-Pfalz
+DE,TS,Landkreis Traunstein,Traunstein,Bayern
+DE,UE,Landkreis Uelzen,Uelzen,Niedersachsen
+DE,UL,Ulm,Ulm,Baden-Württemberg
+DE,UN,Kreis Unna,Unna,Nordrhein-Westfalen
+DE,V,Vogtlandkreis,Plauen,Sachsen
+DE,VIE,Kreis Viersen,Viersen,Nordrhein-Westfalen
+DE,W,Wuppertal,Wuppertal,Nordrhein-Westfalen
+DE,WA,Landkreis Waldeck-Frankenberg,Korbach,Hessen
+DE,WE,Weimar,Weimar,Thüringen
+DE,WES,Kreis Wesel,Wesel,Nordrhein-Westfalen
+DE,WF,Landkreis Wolfenbüttel,Wolfenbüttel,Niedersachsen
+DE,WHV,Wilhelmshaven,Wilhelmshaven,Niedersachsen
+DE,WI,Wiesbaden,Wiesbaden,Hessen
+DE,WIT,Witten,Witten,Nordrhein-Westfalen
+DE,WL,Winsen (Luhe),Winsen (Luhe),Niedersachsen
+DE,WN,Waiblingen,Waiblingen,Baden-Württemberg
+DE,WO,Worms,Worms,Rheinland-Pfalz
+DE,WOB,Wolfsburg,Wolfsburg,Niedersachsen
+DE,WS,Wasserburg am Inn,Wasserburg a.Inn,Bayern
+DE,WUE,Landkreis Würzburg,Würzburg,Bayern
+DE,WZ,Wetzlar,Wetzlar,Hessen
+DE,Z,Zwickau,Zwickau,Sachsen
+DE,ALPI,Alpirsbach,Alpirsbach,Baden-Württemberg
+DE,BGV,Badischer Go-Verein e. V.,Karlsruhe,Baden-Württemberg
+DE,BGV1,"Badischer Go-Verein e. V., Klub Karlsruhe",Karlsruhe,Baden-Württemberg
+DE,BGV2,"Badischer Go-Verein e. V., Klub Mannheim",Mannheim,Baden-Württemberg
+DE,BGV3,"Badischer Go-Verein e. V., Klub Heidelberg",Heidelberg,Baden-Württemberg
+DE,BGVE,"Badischer Go-Verein e. V., Team ERS",Karlsruhe,Baden-Württemberg
+DE,BGVS,"Badischer Go-Verein e. V., Team Stuttgart",Stuttgart,Baden-Württemberg
+DE,Bisp,Go-Club Bispingen,Bispingen,Niedersachsen
+DE,JIGS,Jena International Go School,Jena,Thüringen
+DE,LGW,Europaschule Langerwehe,Langerwehe,Nordrhein-Westfalen
+DE,MEE,Meerbusch,Meerbusch,Nordrhein-Westfalen
+DE,NDK,Niederkassel,Niederkassel,Nordrhein-Westfalen
+DE,Nied,SC 1961 König Nied,Frankfurt am Main,Hessen
+DE,RAT,Ratingen,Ratingen,Nordrhein-Westfalen
+DE,SK25,SportKultur2025 Mülheim,Mülheim an der Ruhr,Nordrhein-Westfalen
+DE,USCL,Universitätssportclub Leipzig e. V.,Leipzig,Sachsen
+DE,USVD,Universitätssportverein TU Dresden e. V.,Dresden,Sachsen
+CH,Base,Basel,Basel,BS
+CH,Bern,Bern,Bern,BE
+CH,CGF,Club de Go Fribourg,Freiburg im Üechtland,FR
+CH,IGC,Ishi Go Club (an der EPFL),Lausanne,VD
+CH,Kogo,Ko Go Club,Genf,GE
+CH,Lau,Go Club Lausanne,Lausanne,VD
+CH,Len,Lenzburg,Lenzburg,AG
+CH,NWG,Fachhochschule Nordwestschweiz Go-Club,Windisch,AG
+CH,Neu,Neuchâtel,Neuenburg,NE
+CH,Orbe,Club d'Echecs et de Go d'Orbe (CEGO),Orbe,VD
+CH,Pei,La Tour-de-Peilz Go Club,La Tour-de-Peilz,VD
+CH,SG,St. Gallen,St. Gallen,SG
+CH,Win,Go-Club Winterthur,Winterthur,ZH
+CH,Yver,Yverdon Go Club,Yverdon-les-Bains,VD
+CH,Zug,Zug,Zug,ZG
+CH,Zur,Zürich,Zürich,ZH
+UK,Abrd,Aberdeen,,
+UK,Abgl,Abergele,,
+UK,Abyt,Aberystwyth,,
+UK,Abdn,Abingdon,,
+UK,Accr,Accrington,,
+UK,Aldt,Aldershot,,
+UK,AlxP,Alexandra Park,,
+UK,Altn,Alton,,
+UK,Amer,Amersham School,,
+UK,Arun,Arundel,,
+UK,Ashy,Ashby,,
+UK,Astn,Aston,,
+UK,Ayby,Aylesbury,,
+UK,Bang,Bangor,,
+UK,Bmth,Barmouth,,
+UK,Bath,Bath,,
+UK,Becm,Beckenham,,
+UK,Bdfd,Bedford,,
+UK,Belf,Belfast,,
+UK,Beve,Beverley,,
+UK,Bily,Billericay,,
+UK,Bmhm,Birmingham,,
+UK,BloS,Bloxham School,,
+UK,Bodm,Bodmin,,
+UK,Bolt,Bolton,,
+UK,Bord,Borders,,
+UK,Bour,Bournemouth,,
+UK,Brck,Bracknell,,
+UK,Brfd,Bradford,,
+UK,Brtn,Burton,,
+UK,Bris,Bristol,,
+UK,Brom,Bromley,,
+UK,BrmS,Bromsgrove School,,
+UK,Bung,Bungay,,
+UK,Cmbl,Camberwell,,
+UK,Camb,Cambridge,,
+UK,CamC,Cambridge CGo,,
+UK,CamU,Cambridge Uni,,
+UK,Cant,Canterbury,,
+UK,Card,Cardiff,,
+UK,Cedr,Cedarwood,,
+UK,CLon,Central London,,
+UK,CHuS,Cheadle Hulme Sch,,
+UK,Chel,Cheltenham,,
+UK,Ches,Chester,,
+UK,Chor,Chorley,,
+UK,Cole,Coleraine,,
+UK,ColB,Colwyn Bay,,
+UK,Conw,Conwy,,
+UK,Cumb,Cumbria,,
+UK,Derb,Derby,,
+UK,Devn,Devon,,
+UK,Dcot,Didcot,,
+UK,Dund,Dundee,,
+UK,Dfln,Dunfermline,,
+UK,Durm,Durham,,
+UK,Easb,Eastbourne,,
+UK,EHam,EastHampstead,,
+UK,Edin,Edinburgh,,
+UK,Elgn,Elgin,,
+UK,Efld,Enfield,,
+UK,Epsm,Epsom,,
+UK,Essx,Essex,,
+UK,EsxU,Essex Uni,,
+UK,Extr,Exeter,,
+UK,Farn,Farnborough,,
+UK,FHPr,Fern Hill Primary,,
+UK,Fife,Fife,,
+UK,FinP,Finham Park,,
+UK,Flee,Fleet,,
+UK,Folk,Folkestone,,
+UK,Gill,Gillingham,,
+UK,Gla,Glasgow,,
+UK,Glas,Glasgow,,
+UK,Glro,Glenrothes,,
+UK,Greg,Gregson,,
+UK,Grim,Grimsby,,
+UK,Guil,Guildford,,
+UK,Hams,Hampstead,,
+UK,Hanw,Hansworth,,
+UK,Harp,Harpenden,,
+UK,HarA,Harpenden Academy,,
+UK,Hast,Hastings,,
+UK,HHth,Haywards Heath,,
+UK,HHem,Hemel Hempstead,,
+UK,HWyc,High Wycombe,,
+UK,HKng,Hong Kong,,
+UK,HBri,HP-Bristol,,
+UK,Hudd,Huddersfield,,
+UK,Hull,Hull,,
+UK,Ilfd,Ilford,,
+UK,IClg,Imperial College,,
+UK,Impn,Impington,,
+UK,Ipsw,Ipswich,,
+UK,IMan,Isle Of Man,,
+UK,JaGH,James G High,,
+UK,JaGP,James G Primary,,
+UK,Jurb,Jurby,,
+UK,Keel,Keele,,
+UK,KGS,KGS,,
+UK,Kinl,Kinglassie,,
+UK,KCJr,Kings College Jnr,,
+UK,Kirk,Kirkcaldy,,
+UK,LAE,LAE Academy,,
+UK,Lanc,Lancaster,,
+UK,LRGS,Lancaster Royal Sc,,
+UK,Lang,Langley,,
+UK,Leam,Leamington,,
+UK,Lees,Leeds,,
+UK,Leic,Leicester,,
+UK,LeiP,Leighton Park,,
+UK,Ltch,Letchworth,,
+UK,Leyt,Leytonstone,,
+UK,Lcln,Lincoln,,
+UK,Lpol,Liverpool,,
+UK,Llan,Llanthony,,
+UK,Lndn,London,,
+UK,LonC,London City,,
+UK,LGC,London Go Centre,,
+UK,LGCr,London Go Centre,,
+UK,Lobo,Loughborough,,
+UK,LSE,LSE,,
+UK,Lyth,Lytham St Annes,,
+UK,Mach,Machynlleth,,
+UK,Maid,Maidenhead,,
+UK,Manc,Manchester,,
+UK,MGrS,Manchester Gram,,
+UK,ManU,Manchester Uni,,
+UK,MCor,Mid Cornwall,,
+UK,Midb,Middlesborough,,
+UK,MKes,Milton Keynes,,
+UK,MilS,Milton School,,
+UK,Mhed,Minehead,,
+UK,Monm,Monmouth,,
+UK,Newc,Newcastle,,
+UK,NMal,New Malden,,
+UK,Nmkt,Newmarket,,
+UK,Nine,Ninestiles,,
+UK,NipC,Nippon Club,,
+UK,Nhtn,Northampton,,
+UK,NLon,North London,,
+UK,NWLo,North West London,,
+UK,NWPr,Northwood Primary,,
+UK,Nwch,Norwich,,
+UK,Nott,Nottingham,,
+UK,NhmU,Nottingham Uni,,
+UK,Orpn,Orpington,,
+UK,Oxfd,Oxford,,
+UK,OxfC,Oxford City,,
+UK,OxfU,Oxford University,,
+UK,Pand,Pandanet,,
+UK,Penz,Penzance,,
+UK,PerS,Perse School,,
+UK,Pert,Perth,,
+UK,Plym,Plymouth,,
+UK,Port,Portsmouth,,
+UK,Pozn,Poznam,,
+UK,Pres,Preston,,
+UK,Purb,Purbrook,,
+UK,Putn,Putney,,
+UK,QMUL,Queen Mary Uni,,
+UK,RadS,Radley School,,
+UK,Read,Reading,,
+UK,ReaS,Reading School,,
+UK,RedS,Rednock School,,
+UK,Runc,Runcorn,,
+UK,Salf,Salford,,
+UK,Sand,Sandbach,,
+UK,Slnd,Sandilands,,
+UK,Scar,Scarborough,,
+UK,Shfd,Sheffield,,
+UK,ShCS,Sheffield Chin Sch,,
+UK,ShfU,Sheffield Uni,,
+UK,Shrb,Sherborne,,
+UK,Shre,Shrewsbury,,
+UK,Shro,Shropshire,,
+UK,SSpr,Silver Springs,,
+UK,Skye,Skye,,
+UK,Slfd,Sleaford,,
+UK,Solh,Solihull,,
+UK,Sham,Southampton,,
+UK,SCam,South Cambridge,,
+UK,SCot,South Cotswold,,
+UK,SLon,South London,,
+UK,SWoS,South Wolds School,,
+UK,SWfd,South Woodford,,
+UK,Sfrd,Stafford,,
+UK,StAg,St Agnes,,
+UK,Stai,Staines,,
+UK,StAl,St Albans,,
+UK,StAn,St Andrews,,
+UK,Stev,Stevenage,,
+UK,Stok,Stockport,,
+UK,StVS,St Olaves School,,
+UK,Stow,Stowe,,
+UK,Sury,Surrey,,
+UK,Swan,Swansea,,
+UK,Swin,Swindon,,
+UK,Taun,Taunton,,
+UK,Tec,Technion,,
+UK,Tech,Technion,,
+UK,Tees,Teesside,,
+UK,ToSc,Tonbridge School,,
+UK,Tosc,Tonbridge School,,
+UK,TWel,Tunbridge Wells,,
+UK,Twik,Twickenham,,
+UK,UCL,UCL,,
+UK,U3A,Uni Third Age,,
+UK,Wals,Walsall,,
+UK,Wans,Wanstead,,
+UK,WarU,Warwick University,,
+UK,Watf,Watford,,
+UK,Wltn,Wellington,,
+UK,WCor,West Cornwall,,
+UK,WLon,West London,,
+UK,WSur,West Surrey,,
+UK,WSus,West Sussex,,
+UK,WWal,West Wales,,
+UK,WFSc,William Farr Sch,,
+UK,Winc,Winchester,,
+UK,Wood,Woodley,,
+UK,Worc,Worcester,,
+UK,Yeov,Yeovil,,
+UK,York,York,,
+LU,Lux,Luxembourg,,
