@@ -60,8 +60,22 @@ How ratings, pairing and handicap work is explained on the page <a href="{{ url_
     it is saved; if something is wrong, nothing is saved and the problem is explained. Explanations and comments in the
     file are kept, so you may also edit it in a text editor.</p>
   <h3>Tournament</h3>
-  <p>Name, place (<code>DE, Sampletown</code>), dates, EGD class (A–D), thinking time and an EGD comment – these go into the
+  <p>Name, place (<code>DE, Sampletown</code>), dates, EGD class (A–D) and an EGD comment – these go into the
     EGD result file. <b>Number of rounds</b> can be changed later, but not below the rounds already paired.</p>
+  <h3>Rules and time</h3>
+  <p><b>Rules:</b> Japanese, Chinese or AGA (or not stated). Choosing them sets the usual komi for even games
+    (Japanese 6.5, Chinese and AGA 7.5); you can change it afterwards. <b>Main time</b> is the thinking time per player in
+    minutes (also in the EGD result file). <b>After the main time:</b></p>
+  <table class="info">
+    <tr><td><b>nothing (sudden death)</b></td><td>Whoever runs out of time loses.</td></tr>
+    <tr><td><b>Byo-yomi</b></td><td>A number of periods of a few seconds each, e.g. 5 × 30 seconds. A period is used up
+      only if it runs out before the move is played.</td></tr>
+    <tr><td><b>Canadian byo-yomi</b></td><td>A number of stones within a time, e.g. 15 stones in 5 minutes; then the next
+      period starts.</td></tr>
+    <tr><td><b>Fischer</b></td><td>Seconds added to the clock for every move, optionally with a maximum.</td></tr>
+  </table>
+  <p>Rules and time appear on the page <a href="{{ url_for('system_page') }}">Tournament system</a> and on the one-page
+    summary to hang up.</p>
   <h3>Printouts</h3>
   <p>Language of all PDFs: English, German, French or <i>custom</i>. For <i>custom</i> the texts come from a translation
     file in the tournament folder (<code>translation.toml</code>, created with a German example).</p>
@@ -195,6 +209,8 @@ How ratings, pairing and handicap work is explained on the page <a href="{{ url_
       last round; you may then correct names in it by hand.</li>
     <li><b>EGD result file</b> – the <code>.h9</code> file made from the wall list. Send it to your national rating
       officer. A preview of its content is on the page.</li>
+    <li><b>Tournament system (1 page)</b> – <code>tournament_system.pdf</code>: the rules of this tournament in brief,
+      with its settings, to hang up next to the pairing. Also on the page <i>Tournament system</i>.</li>
     <li><b>Award ceremony</b> – <code>awards.pdf</code>, slides in 16:9 with the prize winners. Open it and show it
       full-screen. Club codes are written out as club names.</li>
   </ul>

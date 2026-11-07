@@ -73,10 +73,40 @@
       <label>{{ t("st_class") }}
         <select name="class">{% for c in "ABCD" %}<option {% if cfg.tournament.klass == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
         <span class="help">{{ t("st_class_help") }}</span></label>
-      {{ field(t("st_time"), "time", cfg.tournament.time, type="number", attrs='min="1" required') }}
       {{ field(t("st_rounds"), "rounds", cfg.tournament.rounds, type="number", attrs='min="1" max="20" required') }}
       {{ field(t("st_comment"), "comment", cfg.tournament.comment, t("st_comment_help")) }}
     </div>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_game") }}</h2>
+    <div class="fields">
+      <label>{{ t("st_rules_label") }}
+        <select name="game_rules" id="game-rules">
+          <option value="" {% if not cfg.game.rules %}selected{% endif %}>{{ t("st_not_stated") }}</option>
+          {% for r in game_rules %}<option value="{{ r }}" {% if cfg.game.rules == r %}selected{% endif %}>{{ t("st_rules_" ~ r) }}</option>{% endfor %}
+        </select>
+        <span class="help">{{ t("st_rules_label_help") }}</span></label>
+      {{ field(t("st_time"), "time", cfg.tournament.time, t("st_time_help"), type="number", attrs='min="1" required') }}
+      <label>{{ t("st_time_system") }}
+        <select name="time_system" id="time-system">
+          <option value="" {% if not cfg.game.time_system %}selected{% endif %}>{{ t("st_not_stated") }}</option>
+          {% for ts in time_systems %}<option value="{{ ts }}" {% if cfg.game.time_system == ts %}selected{% endif %}>{{ t("st_ts_" ~ ts) }}</option>{% endfor %}
+        </select></label>
+      <div class="clock-fields fields" data-system="byoyomi">
+        {{ field(t("st_byo_periods"), "byoyomi_periods", cfg.game.byoyomi_periods, type="number", attrs='min="1"') }}
+        {{ field(t("st_byo_seconds"), "byoyomi_seconds", cfg.game.byoyomi_seconds, type="number", attrs='min="1"') }}
+      </div>
+      <div class="clock-fields fields" data-system="canadian">
+        {{ field(t("st_can_stones"), "canadian_stones", cfg.game.canadian_stones, type="number", attrs='min="1"') }}
+        {{ field(t("st_can_minutes"), "canadian_minutes", cfg.game.canadian_minutes, type="number", attrs='min="1"') }}
+      </div>
+      <div class="clock-fields fields" data-system="fischer">
+        {{ field(t("st_fis_seconds"), "fischer_seconds", cfg.game.fischer_seconds, type="number", attrs='min="1"') }}
+        {{ field(t("st_fis_max"), "fischer_max", cfg.game.fischer_max, t("st_fis_max_help"), type="number", attrs='min="0"') }}
+      </div>
+    </div>
+    <p class="help" id="clock-preview">{{ clock_text }}</p>
   </section>
 
   <section class="card">
@@ -188,6 +218,22 @@
   form.addEventListener("input", markDirty);
   form.addEventListener("change", markDirty);
   form.addEventListener("submit", function () { dirty = false; });
+
+  // clock: show only the fields of the chosen system
+  var system = document.getElementById("time-system");
+  function showClock() {
+    document.querySelectorAll(".clock-fields").forEach(function (box) {
+      box.hidden = box.dataset.system !== system.value;
+    });
+  }
+  system.addEventListener("change", showClock);
+  showClock();
+  // rules: suggest the usual komi for even games
+  var usualKomi = {{ usual_komi|tojson }};
+  document.getElementById("game-rules").addEventListener("change", function () {
+    var komi = usualKomi[this.value], select = form.querySelector("select[name=komi_even]");
+    if (komi !== undefined && select) select.value = String(komi);
+  });
   // warn before leaving the page with unsaved changes
   window.addEventListener("beforeunload", function (event) {
     if (!dirty) return;

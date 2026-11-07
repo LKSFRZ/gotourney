@@ -29,6 +29,7 @@ höchste TGoR hat, gewinnt.</p>
   {% if cfg.handicap.reduction %}Vorgabe um {{ cfg.handicap.reduction }} verringert{% else %}volle Vorgabe{% endif %},
   {% if cfg.handicap.floor is not none %}Vorgabe-Untergrenze {{ "%g"|format(cfg.handicap.floor) }} ({{ rank_of(cfg.handicap.floor) }}),{% endif %}
   {{ cfg.tournament.rounds }} Runden.
+  {% if game_text %}<br>{{ game_text }}{% endif %}
 </div>
 
 <section id="short">

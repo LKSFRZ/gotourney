@@ -242,9 +242,15 @@ gotourney --help</pre>
   <tr><td><code>place</code></td><td>"DE, Sampletown"</td><td>Country and city (PC).</td></tr>
   <tr><td><code>dates</code></td><td>["2026-09-26", "2026-09-27"]</td><td>First and last day (DT).</td></tr>
   <tr><td><code>class</code></td><td>"A"</td><td>EGD tournament class (CL).</td></tr>
-  <tr><td><code>time</code></td><td>75</td><td>Basic thinking time in minutes (TM).</td></tr>
+  <tr><td><code>time</code></td><td>75</td><td>Main thinking time per player in minutes (TM).</td></tr>
   <tr><td><code>comment</code></td><td>"(submitted by …)"</td><td>Comment (CM).</td></tr>
   <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds (also <code>init --rounds</code>).</td></tr>
+  <tr><td colspan="3"><b>[game]</b> (shown on the one-page summary; all optional)</td></tr>
+  <tr><td><code>rules</code></td><td>"japanese"</td><td><code>japanese</code>, <code>chinese</code> or <code>aga</code>. Usual komi: 6.5 (Japanese), 7.5 (Chinese, AGA) – set it in <code>[handicap]</code>.</td></tr>
+  <tr><td><code>time_system</code></td><td>"byoyomi"</td><td>After the main time (<code>[tournament] time</code>): <code>sudden_death</code>, <code>byoyomi</code>, <code>canadian</code> or <code>fischer</code>.</td></tr>
+  <tr><td><code>byoyomi_periods</code>, <code>byoyomi_seconds</code></td><td>5, 30</td><td>Byo-yomi: 5 periods of 30 seconds.</td></tr>
+  <tr><td><code>canadian_stones</code>, <code>canadian_minutes</code></td><td>15, 5</td><td>Canadian byo-yomi: 15 stones in 5 minutes.</td></tr>
+  <tr><td><code>fischer_seconds</code>, <code>fischer_max</code></td><td>20, 0</td><td>Fischer: 20 seconds per move; at most <code>fischer_max</code> minutes on the clock (0 = no limit).</td></tr>
   <tr><td colspan="3"><b>[output]</b></td></tr>
   <tr><td><code>language</code></td><td>"de"</td><td>Language of the PDFs (pairing, standings, award ceremony): <code>en</code>, <code>de</code>, <code>fr</code> or <code>custom</code> (see 4.1).</td></tr>
   <tr><td><code>translation_file</code></td><td>"translation.toml"</td><td>The texts for <code>language = "custom"</code>.</td></tr>

@@ -62,9 +62,23 @@ EGD-Ergebnisdatei. Wie Wertung, Auslosung und Vorgabe funktionieren, erklärt di
     Speichern geprüft; ist etwas falsch, wird nichts gespeichert und das Problem erklärt. Erklärungen und Kommentare in
     der Datei bleiben erhalten, Sie können sie also auch in einem Texteditor bearbeiten.</p>
   <h3>Turnier</h3>
-  <p>Name, Ort (<code>DE, Musterstadt</code>), Daten, EGD-Klasse (A–D), Bedenkzeit und ein Kommentar für die EGD – das alles
+  <p>Name, Ort (<code>DE, Musterstadt</code>), Daten, EGD-Klasse (A–D) und ein Kommentar für die EGD – das alles
     kommt in die EGD-Ergebnisdatei. Die <b>Rundenzahl</b> lässt sich später ändern, aber nicht unter die Zahl der schon
     ausgelosten Runden.</p>
+  <h3>Regeln und Bedenkzeit</h3>
+  <p><b>Regeln:</b> japanisch, chinesisch oder AGA (oder nicht angegeben). Die Wahl setzt das übliche Komi für Partien
+    ohne Vorgabe (japanisch 6,5, chinesisch und AGA 7,5); Sie können es danach ändern. Die <b>Grundbedenkzeit</b> ist die
+    Zeit pro Spieler in Minuten (steht auch in der EGD-Ergebnisdatei). <b>Nach der Grundbedenkzeit:</b></p>
+  <table class="info">
+    <tr><td><b>nichts (Sudden Death)</b></td><td>Wer die Zeit überschreitet, verliert.</td></tr>
+    <tr><td><b>Byo-Yomi</b></td><td>Eine Anzahl Perioden von einigen Sekunden, z. B. 5 × 30 Sekunden. Eine Periode ist nur
+      verbraucht, wenn sie vor dem Zug abläuft.</td></tr>
+    <tr><td><b>Kanadisches Byo-Yomi</b></td><td>Eine Anzahl Steine in einer Zeit, z. B. 15 Steine in 5 Minuten; danach
+      beginnt die nächste Periode.</td></tr>
+    <tr><td><b>Fischer</b></td><td>Für jeden Zug kommen Sekunden auf die Uhr, wahlweise mit einer Höchstzeit.</td></tr>
+  </table>
+  <p>Regeln und Bedenkzeit erscheinen auf der Seite <a href="{{ url_for('system_page') }}">Turniersystem</a> und in der
+    Kurzfassung zum Aushängen.</p>
   <h3>Ausdrucke</h3>
   <p>Sprache aller PDFs: Englisch, Deutsch, Französisch oder <i>eigene</i>. Bei <i>eigene</i> kommen die Texte aus einer
     Übersetzungsdatei im Turnierordner (<code>translation.toml</code>, mit einem deutschen Beispiel angelegt).</p>
@@ -208,6 +222,8 @@ EGD-Ergebnisdatei. Wie Wertung, Auslosung und Vorgabe funktionieren, erklärt di
       <span class="btnlike">Erstellen</span>; danach können Sie Namen darin von Hand korrigieren.</li>
     <li><b>EGD-Ergebnisdatei</b> – die <code>.h9</code>-Datei, aus der Wandtabelle erstellt. Schicken Sie sie an den
       Ratingverantwortlichen Ihres Landesverbands. Eine Vorschau des Inhalts steht auf der Seite.</li>
+    <li><b>Turniersystem (1 Seite)</b> – <code>tournament_system.pdf</code>: die Regeln dieses Turniers in Kürze, mit
+      seinen Einstellungen, zum Aushängen neben der Auslosung. Auch auf der Seite <i>Turniersystem</i>.</li>
     <li><b>Siegerehrung</b> – <code>awards.pdf</code>, Folien im Format 16:9 mit den Preisträgern. Öffnen und im Vollbild
       zeigen. Vereinskürzel werden als Vereinsnamen ausgeschrieben.</li>
   </ul>

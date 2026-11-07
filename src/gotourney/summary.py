@@ -31,6 +31,26 @@ def _rating(value: float, tr: Translator) -> str:
     return f"{_number(value, tr)} ({Rank.from_gor(value)})"
 
 
+def game_lines(cfg: Config, tr: Translator) -> list[str]:
+    """Rules and clock as sentences; empty if neither is stated in the settings."""
+    g, main = cfg.game, cfg.tournament.time
+    lines = []
+    if g.rules:
+        lines.append(tr.t("sys_rules_" + g.rules))
+    if g.time_system == "sudden_death":
+        lines.append(tr.t("sys_clock_sudden_death", main=main))
+    elif g.time_system == "byoyomi":
+        lines.append(tr.t("sys_clock_byoyomi", main=main, periods=g.byoyomi_periods, seconds=g.byoyomi_seconds))
+    elif g.time_system == "canadian":
+        lines.append(tr.t("sys_clock_canadian", main=main, stones=g.canadian_stones, minutes=g.canadian_minutes))
+    elif g.time_system == "fischer":
+        text = tr.t("sys_clock_fischer", main=main, seconds=g.fischer_seconds)
+        if g.fischer_max:
+            text += " " + tr.t("sys_clock_fischer_max", max=g.fischer_max)
+        lines.append(text)
+    return lines
+
+
 def summary_sections(cfg: Config, tr: Translator) -> list[tuple[str, list[str]]]:
     """(heading, paragraphs) of the summary, using the settings of the tournament."""
     from .rating import game_changes
@@ -48,7 +68,8 @@ def summary_sections(cfg: Config, tr: Translator) -> list[tuple[str, list[str]]]
     if h.floor is not None:
         handicap.append(tr.t("sys_floor", floor=_rating(h.floor, tr)))
     handicap.append(tr.t("sys_komi", even=_number(h.komi_even, tr), handicap=_number(h.komi_handicap, tr)))
-    return [
+    game = game_lines(cfg, tr)
+    return ([(tr.t("sys_h_game"), game)] if game else []) + [
         (tr.t("sys_h_start"), start),
         (tr.t("sys_h_update"), update),
         (tr.t("sys_h_pairing"), pairing),

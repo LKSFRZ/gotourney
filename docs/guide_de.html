@@ -250,9 +250,15 @@ anmelden:</p>
   <tr><td><code>place</code></td><td>"DE, Musterstadt"</td><td>Land und Ort (PC).</td></tr>
   <tr><td><code>dates</code></td><td>["2026-09-26", "2026-09-27"]</td><td>Erster und letzter Tag (DT).</td></tr>
   <tr><td><code>class</code></td><td>"A"</td><td>EGD-Turnierklasse (CL).</td></tr>
-  <tr><td><code>time</code></td><td>75</td><td>Grundbedenkzeit in Minuten (TM).</td></tr>
+  <tr><td><code>time</code></td><td>75</td><td>Grundbedenkzeit pro Spieler in Minuten (TM).</td></tr>
   <tr><td><code>comment</code></td><td>"(eingereicht von …)"</td><td>Kommentar (CM).</td></tr>
   <tr><td><code>rounds</code></td><td>5</td><td>Anzahl der Runden (auch <code>init --rounds</code>).</td></tr>
+  <tr><td colspan="3"><b>[game]</b> (erscheint in der Kurzfassung zum Aushängen; alles freiwillig)</td></tr>
+  <tr><td><code>rules</code></td><td>"japanese"</td><td><code>japanese</code>, <code>chinese</code> oder <code>aga</code>. Übliches Komi: 6,5 (japanisch), 7,5 (chinesisch, AGA) – einzustellen in <code>[handicap]</code>.</td></tr>
+  <tr><td><code>time_system</code></td><td>"byoyomi"</td><td>Nach der Grundbedenkzeit (<code>[tournament] time</code>): <code>sudden_death</code>, <code>byoyomi</code>, <code>canadian</code> oder <code>fischer</code>.</td></tr>
+  <tr><td><code>byoyomi_periods</code>, <code>byoyomi_seconds</code></td><td>5, 30</td><td>Byo-Yomi: 5 Perioden zu 30 Sekunden.</td></tr>
+  <tr><td><code>canadian_stones</code>, <code>canadian_minutes</code></td><td>15, 5</td><td>Kanadisches Byo-Yomi: 15 Steine in 5 Minuten.</td></tr>
+  <tr><td><code>fischer_seconds</code>, <code>fischer_max</code></td><td>20, 0</td><td>Fischer: 20 Sekunden pro Zug; höchstens <code>fischer_max</code> Minuten auf der Uhr (0 = keine Grenze).</td></tr>
   <tr><td colspan="3"><b>[output]</b></td></tr>
   <tr><td><code>language</code></td><td>"de"</td><td>Sprache der PDFs (Auslosung, Tabelle, Siegerehrung): <code>en</code>, <code>de</code>, <code>fr</code> oder <code>custom</code> (siehe 4.1).</td></tr>
   <tr><td><code>translation_file</code></td><td>"translation.toml"</td><td>Die Texte für <code>language = "custom"</code>.</td></tr>

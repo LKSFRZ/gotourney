@@ -19,9 +19,19 @@ name    = "{name}"           # EV
 place   = ""                 # PC, e.g. "DE, Schwerin"
 dates   = []                 # DT, e.g. ["2026-09-26", "2026-09-27"]
 class   = "A"                # CL
-time    = 60                 # TM, basic thinking time in minutes
+time    = 60                 # TM, main thinking time in minutes (per player)
 comment = ""                 # CM, e.g. "(submitted by ...)"
 rounds  = {rounds}                 # number of rounds; R1..Rn columns in players.ods follow this
+
+[game]
+rules        = "japanese"     # "japanese", "chinese" or "aga"
+time_system  = "byoyomi"      # after the main time: "sudden_death", "byoyomi", "canadian" or "fischer"
+byoyomi_periods  = 5          # byoyomi: number of periods ...
+byoyomi_seconds  = 30         # ... of this many seconds each
+canadian_stones  = 15         # canadian: this many stones ...
+canadian_minutes = 5          # ... in this many minutes
+fischer_seconds  = 20         # fischer: seconds added per move ...
+fischer_max      = 0          # ... with at most this many minutes on the clock (0 = no limit)
 
 [output]
 language = "{language}"            # language of the PDFs (pairing, award ceremony): en, de, fr or custom
@@ -122,6 +132,23 @@ DEFAULT_CLUB_PENALTY = 150.0
 
 class ConfigError(Exception):
     pass
+
+
+GAME_RULES = ("japanese", "chinese", "aga")
+TIME_SYSTEMS = ("sudden_death", "byoyomi", "canadian", "fischer")
+USUAL_KOMI = {"japanese": 6.5, "chinese": 7.5, "aga": 7.5}
+
+
+@dataclass
+class GameSettings:
+    rules: str | None = None            # one of GAME_RULES; None = not stated
+    time_system: str | None = None      # one of TIME_SYSTEMS; None = not stated
+    byoyomi_periods: int = 5
+    byoyomi_seconds: int = 30
+    canadian_stones: int = 15
+    canadian_minutes: int = 5
+    fischer_seconds: int = 20
+    fischer_max: int = 0                # minutes; 0 = no limit
 
 
 @dataclass
@@ -250,6 +277,7 @@ class Config:
     registration: RegistrationSettings = field(default_factory=RegistrationSettings)
     awards: AwardSettings = field(default_factory=AwardSettings)
     output: OutputSettings = field(default_factory=OutputSettings)
+    game: GameSettings = field(default_factory=GameSettings)
 
 
 def _get(section: dict, key: str, typ, default, where: str):
@@ -473,9 +501,38 @@ def parse_config(data: dict) -> Config:
         ),
         awards=_awards(data.get("awards", {}), _get(t, "rounds", int, 5, "tournament"), extra_fields),
         output=_output(data.get("output", {})),
+        game=_game(data.get("game", {})),
     )
     _validate(cfg)
     return cfg
+
+
+def _game(g: dict) -> GameSettings:
+    if not isinstance(g, dict):
+        raise ConfigError("game: expected a table [game]")
+    unknown = set(g) - {"rules", "time_system", "byoyomi_periods", "byoyomi_seconds", "canadian_stones",
+                        "canadian_minutes", "fischer_seconds", "fischer_max"}
+    if unknown:
+        raise ConfigError(f"game: unknown key(s) {', '.join(sorted(unknown))}")
+
+    def choice(key, allowed):
+        value = _get(g, key, str, "", "game").strip().lower().replace("-", "_").replace(" ", "_")
+        if value in ("", "none"):
+            return None
+        if value not in allowed:
+            raise ConfigError(f"game.{key}: {value!r} is not one of {', '.join(allowed)}")
+        return value
+
+    def count(key, default, minimum=1):
+        value = _get(g, key, int, default, "game")
+        if value < minimum:
+            raise ConfigError(f"game.{key} must be at least {minimum}")
+        return value
+
+    return GameSettings(rules=choice("rules", GAME_RULES), time_system=choice("time_system", TIME_SYSTEMS),
+                        byoyomi_periods=count("byoyomi_periods", 5), byoyomi_seconds=count("byoyomi_seconds", 30),
+                        canadian_stones=count("canadian_stones", 15), canadian_minutes=count("canadian_minutes", 5),
+                        fischer_seconds=count("fischer_seconds", 20), fischer_max=count("fischer_max", 0, 0))
 
 
 def _validate(cfg: Config) -> None:

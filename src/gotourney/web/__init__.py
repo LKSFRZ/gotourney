@@ -252,9 +252,11 @@ def create_app(directory: Path | None = None) -> Flask:
     @app.get("/system")
     def system_page():
         """How the TGoR tournament system works, with the values of the open tournament."""
+        from ..i18n import builtin
+        from ..summary import game_lines
         cfg, own = current_config()
         return render_template(f"help/system_{lang()}.html", cfg=cfg, own=own, rank_of=rank_of_gor,
-                               summary_file=SUMMARY_FILE,
+                               summary_file=SUMMARY_FILE, game_text=" ".join(game_lines(cfg, builtin(lang()))),
                                examples=rating_examples(cfg.rating.k_factor),
                                handicaps=handicap_table(cfg.handicap.reduction, cfg.handicap.komi_even,
                                                         cfg.handicap.komi_handicap))
@@ -705,7 +707,13 @@ def create_app(directory: Path | None = None) -> Flask:
         except workflow.Problem as e:
             flash(str(e), "error")
             return redirect(url_for("dashboard"))
+        from ..config import GAME_RULES, TIME_SYSTEMS, USUAL_KOMI
+        from ..i18n import builtin
+        from ..summary import game_lines
         return render_template("settings.html", cfg=cfg, settings_version=version, errors=errors,
+                               game_rules=GAME_RULES, time_systems=TIME_SYSTEMS,
+                               usual_komi={k: f"{v}" for k, v in USUAL_KOMI.items()},
+                               clock_text=" ".join(game_lines(cfg, builtin(lang()))),
                                rule_fields=list(RULE_BUILTIN_FIELDS) + list(cfg.registration.extra_fields),
                                rule_types=RULE_TYPES,
                                prize_types=PRIZE_TYPES, groups_text=groups_text), (422 if errors else 200)
@@ -814,6 +822,10 @@ def settings_from_form(f) -> dict:
             raise ValueError(f"{label or name}: {raw!r} is not a number") from None
 
     dates = [x for x in (f.get("date_first", "").strip(), f.get("date_last", "").strip()) if x]
+    def count(name: str, default: int) -> int:
+        """A whole number; empty = the default (fields of other clock systems may be left empty)."""
+        return num(name, int) if f.get(name, "").strip() else default
+
     def rating_value(name: str):
         """A rank ('3d', '20k') stays text, a number becomes a number, empty = 'none'."""
         raw = f.get(name, "").strip().replace(",", ".") or "none"
@@ -838,6 +850,10 @@ def settings_from_form(f) -> dict:
                          "rank_gor_tolerance": num("rank_gor_tolerance", int),
                          "extra_fields": [], "field_values": {}},
         "awards": {"title_slide": bool(f.get("title_slide")), "prizes": []},
+        "game": {"rules": f.get("game_rules", "").strip(), "time_system": f.get("time_system", "").strip(),
+                 "byoyomi_periods": count("byoyomi_periods", 5), "byoyomi_seconds": count("byoyomi_seconds", 30),
+                 "canadian_stones": count("canadian_stones", 15), "canadian_minutes": count("canadian_minutes", 5),
+                 "fischer_seconds": count("fischer_seconds", 20), "fischer_max": count("fischer_max", 0)},
     }
     indices = lambda prefix: sorted({int(k[len(prefix):]) for k in f if k.startswith(prefix) and k[len(prefix):].isdigit()})
     for i in indices("rule_field_"):

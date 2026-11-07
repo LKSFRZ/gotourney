@@ -29,6 +29,7 @@ wins.</p>
   {% if cfg.handicap.reduction %}handicap reduced by {{ cfg.handicap.reduction }}{% else %}full handicap{% endif %},
   {% if cfg.handicap.floor is not none %}handicap floor {{ "%g"|format(cfg.handicap.floor) }} ({{ rank_of(cfg.handicap.floor) }}),{% endif %}
   {{ cfg.tournament.rounds }} rounds.
+  {% if game_text %}<br>{{ game_text }}{% endif %}
 </div>
 
 <section id="short">
