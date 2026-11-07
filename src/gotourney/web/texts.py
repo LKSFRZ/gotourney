@@ -88,14 +88,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "doc_needs_round": "Needs at least one paired round.",
         "doc_needs_results": "Needs all results of all rounds.",
         "doc_needs_wall": "Needs the wall list.",
-        "doc_standings": "Standings", "doc_standings_text": "Printable standings (PDF) and standings.ods; also useful "
-                                                             "between rounds.",
+        "doc_standings": "Standings", "doc_standings_text": "Printable standings (PDF) and standings.ods, always with "
+                                                             "the latest results; also useful between rounds.",
         "doc_wall": "Wall list", "doc_wall_text": "Final places in wall_list.ods. You may correct it by hand (e.g. "
                                                   "spelling of names) before creating the EGD file.",
         "doc_h9": "EGD result file", "doc_h9_text": "The .h9 file for the EGD, made from the wall list. Send it to your "
                                                     "national rating officer.",
-        "doc_awards": "Award ceremony", "doc_awards_text": "Slides for the award ceremony (PDF, 16:9). Show them "
-                                                           "full-screen. Prizes are set in the settings.",
+        "doc_awards": "Award ceremony", "doc_awards_text": "Slides for the award ceremony (PDF, 16:9), always with the "
+                                                           "latest results. Show them full-screen. Prizes are set in "
+                                                           "the settings.",
         "doc_h9_preview": "Content of the EGD file",
         "doc_winners": "Prize winners",
         "doc_backups": "Backups",
@@ -141,6 +142,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "rt_avoid_same": "avoid same value", "rt_prefer_same": "prefer same value",
         "rt_forbid_same": "never same value", "rt_require_same": "only same value",
         "st_delete": "remove", "st_add_rule": "Add rule",
+        "st_unsaved": "Unsaved changes",
         "st_sec_registration": "Registration",
         "st_outdated": "Warn if the last EGD tournament is more than … years ago",
         "st_tolerance": "Warn if rank and GoR differ by more than … points",
@@ -274,6 +276,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_open_round": "Open round_{r}.ods",
         "act_check_results": "Check results",
         "act_standings": "Standings",
+        "act_standings_pdf": "Standings (PDF)",
+        "doc_open": "open",
         "act_wall": "Wall list",
         "act_h9": "EGD result file",
         "act_awards": "Award slides",
@@ -393,14 +397,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "doc_needs_round": "Braucht mindestens eine ausgeloste Runde.",
         "doc_needs_results": "Braucht alle Ergebnisse aller Runden.",
         "doc_needs_wall": "Braucht die Wandtabelle.",
-        "doc_standings": "Tabelle", "doc_standings_text": "Druckbare Tabelle (PDF) und standings.ods; auch zwischen den "
-                                                          "Runden nützlich.",
+        "doc_standings": "Tabelle", "doc_standings_text": "Druckbare Tabelle (PDF) und standings.ods, immer mit den "
+                                                          "neuesten Ergebnissen; auch zwischen den Runden nützlich.",
         "doc_wall": "Wandtabelle", "doc_wall_text": "Endplätze in wall_list.ods. Sie können sie vor dem Erstellen der "
                                                     "EGD-Datei von Hand korrigieren (z. B. Schreibweise von Namen).",
         "doc_h9": "EGD-Ergebnisdatei", "doc_h9_text": "Die .h9-Datei für die EGD, aus der Wandtabelle erstellt. Senden "
                                                       "Sie sie an Ihren nationalen Wertungsbeauftragten.",
-        "doc_awards": "Siegerehrung", "doc_awards_text": "Folien für die Siegerehrung (PDF, 16:9). Im Vollbild zeigen. "
-                                                         "Die Preise stellen Sie in den Einstellungen ein.",
+        "doc_awards": "Siegerehrung", "doc_awards_text": "Folien für die Siegerehrung (PDF, 16:9), immer mit den "
+                                                         "neuesten Ergebnissen. Im Vollbild zeigen. Die Preise stellen "
+                                                         "Sie in den Einstellungen ein.",
         "doc_h9_preview": "Inhalt der EGD-Datei",
         "doc_winners": "Preisträger",
         "doc_backups": "Sicherungen",
@@ -447,6 +452,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "rt_avoid_same": "gleichen Wert vermeiden", "rt_prefer_same": "gleichen Wert bevorzugen",
         "rt_forbid_same": "nie gleicher Wert", "rt_require_same": "nur gleicher Wert",
         "st_delete": "entfernen", "st_add_rule": "Regel hinzufügen",
+        "st_unsaved": "Ungespeicherte Änderungen",
         "st_sec_registration": "Anmeldung",
         "st_outdated": "Warnen, wenn das letzte EGD-Turnier länger als … Jahre her ist",
         "st_tolerance": "Warnen, wenn Rang und GoR um mehr als … Punkte abweichen",
@@ -583,6 +589,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_open_round": "round_{r}.ods öffnen",
         "act_check_results": "Ergebnisse prüfen",
         "act_standings": "Tabelle",
+        "act_standings_pdf": "Tabelle (PDF)",
+        "doc_open": "öffnen",
         "act_wall": "Wandtabelle",
         "act_h9": "EGD-Ergebnisdatei",
         "act_awards": "Folien Siegerehrung",

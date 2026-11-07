@@ -10,6 +10,7 @@ import datetime as dt
 import hashlib
 import json
 import os
+import re
 import secrets
 import subprocess
 import sys
@@ -254,9 +255,17 @@ def create_app(directory: Path | None = None) -> Flask:
     def download(name: str):
         d = tdir()
         p = Path(name)
-        if d is None or p.name != name or p.suffix.lower() not in DOWNLOADABLE or not (d / name).is_file():
+        if d is None or p.name != name or p.suffix.lower() not in DOWNLOADABLE:
             abort(404)
-        return send_from_directory(d, name, as_attachment=request.args.get("dl") == "1")
+        # documents made from the tournament files are created fresh, so they are always up to date
+        try:
+            refresh_generated(d, name)
+        except workflow.Problem as e:
+            explain(e)
+            return redirect(request.referrer or url_for("documents_page"))
+        if not (d / name).is_file():
+            abort(404)
+        return send_from_directory(d, name, as_attachment=request.args.get("dl") == "1", max_age=0)
 
     # ------------------------------------------------------------ results of a round
 
@@ -530,6 +539,11 @@ def create_app(directory: Path | None = None) -> Flask:
             flash(str(e), "error")
             return redirect(url_for("dashboard"))
         complete = bool(t.rounds) and all(rg.complete for rg in t.rounds.values())
+        if (d / "wall_list.ods").exists():
+            try:
+                workflow.make_h9(d)                   # keep the preview up to date
+            except workflow.Problem:
+                pass
         winners, notes = [], []
         if complete:
             from ..awards import AwardError, compute_awards
@@ -708,7 +722,7 @@ def settings_from_form(f) -> dict:
     }
     indices = lambda prefix: sorted({int(k[len(prefix):]) for k in f if k.startswith(prefix) and k[len(prefix):].isdigit()})
     for i in indices("rule_field_"):
-        if f.get(f"rule_delete_{i}") or not f.get(f"rule_field_{i}", "").strip():
+        if not f.get(f"rule_field_{i}", "").strip():
             continue
         rule = {"field": f.get(f"rule_field_{i}").strip(), "type": f.get(f"rule_type_{i}", "avoid_same")}
         if rule["type"] in ("avoid_same", "prefer_same"):
@@ -721,15 +735,13 @@ def settings_from_form(f) -> dict:
         changes["pairing"]["rules"].append(rule)
     for i in indices("xf_name_"):
         name = f.get(f"xf_name_{i}", "").strip()
-        if not name or f.get(f"xf_delete_{i}"):
+        if not name:
             continue
         changes["registration"]["extra_fields"].append(name)
         values = [v.strip() for v in f.get(f"xf_values_{i}", "").split(",") if v.strip()]
         if values:
             changes["registration"]["field_values"][name] = values
     for i in indices("pz_type_"):
-        if f.get(f"pz_delete_{i}"):
-            continue
         prize = {"type": f.get(f"pz_type_{i}")}
         if f.get(f"pz_title_{i}", "").strip():
             prize["title"] = f.get(f"pz_title_{i}").strip()
@@ -762,6 +774,28 @@ def _folder_name(name: str) -> str:
 
 # ---------------------------------------------------------------- dashboard content
 
+GENERATED_ROUND = re.compile(r"^round_(\d+)(_alphabetical)?\.pdf$")
+
+
+def refresh_generated(d: Path, name: str) -> None:
+    """Create a generated document (PDFs, standings.ods, .h9) fresh before it is shown."""
+    from ..config import load_config
+    from ..wall import h9_filename
+    m = GENERATED_ROUND.match(name)
+    if m:
+        paths, error, _ = workflow.pairing_pdfs(d, int(m.group(1)))
+        if error:
+            raise workflow.Problem("pdf", f"PDF not written: {error}")
+    elif name in ("standings.pdf", "standings.ods"):
+        out = workflow.make_standings(d)
+        if out.pdf_error and name.endswith(".pdf"):
+            raise workflow.Problem("pdf", f"PDF not written: {out.pdf_error}")
+    elif name == "awards.pdf":
+        workflow.make_awards(d)
+    elif name.endswith(".h9") and name == h9_filename(load_config(d)):
+        workflow.make_h9(d)
+
+
 def standings_preview(t) -> list[dict]:
     from ..wall import ranking
     r = t.last_round
@@ -783,21 +817,25 @@ def document_cards(t, complete: bool) -> list[dict]:
     d = t.directory
     newest_input = max([p.stat().st_mtime for p in d.glob("round_*.ods")] + [(d / "players.ods").stat().st_mtime])
 
-    def card(key, action, names, needs=None):
+    def card(key, action, names, needs=None, generated=False):
         files = [{"name": n, "exists": (d / n).exists(), "locked": workflow.is_open_in_libreoffice(d / n)}
                  for n in names]
         main = d / names[0]
         made = main.stat().st_mtime if main.exists() else None
-        return {"key": key, "action": action, "files": files, "needs": needs,
+        if generated:
+            for f in files:
+                f["exists"] = needs is None           # created when opened
+        return {"key": key, "action": action, "files": files, "needs": needs, "generated": generated,
                 "made": dt.datetime.fromtimestamp(made).strftime("%Y-%m-%d %H:%M") if made else "",
                 "outdated": bool(made and made < newest_input)}
 
     h9 = h9_filename(t.cfg)
     return [
-        card("standings", "standings", ["standings.pdf", "standings.ods"], None if t.rounds else "doc_needs_round"),
+        card("standings", "standings", ["standings.pdf", "standings.ods"], None if t.rounds else "doc_needs_round",
+             generated=True),
         card("wall", "wall", ["wall_list.ods"], None if complete else "doc_needs_results"),
-        card("h9", "h9", [h9], None if (d / "wall_list.ods").exists() else "doc_needs_wall"),
-        card("awards", "awards", ["awards.pdf"], None if complete else "doc_needs_results"),
+        card("h9", "h9", [h9], None if (d / "wall_list.ods").exists() else "doc_needs_wall", generated=True),
+        card("awards", "awards", ["awards.pdf"], None if complete else "doc_needs_results", generated=True),
     ]
 
 
@@ -874,8 +912,7 @@ def phase_card(t, lang: str) -> dict:
     tx = lambda key, **kw: text(lang, key, **kw)
     act = lambda label, action, primary=False, confirm=None, **form: {
         "label": label, "action": action, "primary": primary, "confirm": confirm, "form": form}
-    files = lambda *names: [{"label": label, "file": name} for label, name in names
-                            if (t.directory / name).exists()]
+    files = lambda *names: [{"label": label, "file": name} for label, name in names]   # created when opened
     card = {"title": "", "text": "", "extra": "", "actions": [], "files": [], "link": None, "link_primary": False}
     if s.phase == "no_players":
         card.update(title=tx("ph_no_players_title"), text=tx("ph_no_players_text"),
@@ -911,14 +948,13 @@ def phase_card(t, lang: str) -> dict:
     elif s.phase == "round_complete":
         card.update(title=tx("ph_complete_title", r=r), text=tx("ph_complete_text", next=r + 1),
                     link={"label": tx("documents_title"), "href": "/documents"},
-                    actions=[act(tx("act_standings"), "standings"),
-                             act(tx("act_pair", r=r + 1), "pair", primary=True, round=r + 1)],
-                    files=files((tx("act_standings"), "standings.pdf")))
+                    actions=[act(tx("act_pair", r=r + 1), "pair", primary=True, round=r + 1)],
+                    files=files((tx("act_standings_pdf"), "standings.pdf")))
     else:
         card.update(title=tx("ph_finished_title"), text=tx("ph_finished_text"),
                     link={"label": tx("documents_title"), "href": "/documents"}, link_primary=True,
                     actions=[],
-                    files=files((tx("act_standings"), "standings.pdf"), (tx("act_awards"), "awards.pdf")))
+                    files=files((tx("act_standings_pdf"), "standings.pdf"), (tx("act_awards"), "awards.pdf")))
     return card
 
 

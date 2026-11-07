@@ -280,3 +280,6 @@ table.standings .num { text-align: right; white-space: nowrap; }
 .up { color: var(--ok); font-size: 13px; }
 .down { color: var(--err); font-size: 13px; }
 ul.backups li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+button.remove-row { border: 1px solid var(--line); color: var(--err); padding: 4px 9px; font-size: 14px; }
+button.remove-row:hover { background: var(--err-soft); border-color: var(--err); }
+.unsaved { margin-left: 12px; color: var(--warn); font-weight: 600; font-size: 14px; }

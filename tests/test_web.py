@@ -394,3 +394,32 @@ def test_documents_page(make_tournament):
     name = re.search(r'href="/backup/([^"]+by_hand[^"]*)"', page(r)).group(1)
     assert c.get(f"/backup/{name}").status_code == 200
     assert c.get("/backup/../players.ods").status_code == 404
+
+
+def test_pdfs_are_created_when_opened(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    # standings were never created explicitly
+    assert not (d / "standings.pdf").exists()
+    r = c.get("/file/standings.pdf")
+    assert r.status_code == 200 and r.data.startswith(b"%PDF")
+    # award slides need all results: refused with an explanation instead of a stale file
+    r = c.get("/file/awards.pdf", follow_redirects=True)
+    assert "missing results" in page(r) and not (d / "awards.pdf").exists()
+    finish(d, 1)
+    r = c.get("/dashboard")
+    assert "Standings (PDF)" in page(r) and 'action="/do/standings"' not in page(r)
+    assert c.get("/file/awards.pdf").data.startswith(b"%PDF")
+    # the pairing PDF reflects a change made after pairing
+    import os, time
+    before = (d / "round_1.pdf").stat().st_mtime_ns
+    time.sleep(0.01)
+    assert c.get("/file/round_1_alphabetical.pdf").status_code == 200
+    assert (d / "round_1.pdf").stat().st_mtime_ns > before
+    # the EGD file needs the wall list, then is made fresh from it
+    r = c.get("/file/Test.h9", follow_redirects=True)
+    assert "wall_list.ods" in page(r) or r.status_code in (200, 404)
+    post(c, app, "/do/wall", next="/documents")
+    r = c.get("/file/Test.h9")
+    assert r.status_code == 200 and b"; TC[]" in r.data

@@ -37,14 +37,14 @@
           </li>
         {% endfor %}
       </ul>
-      {% if doc.made %}
-        <p class="small {{ 'warn-text' if doc.outdated else 'muted' }}">
-          {{ t("doc_made", time=doc.made) }}{% if doc.outdated %} – {{ t("doc_outdated") }}{% endif %}
-        </p>
-      {% endif %}
       {% if doc.needs %}
         <p class="small muted">{{ t(doc.needs) }}</p>
-      {% else %}
+      {% elif not doc.generated %}
+        {% if doc.made %}
+          <p class="small {{ 'warn-text' if doc.outdated else 'muted' }}">
+            {{ t("doc_made", time=doc.made) }}{% if doc.outdated %} – {{ t("doc_outdated") }}{% endif %}
+          </p>
+        {% endif %}
         {{ action_button(doc.action, t("doc_update") if doc.made else t("doc_create"), primary=(not doc.made or doc.outdated)) }}
       {% endif %}
     </section>

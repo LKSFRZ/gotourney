@@ -18,7 +18,7 @@
     </select></td>
     <td><input name="rule_points_{{ i }}" value="{{ '%g'|format(rule.points) if rule and rule.type in ('avoid_same', 'prefer_same') else '' }}" inputmode="decimal" size="5"></td>
     <td><input name="rule_groups_{{ i }}" value="{{ groups_text(rule.all_groups) if rule else '' }}"></td>
-    <td><label class="check"><input type="checkbox" name="rule_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+    <td><button type="button" class="remove-row" title="{{ t('st_delete') }}" aria-label="{{ t('st_delete') }}">&#10005;</button></td>
   </tr>
 {%- endmacro %}
 
@@ -26,7 +26,7 @@
   <tr class="list-row">
     <td><input name="xf_name_{{ i }}" value="{{ name }}"></td>
     <td><input name="xf_values_{{ i }}" value="{{ values|join(', ') if values else '' }}"></td>
-    <td><label class="check"><input type="checkbox" name="xf_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+    <td><button type="button" class="remove-row" title="{{ t('st_delete') }}" aria-label="{{ t('st_delete') }}">&#10005;</button></td>
   </tr>
 {%- endmacro %}
 
@@ -43,8 +43,8 @@
     </select></td>
     <td><input name="pz_groups_{{ i }}" value="{{ groups_text(p.all_groups) if p else '' }}"></td>
     <td><input name="pz_count_{{ i }}" value="{{ p.count if p and p.count != 1 else '' }}" size="3"></td>
-    <td><label class="check"><input type="checkbox" name="pz_exclusive_{{ i }}" {% if p and p.exclusive %}checked{% endif %}> {{ t("st_pz_exclusive") }}</label>
-        <label class="check"><input type="checkbox" name="pz_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+    <td><label class="check"><input type="checkbox" name="pz_exclusive_{{ i }}" {% if p and p.exclusive %}checked{% endif %}> {{ t("st_pz_exclusive") }}</label></td>
+    <td><button type="button" class="remove-row" title="{{ t('st_delete') }}" aria-label="{{ t('st_delete') }}">&#10005;</button></td>
   </tr>
 {%- endmacro %}
 
@@ -142,7 +142,7 @@
     <div class="table-scroll">
     <table class="list">
       <thead><tr><th>{{ t("st_pz_type") }}</th><th>{{ t("st_pz_title") }}</th><th>{{ t("st_pz_places") }}</th><th>{{ t("st_pz_min_wins") }}</th>
-                 <th>{{ t("st_pz_field") }}</th><th>{{ t("st_pz_groups") }}</th><th>{{ t("st_pz_count") }}</th><th></th></tr></thead>
+                 <th>{{ t("st_pz_field") }}</th><th>{{ t("st_pz_groups") }}</th><th>{{ t("st_pz_count") }}</th><th></th><th></th></tr></thead>
       <tbody data-list="prize">{% for p in cfg.awards.prizes %}{{ prize_row(loop.index0, p) }}{% endfor %}</tbody>
     </table>
     </div>
@@ -150,21 +150,47 @@
     <button type="button" class="link" data-add="prize">+ {{ t("st_add_prize") }}</button>
   </section>
 
-  <div class="save-bar"><button type="submit" class="primary">{{ t("st_save") }}</button></div>
+  <div class="save-bar"><button type="submit" class="primary">{{ t("st_save") }}</button>
+    <span id="unsaved" class="unsaved" hidden>{{ t("st_unsaved") }}</span></div>
 </form>
 {% endblock %}
 
 {% block scripts %}
 <script>
-  // add a row: copy the hidden template with the next free index
+(function () {
+  var form = document.querySelector("form.settings");
+  var dirty = false, counter = 1000;
+  var unsaved = document.getElementById("unsaved");
+  function markDirty() { dirty = true; unsaved.hidden = false; }
+
+  // add a row: copy the hidden template with a new index
   document.querySelectorAll("[data-add]").forEach(function (button) {
     button.addEventListener("click", function () {
       var kind = button.dataset.add;
       var body = document.querySelector('tbody[data-list="' + kind + '"]');
-      var next = 1000 + body.querySelectorAll("tr").length;
-      var html = document.getElementById("tpl-" + kind).innerHTML.replace(/__I__/g, next);
+      var html = document.getElementById("tpl-" + kind).innerHTML.replace(/__I__/g, counter++);
       body.insertAdjacentHTML("beforeend", html);
+      markDirty();
+      var first = body.lastElementChild.querySelector("input, select");
+      if (first) first.focus();
     });
   });
+  // remove a row with one click
+  form.addEventListener("click", function (event) {
+    var button = event.target.closest(".remove-row");
+    if (!button) return;
+    button.closest("tr").remove();
+    markDirty();
+  });
+  form.addEventListener("input", markDirty);
+  form.addEventListener("change", markDirty);
+  form.addEventListener("submit", function () { dirty = false; });
+  // warn before leaving the page with unsaved changes
+  window.addEventListener("beforeunload", function (event) {
+    if (!dirty) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+})();
 </script>
 {% endblock %}
