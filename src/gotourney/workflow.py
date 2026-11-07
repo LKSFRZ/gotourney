@@ -1,0 +1,485 @@
+"""The tournament workflow without any user interface.
+
+Used by the command line and the web interface. Functions report problems as ``Problem``
+exceptions with a machine-readable ``code`` (so each interface can explain them in its own way)
+and ask questions (e.g. "is 'Becker' Becker Anna?") through a ``Resolver`` callback.
+"""
+
+from __future__ import annotations
+
+from collections import Counter
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Protocol
+
+from .config import ConfigError
+from .i18n import TranslationError, Translator, get_translator
+from .models import Game, Player
+from .ods import OdsError
+from .rounds import RoundGames, player_label, read_not_playing, round_file, save_round
+from .tournament import Tournament, TournamentError
+
+
+# ---------------------------------------------------------------- problems
+
+@dataclass
+class Problem(Exception):
+    """Something that stops a step. ``code`` identifies the situation, ``data`` holds details."""
+
+    code: str
+    message: str
+    data: dict = field(default_factory=dict)
+
+    def __str__(self) -> str:
+        return self.message
+
+
+def lock_file(path: Path) -> Path:
+    return path.with_name(f".~lock.{path.name}#")
+
+
+def is_open_in_libreoffice(path: Path) -> bool:
+    return lock_file(path).exists()
+
+
+def check_writable(path: Path) -> None:
+    if is_open_in_libreoffice(path):
+        raise Problem("file_open", f"{path} is open in LibreOffice. Save and close it first, then try again.",
+                      {"path": path})
+
+
+def load(directory: Path, names_allowed_in_round: int | None = None) -> Tournament:
+    try:
+        return Tournament.load(directory, names_allowed_in_round=names_allowed_in_round)
+    except (ConfigError, OdsError, TournamentError) as e:
+        raise Problem("load", str(e)) from None
+
+
+def translator(t: Tournament) -> tuple[Translator, list[str]]:
+    try:
+        return get_translator(t.cfg, t.directory)
+    except TranslationError as e:
+        raise Problem("translation", str(e)) from None
+
+
+# ---------------------------------------------------------------- tournament status
+
+@dataclass
+class Status:
+    """Where the tournament stands, for 'next step' hints and the dashboard.
+
+    phase: no_players | registration | names_pending | paired | running | round_complete | finished
+    """
+
+    phase: str
+    round: int = 0                  # the round the phase refers to
+    rounds: int = 0                 # number of rounds of the tournament
+    players: int = 0
+    boards: int = 0
+    missing: int = 0                # missing results in that round
+    started: bool = False
+
+
+def round_started(t: Tournament, r: int) -> bool:
+    rg = t.rounds.get(r)
+    return bool(rg and rg.games and all(g.finalized for g in rg.games))
+
+
+def status(t: Tournament) -> Status:
+    s = Status("registration", rounds=t.cfg.tournament.rounds, players=len(t.players))
+    if not t.players:
+        s.phase = "no_players"
+        return s
+    r = t.last_round
+    if r == 0:
+        return s
+    rg = t.rounds[r]
+    s.round, s.boards, s.started = r, len(rg.games), round_started(t, r)
+    s.missing = sum(1 for g in rg.games if g.result is None)
+    if rg.unresolved:
+        s.phase = "names_pending"
+    elif not s.started and not rg.has_results:
+        s.phase = "paired"
+    elif s.missing:
+        s.phase = "running"
+    elif r < s.rounds:
+        s.phase = "round_complete"
+    else:
+        s.phase = "finished"
+    return s
+
+
+# ---------------------------------------------------------------- pairing
+
+class Resolver(Protocol):
+    """Asks which player is meant by a name typed into a round file.
+
+    Gets the place ('row 3, White'), the typed text and the candidates (best first); returns the
+    chosen player, or None to cancel."""
+
+    def __call__(self, where: str, text: str, candidates: list[Player], round_no: int) -> Player | None: ...
+
+
+@dataclass
+class PairOutcome:
+    tournament: Tournament
+    round: int
+    games: list[Game]
+    sitting_out: list[tuple[int, str]]
+    rule_hits: Counter
+    ratings: dict[int, float]
+    kept: int                       # finalized boards kept unchanged
+    repaired: int                   # boards without 'Finalized' that were paired again
+    new_boards: list[int]           # board numbers of the boards paired now
+    started_before: bool            # the round had been started (latecomers were paired)
+    warnings: list[str] = field(default_factory=list)
+    resolved: list[str] = field(default_factory=list)      # "row 3: A - B" for boards given by name
+    pdfs: list[Path] = field(default_factory=list)
+    pdf_error: str = ""
+
+
+def _check_can_pair(t: Tournament, round_no: int, force: bool) -> None:
+    rounds = t.cfg.tournament.rounds
+    if not 1 <= round_no <= rounds:
+        raise Problem("round_range", f"the tournament has rounds 1 to {rounds}", {"rounds": rounds})
+    if round_no > t.last_round + 1:
+        nxt = t.last_round + 1
+        raise Problem("not_next", f"Round {nxt} has not been paired yet; rounds are paired one after the other.",
+                      {"next": nxt})
+    for r in range(1, round_no):
+        rg = t.rounds.get(r)
+        missing = [g for g in rg.games if g.result is None] if rg else []
+        if missing:
+            raise Problem(
+                "previous_incomplete",
+                f"Round {round_no} cannot be paired yet: round {r} still has {len(missing)} missing "
+                f"result(s). The pairing depends on the TGoR after round {r}.",
+                {"round": r, "boards": [(g.board, t.players[g.white].name, t.players[g.black].name)
+                                        for g in missing]})
+    later = [r for r in t.rounds if r > round_no]
+    if later:
+        raise Problem("later_exists", f"round {later[0]} already exists; re-pairing round {round_no} is not "
+                      f"possible", {"round": later[0]})
+    existing = t.rounds.get(round_no)
+    if existing:
+        open_results = [g.board for g in existing.games if g.result is not None and not g.finalized]
+        if open_results and not force:
+            raise Problem(
+                "open_results",
+                f"round_{round_no}.ods: board(s) {', '.join(map(str, open_results))} have results but are not "
+                f"finalized. Start the round (or put an x in the Finalized column) to keep them, or pair "
+                f"again with force (their results are lost).", {"boards": open_results})
+
+
+def finalized_boards(t: Tournament, rg: RoundGames, round_no: int, ratings: dict[int, float],
+                     warnings: list[str] | None = None) -> list[Game]:
+    """The finalized boards of a round file, with default handicap/komi/colours filled in where the
+    handicap was left empty. Boards without a board number get one later (number_boards)."""
+    from .pairing import PairingError, check_rule_fields, pair_rules, rng_for, setup_game
+
+    rng = rng_for(t.cfg, round_no, "manual")
+    kept = []
+    for i, g in enumerate(rg.games):
+        if not g.finalized:
+            continue
+        if i in rg.missing_handicap:
+            d = setup_game(t, round_no, g.white, g.black, ratings, rng, finalized=True)
+            g.white, g.black, g.handicap, g.komi = d.white, d.black, d.handicap, d.komi
+        elif i in rg.missing_komi:
+            g.komi = t.cfg.handicap.komi_handicap if g.handicap > 0 else t.cfg.handicap.komi_even
+        if i in rg.missing_board:
+            g.board = 0
+        kept.append(g)
+        if warnings is None:
+            continue
+        a, b = t.players[g.white].name, t.players[g.black].name
+        if frozenset(g.players()) in t.played_pairs(before_round=round_no):
+            warnings.append(f"finalized board: {a} and {b} already played each other")
+        try:
+            check_rule_fields(t)
+            hard = [r.describe() for r in pair_rules(t, g.white, g.black)[2] if r.hard]
+        except PairingError:
+            hard = []
+        if hard:
+            warnings.append(f"finalized board: {a} - {b} breaks rule {'; '.join(hard)}")
+    return kept
+
+
+def describe_candidate(p: Player, round_no: int) -> str:
+    extra = "" if p.plays(round_no) else f", not registered for round {round_no}"
+    return f"{p.name} ({p.rank or '?'}, ID {p.id}{', ' + p.club if p.club else ''}{extra})"
+
+
+def resolve_names(t: Tournament, rg: RoundGames, round_no: int, resolver: Resolver | None) -> list[str]:
+    """Look up players typed by name and add those boards (finalized) to rg.games."""
+    from .resolve import match_players
+
+    if rg.unresolved and resolver is None:
+        raise Problem("names_need_confirmation", f"round_{round_no}.ods has players given by name; they must be "
+                      f"confirmed", {"rows": [u.line for u in rg.unresolved]})
+    used = {pid for g in rg.games for pid in g.players()}
+    done = []
+
+    def choose(text: str, where: str) -> int:
+        candidates = [p for p in match_players(text, list(t.players.values())) if p.id not in used]
+        if not candidates:
+            raise Problem("name_not_found", f"{where}: no player matches {text!r}. Enter the player's ID or "
+                          f"more of the name.", {"where": where, "text": text})
+        candidates = [p for p in candidates if p.plays(round_no)] or candidates
+        chosen = resolver(where, text, candidates, round_no)
+        if chosen is None:
+            raise Problem("name_cancelled", f"{where}: cancelled. Enter the player's ID or more of the name in "
+                          f"the round file.", {"where": where, "text": text})
+        return chosen.id
+
+    for u in rg.unresolved:
+        if u.white is None:
+            u.white = choose(u.white_text, f"row {u.line}, White")
+        used.add(u.white)
+        if u.black is None:
+            u.black = choose(u.black_text, f"row {u.line}, Black")
+        used.add(u.black)
+        if u.white == u.black:
+            raise Problem("same_player", f"row {u.line}: White and Black are the same player", {"row": u.line})
+        idx = len(rg.games)
+        if u.handicap is None:
+            rg.missing_handicap.add(idx)
+        if u.komi is None:
+            rg.missing_komi.add(idx)
+        rg.missing_board.add(idx)
+        rg.games.append(Game(board=0, white=u.white, black=u.black, handicap=u.handicap or 0,
+                             komi=u.komi if u.komi is not None else t.cfg.handicap.komi_even, finalized=True))
+        done.append(f"row {u.line}: {t.players[u.white].name} - {t.players[u.black].name}")
+    rg.unresolved = []
+    return done
+
+
+def pair(directory: Path, round_no: int, *, force: bool = False,
+         resolver: Resolver | None = None) -> PairOutcome:
+    """Pair a round: finalized boards stay unchanged, everybody else registered for the round is paired.
+    Writes round_<r>.ods and the pairing PDFs."""
+    from .pairing import PairingError, pair_round
+
+    t = load(directory, names_allowed_in_round=round_no)
+    path = round_file(directory, round_no)
+    check_writable(path)
+    _check_can_pair(t, round_no, force)
+    try:
+        ratings = t.rating_before(round_no)
+    except TournamentError as e:
+        raise Problem("load", str(e)) from None
+    existing = t.rounds.get(round_no)
+    warnings: list[str] = [w for w in t.warnings if not w.startswith(f"round {round_no}:")]
+    resolved: list[str] = []
+    kept: list[Game] = []
+    started_before = bool(existing and existing.games and all(g.finalized for g in existing.games))
+    if existing:
+        resolved = resolve_names(t, existing, round_no, resolver)
+        kept = finalized_boards(t, existing, round_no, ratings, warnings)
+    try:
+        result = pair_round(t, round_no, kept)
+    except PairingError as e:
+        raise Problem("pairing", str(e)) from None
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    save_round(path, result.games, labels, ratings,
+               not_playing=[(pid, labels[pid], reason) for pid, reason in result.sitting_out])
+    outcome = PairOutcome(
+        t, round_no, result.games, result.sitting_out, result.rule_hits, ratings, kept=len(kept),
+        repaired=(len(existing.games) - len(kept)) if existing else 0,
+        new_boards=[g.board for g in result.games if not g.finalized],
+        started_before=started_before, warnings=warnings, resolved=resolved)
+    outcome.pdfs, outcome.pdf_error, pdf_warnings = pairing_pdfs(directory, round_no)
+    outcome.warnings += pdf_warnings
+    return outcome
+
+
+def pairing_pdfs(directory: Path, round_no: int) -> tuple[list[Path], str, list[str]]:
+    """Write round_<r>.pdf and round_<r>_alphabetical.pdf. Returns (paths, error, warnings)."""
+    from .printing import PrintError, alphabetical_pdf, alphabetical_pdf_path, pairing_pdf, pdf_path
+
+    t = load(directory)
+    rg = t.rounds.get(round_no)
+    if rg is None:
+        raise Problem("no_round", f"{round_file(directory, round_no).name} not found", {"round": round_no})
+    tr, warnings = translator(t)
+    try:
+        paths = [pairing_pdf(t, rg, pdf_path(directory, round_no), tr),
+                 alphabetical_pdf(t, rg, alphabetical_pdf_path(directory, round_no), tr)]
+    except (PrintError, OSError) as e:
+        return [], str(e), warnings
+    return paths, "", warnings
+
+
+def template(directory: Path, round_no: int, *, force: bool = False) -> Path:
+    """An empty round file for boards the director pairs by hand (with a 'Participants' sheet)."""
+    t = load(directory, names_allowed_in_round=round_no)
+    path = round_file(directory, round_no)
+    check_writable(path)
+    _check_can_pair(t, round_no, force)
+    if path.exists() and not force:
+        raise Problem("exists", f"{path.name} already exists. Use force to replace it with an empty template.",
+                      {"path": path})
+    ratings = t.rating_before(round_no)
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    parts = [(pid, labels[pid], ratings[pid], p.club)
+             for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]]) if p.plays(round_no)]
+    save_round(path, [], labels, ratings, participants=parts)
+    return path
+
+
+@dataclass
+class StartOutcome:
+    round: int
+    boards: int
+    newly: int
+
+
+def start(directory: Path, round_no: int) -> StartOutcome:
+    """Mark all boards of a round as finalized."""
+    from .pairing import number_boards
+
+    t = load(directory)
+    rg = t.rounds.get(round_no)
+    path = round_file(directory, round_no)
+    if rg is None or not rg.games:
+        raise Problem("not_paired", f"{path.name} {'has no boards' if rg else 'not found'}. Pair the round first.",
+                      {"round": round_no})
+    check_writable(path)
+    ratings = t.rating_before(round_no)
+    newly = sum(1 for g in rg.games if not g.finalized)
+    for g in rg.games:
+        g.finalized = True
+    finalized_boards(t, rg, round_no, ratings)          # fills an empty handicap / board number
+    number_boards(rg.games, ratings)
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    save_round(path, rg.games, labels, ratings, not_playing=read_not_playing(path))
+    return StartOutcome(round_no, len(rg.games), newly)
+
+
+# ---------------------------------------------------------------- results
+
+@dataclass
+class ResultsCheck:
+    round: int
+    boards: int
+    missing: list[tuple[int, str, str]]          # (board, white name, black name)
+    rematches: list[tuple[int, str, str]]
+    unpaired: list[tuple[int, str]]              # registered but not on a board (id, name)
+    warnings: list[str]
+
+    @property
+    def complete(self) -> bool:
+        return not self.missing
+
+
+def check_results(t: Tournament, round_no: int) -> ResultsCheck:
+    rg = t.rounds.get(round_no)
+    if rg is None:
+        raise Problem("no_round", f"{round_file(t.directory, round_no).name} not found", {"round": round_no})
+    name = lambda pid: t.players[pid].name
+    missing = [(g.board, name(g.white), name(g.black)) for g in rg.games if g.result is None]
+    earlier = t.played_pairs(before_round=round_no)
+    rematches = [(g.board, name(g.white), name(g.black)) for g in rg.games if frozenset(g.players()) in earlier]
+    on_board = {pid for g in rg.games for pid in g.players()}
+    unpaired = [(pid, p.name) for pid, p in sorted(t.players.items())
+                if p.plays(round_no) and pid not in on_board and not p.joker]
+    warnings = [w for w in t.warnings if w.startswith(f"round {round_no}, ")]
+    return ResultsCheck(round_no, len(rg.games), missing, rematches, unpaired, warnings)
+
+
+# ---------------------------------------------------------------- standings, wall list, EGD file, awards
+
+@dataclass
+class StandingsOutcome:
+    tournament: Tournament
+    round: int
+    columns: list
+    rows: list
+    ods: Path
+    pdf: Path | None
+    pdf_error: str = ""
+    warnings: list[str] = field(default_factory=list)
+
+
+def make_standings(directory: Path, round_no: int | None = None) -> StandingsOutcome:
+    """standings.ods and standings.pdf after a round (default: the last round paired)."""
+    from .printing import PrintError, standings_pdf
+    from .wall import STANDINGS_FILE, standings_rows, write_standings
+
+    t = load(directory)
+    r = t.last_round if round_no is None else round_no
+    if not 0 <= r <= t.last_round:
+        raise Problem("round_range", f"round {r} has not been played (last round: {t.last_round})",
+                      {"rounds": t.last_round})
+    check_writable(Path(directory) / STANDINGS_FILE)
+    cols, rows = standings_rows(t, r)
+    ods = write_standings(t, r)
+    tr, warnings = translator(t)
+    out = StandingsOutcome(t, r, cols, rows, ods, None, warnings=list(t.warnings) + warnings)
+    try:
+        out.pdf = standings_pdf(t, r, Path(directory) / "standings.pdf", tr)
+    except (PrintError, OSError) as e:
+        out.pdf_error = str(e)
+    return out
+
+
+def make_wall(directory: Path) -> tuple[Path, Tournament]:
+    from .wall import WALL_FILE, WallError, write_wall_list
+
+    t = load(directory)
+    check_writable(Path(directory) / WALL_FILE)
+    try:
+        return write_wall_list(t), t
+    except WallError as e:
+        raise Problem("wall", str(e)) from None
+
+
+def make_h9(directory: Path, output: Path | None = None) -> tuple[Path, int, list[str]]:
+    """The EGD result file from wall_list.ods. Returns (path, number of players, warnings)."""
+    from .config import load_config
+    from .wall import WallError, h9_filename, h9_text, read_wall_list
+
+    try:
+        cfg = load_config(directory)
+        lines, warnings = read_wall_list(directory)
+    except (ConfigError, OdsError, WallError) as e:
+        raise Problem("h9", str(e)) from None
+    for name, value in [("name", cfg.tournament.name), ("place", cfg.tournament.place),
+                        ("dates", cfg.tournament.dates)]:
+        if not value:
+            warnings.append(f"tournament.{name} is empty in tournament.toml")
+    path = Path(output) if output else Path(directory) / h9_filename(cfg)
+    path.write_text(h9_text(cfg, lines), encoding="utf-8")
+    return path, len(lines), warnings
+
+
+@dataclass
+class AwardsOutcome:
+    tournament: Tournament
+    path: Path
+    winners: list
+    slides: int
+    notes: list[str]
+    warnings: list[str]
+
+
+def make_awards(directory: Path, output: Path | None = None) -> AwardsOutcome:
+    from .awards import AWARDS_FILE, AwardError, awards_pdf, compute_awards
+    from .printing import PrintError
+
+    t = load(directory)
+    warnings = []
+    if t.last_round < t.cfg.tournament.rounds:
+        warnings.append(f"only {t.last_round} of {t.cfg.tournament.rounds} rounds have been played")
+    tr, tw = translator(t)
+    try:
+        winners, notes = compute_awards(t, tr)
+    except AwardError as e:
+        raise Problem("awards", str(e)) from None
+    path = Path(output) if output else Path(directory) / AWARDS_FILE
+    try:
+        awards_pdf(t, winners, path, tr)
+    except (PrintError, OSError) as e:
+        raise Problem("pdf", f"PDF not written: {e}") from None
+    slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
+    return AwardsOutcome(t, path, winners, slides, notes, warnings + tw)

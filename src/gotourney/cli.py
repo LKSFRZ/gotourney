@@ -13,7 +13,7 @@ from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
 from .rank import RankError
 from .registration import RegistrationError, check_players, new_player, parse_rounds, sync_player
-from .rounds import player_label, round_file, save_round
+from .rounds import player_label, round_file
 from .tournament import Tournament, TournamentError
 
 app = typer.Typer(
@@ -392,61 +392,13 @@ def pair(
     latecomers, on new boards. On boards you enter yourself, players can be given by (part of) their
     name instead of the ID; the tool looks them up and asks for confirmation.
     """
-    from .pairing import PairingError, check_rule_fields, pair_round, pair_rules, rng_for, setup_game
-
-    t = load_tournament(directory, names_allowed_in_round=round_no)
-    show_warnings(t, skip=(f"round {round_no}:",))
-    path = round_file(directory, round_no)
-    ensure_not_open(path)
-    if not 1 <= round_no <= t.cfg.tournament.rounds:
-        fail(f"the tournament has rounds 1 to {t.cfg.tournament.rounds}")
-    if round_no > t.last_round + 1:
-        nxt = t.last_round + 1
-        typer.secho(f"Round {nxt} has not been paired yet; rounds are paired one after the other.",
-                    fg=typer.colors.RED, err=True)
-        hints.show([f"Pair round {nxt} first: {cmd(directory, f'pair {nxt}')}"])
-        raise typer.Exit(1)
-    for r in range(1, round_no):
-        rg_prev = t.rounds.get(r)
-        missing = [g for g in rg_prev.games if g.result is None] if rg_prev else []
-        if missing:
-            typer.secho(f"Round {round_no} cannot be paired yet: round {r} still has {len(missing)} "
-                        f"missing result(s). The pairing depends on the TGoR after round {r}.",
-                        fg=typer.colors.RED, err=True)
-            for g in missing:
-                typer.echo(f"  board {g.board}: {t.players[g.white].name} - {t.players[g.black].name}", err=True)
-            hints.show([
-                f"Enter the missing results in {hints.fpath(directory, f'round_{r}.ods')} (an x under "
-                f"'White win', 'Draw' or 'Black win').",
-                "A game that will not be played (e.g. a player left): enter a forfeit, x! for the winner,\n"
-                "or ! under both 'White win' and 'Black win' if both lose. Forfeits are not rated.",
-                f"Save and close the file, check with {cmd(directory, f'results check {r}')},\n"
-                f"then run {cmd(directory, f'pair {round_no}')} again.",
-            ])
-            raise typer.Exit(1)
-    later = [r for r in t.rounds if r > round_no]
-    if later:
-        fail(f"round {later[0]} already exists; re-pairing round {round_no} is not possible")
-    existing = t.rounds.get(round_no)
-    if existing:
-        open_results = [g.board for g in existing.games if g.result is not None and not g.finalized]
-        if open_results and not force:
-            fail(f"{path.name}: board(s) {', '.join(map(str, open_results))} have results but are not "
-                 f"finalized. Run 'gotourney start {round_no}' (or put an x in the Finalized column) to keep "
-                 f"them, or use --force to pair them again (their results are lost).")
-    try:
-        ratings = t.rating_before(round_no)
-    except TournamentError as e:
-        fail(str(e))
-    names = {pid: p.name for pid, p in t.players.items()}
-    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    from . import workflow
 
     if template:
-        if path.exists() and not force:
-            fail(f"{path.name} already exists. Use --force to replace it with an empty template.")
-        parts = [(pid, labels[pid], ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
-                 if p.plays(round_no)]
-        save_round(path, [], labels, ratings, participants=parts)
+        try:
+            path = workflow.template(directory, round_no, force=force)
+        except workflow.Problem as e:
+            explain(e, directory, round_no)
         typer.echo(f"Wrote {path}.")
         hints.show([
             f"Open {path.name} and enter the boards you want to pair yourself, one per row:\n"
@@ -457,35 +409,30 @@ def pair(
         ])
         return
 
-    finalized = []
-    if existing and existing.unresolved:
-        _resolve_names(t, existing, round_no, yes)
-    if existing:
-        finalized = _finalized_boards(t, existing, round_no, ratings, warn_checks=True)
-        dropped = len(existing.games) - len(finalized)
-        if dropped:
-            typer.echo(f"{dropped} board(s) without 'x' in the Finalized column are paired again.")
     try:
-        result = pair_round(t, round_no, finalized)
-    except PairingError as e:
-        fail(str(e))
-    new_boards = [g.board for g in result.games if not g.finalized]
-    if finalized and not new_boards:
+        out = workflow.pair(directory, round_no, force=force, resolver=_cli_resolver(yes))
+    except workflow.Problem as e:
+        explain(e, directory, round_no)
+    t = out.tournament
+    for w in out.warnings:
+        warn(w)
+    for line in out.resolved:
+        typer.echo(f"Board ({line})")
+    if out.repaired:
+        typer.echo(f"{out.repaired} board(s) without 'x' in the Finalized column are paired again.")
+    if out.kept and not out.new_boards:
         typer.echo(f"All players of round {round_no} are on finalized boards; nothing new to pair.")
-    elif finalized:
-        typer.echo(f"Kept {len(finalized)} finalized board(s). New board(s): {', '.join(map(str, new_boards))}.")
-    save_round(path, result.games, labels, ratings, not_playing=[
-        (pid, labels[pid], reason) for pid, reason in result.sitting_out])
-    _print_round(t, result.games, ratings, result.sitting_out)
-    for rule, n in sorted(result.rule_hits.items()):
+    elif out.kept:
+        typer.echo(f"Kept {out.kept} finalized board(s). New board(s): {', '.join(map(str, out.new_boards))}.")
+    _print_round(t, out.games, out.ratings, out.sitting_out)
+    for rule, n in sorted(out.rule_hits.items()):
         typer.echo(f"Rule {rule}: applies to {n} board{'s' if n != 1 else ''}")
-    typer.echo(f"Wrote {path} ({len(result.games)} boards).")
-    _write_pairing_pdf(directory, round_no)
+    typer.echo(f"Wrote {round_file(directory, round_no)} ({len(out.games)} boards).")
+    _report_pdfs(out.pdfs, out.pdf_error)
     r = round_no
-    started_before = bool(existing and existing.games and all(g.finalized for g in existing.games))
-    if started_before and new_boards:            # latecomers were paired in a running round
+    if out.started_before and out.new_boards:          # latecomers were paired in a running round
         steps = [f"Print the updated {hints.fpath(directory, f'round_{r}.pdf')} / round_{r}_alphabetical.pdf and tell the players their\n"
-                 f"new board(s): {', '.join(map(str, new_boards))}.",
+                 f"new board(s): {', '.join(map(str, out.new_boards))}.",
                  f"When these games begin, finalize them too: {cmd(directory, f'start {r}')}"]
     else:
         steps = [f"Print {hints.fpath(directory, f'round_{r}.pdf')} (by board) and round_{r}_alphabetical.pdf "
@@ -496,127 +443,77 @@ def pair(
     hints.show(steps + hints.results_steps(t, directory, r))
 
 
-def _finalized_boards(t: Tournament, rg, round_no: int, ratings, warn_checks: bool = False) -> list:
-    """The finalized boards of a round file, with default handicap/komi/colours filled in where the
-    handicap was left empty. Boards without a board number get one later (number_boards)."""
-    from .pairing import PairingError, check_rule_fields, pair_rules, rng_for, setup_game
-
-    rng = rng_for(t.cfg, round_no, "manual")
-    kept = []
-    for i, g in enumerate(rg.games):
-        if not g.finalized:
-            continue
-        if i in rg.missing_handicap:
-            d = setup_game(t, round_no, g.white, g.black, ratings, rng, finalized=True)
-            g.white, g.black, g.handicap, g.komi = d.white, d.black, d.handicap, d.komi
-        elif i in rg.missing_komi:
-            g.komi = t.cfg.handicap.komi_handicap if g.handicap > 0 else t.cfg.handicap.komi_even
-        if i in rg.missing_board:
-            g.board = 0
-        kept.append(g)
-        if not warn_checks:
-            continue
-        a, b = t.players[g.white].name, t.players[g.black].name
-        if frozenset(g.players()) in t.played_pairs(before_round=round_no):
-            warn(f"finalized board: {a} and {b} already played each other")
-        try:
-            check_rule_fields(t)
-            hard = [r.describe() for r in pair_rules(t, g.white, g.black)[2] if r.hard]
-        except PairingError:
-            hard = []
-        if hard:
-            warn(f"finalized board: {a} - {b} breaks rule {'; '.join(hard)}")
-    return kept
+def explain(e, directory: Path, round_no: int | None = None) -> None:
+    """Print a workflow problem with what to do about it, then stop."""
+    typer.secho(str(e), fg=typer.colors.RED, err=True)
+    d = e.data
+    if e.code == "not_next":
+        nxt = d["next"]
+        hints.show([f"Pair round {nxt} first: {cmd(directory, f'pair {nxt}')}"])
+    elif e.code == "previous_incomplete":
+        r = d["round"]
+        for board, white, black in d["boards"]:
+            typer.echo(f"  board {board}: {white} - {black}", err=True)
+        hints.show([
+            f"Enter the missing results in {hints.fpath(directory, f'round_{r}.ods')} (an x under "
+            f"'White win', 'Draw' or 'Black win').",
+            "A game that will not be played (e.g. a player left): enter a forfeit, x! for the winner,\n"
+            "or ! under both 'White win' and 'Black win' if both lose. Forfeits are not rated.",
+            f"Save and close the file, check with {cmd(directory, f'results check {r}')},\n"
+            f"then run {cmd(directory, f'pair {round_no}')} again.",
+        ])
+    elif e.code == "open_results":
+        hints.show([f"Keep the boards with results: {cmd(directory, f'start {round_no}')}",
+                    f"Or pair them again, losing their results: {cmd(directory, f'pair {round_no} --force')}"])
+    elif e.code == "not_paired":
+        hints.show([f"Pair the round first: {cmd(directory, f'pair {round_no}')}"])
+    raise typer.Exit(1)
 
 
-def _resolve_names(t: Tournament, rg, round_no: int, yes: bool) -> None:
-    """Look up players typed by name on manual boards and add those boards to rg.games."""
-    from .models import Game
+def _cli_resolver(yes: bool):
+    """Ask in the terminal which player is meant by a name typed into a round file."""
+    from .workflow import describe_candidate
 
-    used = {pid for g in rg.games for pid in g.players()}
-    for u in rg.unresolved:
-        u.white = u.white if u.white is not None else _choose_player(t, u.white_text, round_no, used,
-                                                                       f"row {u.line}, White", yes)
-        used.add(u.white)
-        u.black = u.black if u.black is not None else _choose_player(t, u.black_text, round_no, used,
-                                                                       f"row {u.line}, Black", yes)
-        used.add(u.black)
-        if u.white == u.black:
-            fail(f"row {u.line}: White and Black are the same player")
-        idx = len(rg.games)
-        if u.handicap is None:
-            rg.missing_handicap.add(idx)
-        if u.komi is None:
-            rg.missing_komi.add(idx)
-        rg.missing_board.add(idx)
-        rg.games.append(Game(board=0, white=u.white, black=u.black, handicap=u.handicap or 0,
-                             komi=u.komi if u.komi is not None else t.cfg.handicap.komi_even, finalized=True))
-        typer.echo(f"Board (row {u.line}): {t.players[u.white].name} - {t.players[u.black].name}")
-    rg.unresolved = []
+    def resolve(where, text, candidates, round_no):
+        if len(candidates) == 1:
+            p = candidates[0]
+            if yes or typer.confirm(f"{where}: {text!r} -> {describe_candidate(p, round_no)}?", default=True):
+                return p
+            return None
+        if yes:
+            fail(f"{where}: {text!r} matches several players: "
+                 + "; ".join(describe_candidate(p, round_no) for p in candidates[:9])
+                 + ". Enter more of the name or the ID.")
+        shown = candidates[:9]
+        typer.echo(f"{where}: {text!r} matches several players:")
+        for i, p in enumerate(shown, start=1):
+            typer.echo(f"  {i}) {describe_candidate(p, round_no)}")
+        if len(candidates) > len(shown):
+            typer.echo(f"  ... and {len(candidates) - len(shown)} more (type more of the name to narrow it down)")
+        choice = typer.prompt(f"Which player? (1-{len(shown)}, 0 = cancel)", type=int, default=1)
+        return shown[choice - 1] if 1 <= choice <= len(shown) else None
 
-
-def _choose_player(t: Tournament, text: str, round_no: int, used: set[int], where: str, yes: bool) -> int:
-    """Find the player meant by a (partial) name; ask for confirmation or a choice."""
-    from .resolve import match_players
-
-    candidates = [p for p in match_players(text, list(t.players.values())) if p.id not in used]
-    if not candidates:
-        fail(f"{where}: no player matches {text!r}. Enter the player's ID or more of the name.")
-    registered = [p for p in candidates if p.plays(round_no)]
-    candidates = registered or candidates
-
-    def describe(p) -> str:
-        extra = "" if p.plays(round_no) else f", not registered for round {round_no}"
-        return f"{p.name} ({p.rank or '?'}, ID {p.id}{', ' + p.club if p.club else ''}{extra})"
-
-    if len(candidates) == 1:
-        p = candidates[0]
-        if yes or typer.confirm(f"{where}: {text!r} -> {describe(p)}?", default=True):
-            return p.id
-        fail(f"{where}: cancelled. Enter the player's ID or more of the name in the round file.")
-    if yes:
-        fail(f"{where}: {text!r} matches several players: "
-             + "; ".join(describe(p) for p in candidates[:9]) + ". Enter more of the name or the ID.")
-    shown = candidates[:9]
-    typer.echo(f"{where}: {text!r} matches several players:")
-    for i, p in enumerate(shown, start=1):
-        typer.echo(f"  {i}) {describe(p)}")
-    if len(candidates) > len(shown):
-        typer.echo(f"  ... and {len(candidates) - len(shown)} more (type more of the name to narrow it down)")
-    choice = typer.prompt(f"Which player? (1-{len(shown)}, 0 = cancel)", type=int, default=1)
-    if not 1 <= choice <= len(shown):
-        fail(f"{where}: cancelled.")
-    return shown[choice - 1].id
+    return resolve
 
 
 def translator(t: Tournament):
     """Texts for the PDFs in the configured output language."""
-    from .i18n import TranslationError, get_translator
+    from . import workflow
     try:
-        tr, warnings = get_translator(t.cfg, t.directory)
-    except TranslationError as e:
+        tr, warnings = workflow.translator(t)
+    except workflow.Problem as e:
         fail(str(e))
     for w in warnings:
         warn(w)
     return tr
 
 
-def _write_pairing_pdf(directory: Path, round_no: int) -> None:
-    from .printing import PrintError, alphabetical_pdf, alphabetical_pdf_path, pairing_pdf, pdf_path
-
-    t = load_tournament(directory)
-    rg = t.rounds.get(round_no)
-    if rg is None:
-        fail(f"{round_file(directory, round_no).name} not found")
-    tr = translator(t)
-    try:
-        path = pairing_pdf(t, rg, pdf_path(directory, round_no), tr)
-        alpha = alphabetical_pdf(t, rg, alphabetical_pdf_path(directory, round_no), tr)
-    except (PrintError, OSError) as e:
-        warn(f"PDF not written: {e}")
+def _report_pdfs(paths, error: str) -> None:
+    if error:
+        warn(f"PDF not written: {error}")
         return
-    typer.echo(f"Wrote {path} (printable pairing, by board).")
-    typer.echo(f"Wrote {alpha} (printable pairing, players in alphabetical order).")
+    typer.echo(f"Wrote {paths[0]} (printable pairing, by board).")
+    typer.echo(f"Wrote {paths[1]} (printable pairing, players in alphabetical order).")
 
 
 @app.command("pairing-pdf")
@@ -629,7 +526,14 @@ def pairing_pdf_command(
     round_<r>.pdf: by board, with result columns and handicap.
     round_<r>_alphabetical.pdf: all players by surname, with board, colour, opponent and handicap.
     """
-    _write_pairing_pdf(directory, round_no)
+    from . import workflow
+    try:
+        paths, error, warnings = workflow.pairing_pdfs(directory, round_no)
+    except workflow.Problem as e:
+        explain(e, directory, round_no)
+    for w in warnings:
+        warn(w)
+    _report_pdfs(paths, error)
     hints.show([f"Print {hints.fpath(directory, f'round_{round_no}.pdf')} and round_{round_no}_alphabetical.pdf "
                 f"and put them up."])
 
@@ -642,31 +546,24 @@ def results_check(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
     """Check the results of a round (missing or invalid results, rematches, players)."""
+    from . import workflow
+
     t = load_tournament(directory)
-    rg = t.rounds.get(round_no)
-    if rg is None:
-        fail(f"{round_file(directory, round_no).name} not found")
-    problems = 0
-    for g in rg.games:
-        if g.result is None:
-            problems += 1
-            typer.secho(f"Board {g.board}: result missing ({t.players[g.white].name} - "
-                        f"{t.players[g.black].name})", fg=typer.colors.RED)
-    earlier = t.played_pairs(before_round=round_no)
-    for g in rg.games:
-        if frozenset(g.players()) in earlier:
-            warn(f"board {g.board}: rematch of {t.players[g.white].name} and {t.players[g.black].name}")
-    on_board = {pid for g in rg.games for pid in g.players()}
-    for pid, p in sorted(t.players.items()):
-        if p.plays(round_no) and pid not in on_board and not p.joker:
-            warn(f"{p.name} (ID {pid}) is registered for round {round_no} but not paired "
-                 f"(latecomer? 'gotourney pair {round_no}' pairs them on new boards)")
-    for w in t.warnings:
-        if w.startswith(f"round {round_no}, ") :
-            warn(w)
-    done = len(rg.games) - problems
-    typer.echo(f"Round {round_no}: {done} of {len(rg.games)} results entered.")
-    if problems:
+    try:
+        check = workflow.check_results(t, round_no)
+    except workflow.Problem as e:
+        explain(e, directory, round_no)
+    for board, white, black in check.missing:
+        typer.secho(f"Board {board}: result missing ({white} - {black})", fg=typer.colors.RED)
+    for board, white, black in check.rematches:
+        warn(f"board {board}: rematch of {white} and {black}")
+    for pid, name in check.unpaired:
+        warn(f"{name} (ID {pid}) is registered for round {round_no} but not paired "
+             f"(latecomer? 'gotourney pair {round_no}' pairs them on new boards)")
+    for w in check.warnings:
+        warn(w)
+    typer.echo(f"Round {round_no}: {check.boards - len(check.missing)} of {check.boards} results entered.")
+    if check.missing:
         hints.show([f"Enter the missing results in {hints.fpath(directory, f'round_{round_no}.ods')} (an x under 'White win', 'Draw' or\n"
                     f"'Black win'), save in .ods format, close the file and check again:\n"
                     f"{cmd(directory, f'results check {round_no}')}"])
@@ -683,32 +580,27 @@ def standings(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
     """Show the TGoR standings and write standings.ods and standings.pdf."""
-    from .wall import STANDINGS_FILE, standings_rows, write_standings
+    from . import workflow
 
-    t = load_tournament(directory)
-    show_warnings(t)
-    r = t.last_round if round_no is None else round_no
-    if not 0 <= r <= t.last_round:
-        fail(f"round {r} has not been played (last round: {t.last_round})")
-    ensure_not_open(directory / STANDINGS_FILE)
-    cols, rows = standings_rows(t, r)
+    try:
+        out = workflow.make_standings(directory, round_no)
+    except workflow.Problem as e:
+        explain(e, directory)
+    t, r = out.tournament, out.round
+    for w in out.warnings:
+        warn(w)
     typer.echo(f"Standings after round {r}:" if r else "Starting ratings:")
     typer.echo(f"{'Pl':>3}  {'Name':<28} {'Rank':>4} {'Start':>5}  {'Games':>5} {'Wins':>4}  {'TGoR':>5}")
-    idx = {c.title: i for i, c in enumerate(cols)}
-    for row in rows:
+    idx = {c.title: i for i, c in enumerate(out.columns)}
+    for row in out.rows:
         place, name, rank, start = (row[idx[k]] for k in ("Place", "Name", "Rank", "Start TGoR"))
         games, wins, tgor = (row[idx[k]] for k in ("Games", "Wins", "TGoR"))
         typer.echo(f"{place:>3}  {name[:28]:<28} {rank:>4} {start:>5}  {games:>5} {wins:>4g}  {tgor:>5}")
-    path = write_standings(t, r)
-    typer.echo(f"Wrote {path}.")
-    from .printing import PrintError, standings_pdf
-    tr = translator(t)
-    try:
-        pdf = standings_pdf(t, r, directory / "standings.pdf", tr)
-    except (PrintError, OSError) as e:
-        warn(f"PDF not written: {e}")
+    typer.echo(f"Wrote {out.ods}.")
+    if out.pdf_error:
+        warn(f"PDF not written: {out.pdf_error}")
         return
-    typer.echo(f"Wrote {pdf} (printable standings).")
+    typer.echo(f"Wrote {out.pdf} (printable standings).")
     last = t.last_round
     if r == last and last and t.rounds[last].complete:
         if last < t.cfg.tournament.rounds:
@@ -724,14 +616,12 @@ def standings(
 @app.command()
 def wall(directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP)) -> None:
     """Compute the final places and write wall_list.ods (editable; used by 'gotourney h9')."""
-    from .wall import WALL_FILE, WallError, write_wall_list
+    from . import workflow
 
-    t = load_tournament(directory)
-    ensure_not_open(directory / WALL_FILE)
     try:
-        path = write_wall_list(t)
-    except WallError as e:
-        fail(str(e))
+        path, t = workflow.make_wall(directory)
+    except workflow.Problem as e:
+        explain(e, directory)
     show_warnings(t)
     typer.echo(f"Wrote {path} ({len(t.players)} players, {t.last_round} rounds).")
     hints.show([
@@ -748,22 +638,15 @@ def h9(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
     """Write the EGD result file (.h9) from wall_list.ods."""
-    from .wall import WallError, h9_filename, h9_text, read_wall_list
+    from . import workflow
 
     try:
-        cfg = load_config(directory)
-        lines, warnings = read_wall_list(directory)
-    except (ConfigError, OdsError, WallError) as e:
-        fail(str(e))
+        path, count, warnings = workflow.make_h9(directory, output)
+    except workflow.Problem as e:
+        explain(e, directory)
     for w in warnings:
         warn(w)
-    for field, value in [("name", cfg.tournament.name), ("place", cfg.tournament.place),
-                         ("dates", cfg.tournament.dates)]:
-        if not value:
-            warn(f"tournament.{field} is empty in {CONFIG_FILE}")
-    path = output or directory / h9_filename(cfg)
-    path.write_text(h9_text(cfg, lines), encoding="utf-8")
-    typer.echo(f"Wrote {path} ({len(lines)} players).")
+    typer.echo(f"Wrote {path} ({count} players).")
     steps = [f"Send {path} to the EGD: usually to your national rating officer, who uploads it\n"
              f"(see europeangodatabase.eu). If you correct wall_list.ods later, run this command again."]
     if not (directory / "awards.pdf").exists():
@@ -782,29 +665,18 @@ def awards(
 
     The prizes are configured in the [awards] section of tournament.toml.
     """
-    from .awards import AWARDS_FILE, AwardError, awards_pdf, compute_awards
-    from .printing import PrintError
+    from . import workflow
 
-    t = load_tournament(directory)
-    if t.last_round < t.cfg.tournament.rounds:
-        warn(f"only {t.last_round} of {t.cfg.tournament.rounds} rounds have been played")
     try:
-        tr = translator(t)
-        winners, notes = compute_awards(t, tr)
-    except AwardError as e:
-        fail(str(e))
-    for n in notes:
-        warn(n)
-    for a in winners:
-        typer.echo(f"{a.title:<32} {t.players[a.player].name:<28} place {a.place}")
-    path = output or directory / AWARDS_FILE
-    try:
-        awards_pdf(t, winners, path, tr)
-    except (PrintError, OSError) as e:
-        fail(f"PDF not written: {e}")
-    slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
-    typer.echo(f"Wrote {path} ({slides} slides).")
-    steps = [f"Open {path} in a PDF viewer and switch to full-screen / presentation mode for the\n"
+        out = workflow.make_awards(directory, output)
+    except workflow.Problem as e:
+        explain(e, directory)
+    for w in out.warnings + out.notes:
+        warn(w)
+    for a in out.winners:
+        typer.echo(f"{a.title:<32} {out.tournament.players[a.player].name:<28} place {a.place}")
+    typer.echo(f"Wrote {out.path} ({out.slides} slides).")
+    steps = [f"Open {out.path} in a PDF viewer and switch to full-screen / presentation mode for the\n"
              f"ceremony. Prizes are set in the [awards] section of {CONFIG_FILE}; run this command again\n"
              f"after changing them."]
     if not any(directory.glob("*.h9")):
@@ -846,26 +718,14 @@ def start(
     'gotourney pair' never changes finalized boards; afterwards it only pairs latecomers (players
     registered for the round who are not on a board yet) on new boards.
     """
-    from .pairing import number_boards
-    from .rounds import read_not_playing
+    from . import workflow
 
+    try:
+        out = workflow.start(directory, round_no)
+    except workflow.Problem as e:
+        explain(e, directory, round_no)
     t = load_tournament(directory)
-    rg = t.rounds.get(round_no)
-    path = round_file(directory, round_no)
-    if rg is None:
-        fail(f"{path.name} not found. Pair the round first: gotourney pair {round_no}")
-    if not rg.games:
-        fail(f"{path.name} has no boards. Pair the round first: gotourney pair {round_no}")
-    ensure_not_open(path)
-    ratings = t.rating_before(round_no)
-    newly = sum(1 for g in rg.games if not g.finalized)
-    for g in rg.games:
-        g.finalized = True
-    _finalized_boards(t, rg, round_no, ratings)          # fills an empty handicap / board number
-    number_boards(rg.games, ratings)
-    labels = {pid: player_label(p) for pid, p in t.players.items()}
-    save_round(path, rg.games, labels, ratings, not_playing=read_not_playing(path))
-    typer.echo(f"Round {round_no} started: {len(rg.games)} board(s) finalized ({newly} newly).")
+    typer.echo(f"Round {round_no} started: {out.boards} board(s) finalized ({out.newly} newly).")
     hints.show([
         f"Latecomers: register them for round {round_no} (registration window, or an x in column R{round_no}\n"
         f"of {hints.fpath(directory, 'players.ods')}), then run {cmd(directory, f'pair {round_no}')} - they are paired among each\n"

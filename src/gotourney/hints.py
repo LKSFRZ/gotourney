@@ -40,11 +40,6 @@ def show(steps: list[str]) -> None:
 
 # ---------------------------------------------------------------- overall state
 
-def round_started(t: Tournament, r: int) -> bool:
-    rg = t.rounds.get(r)
-    return bool(rg and rg.games and all(g.finalized for g in rg.games))
-
-
 def results_steps(t: Tournament, d: Path, r: int) -> list[str]:
     return [f"Enter the results in {fpath(d, f'round_{r}.ods')}: an x under 'White win', 'Draw' or 'Black win'\n"
             f"(save in .ods format and close the file afterwards).",
@@ -64,20 +59,21 @@ def after_complete_round(t: Tournament, d: Path, r: int) -> list[str]:
 
 def overall(t: Tournament, d: Path) -> list[str]:
     """What to do next, judged from the files of the tournament."""
-    if not t.players:
+    from .workflow import status
+
+    s = status(t)
+    r = s.round
+    if s.phase == "no_players":
         return [f"Register the players: {cmd(d, 'gui')}  (or {cmd(d, 'players add')} ...)"]
-    r = t.last_round
-    if r == 0:
+    if s.phase == "registration":
         return [f"When registration is complete, check it: {cmd(d, 'players check')}",
                 f"Then pair round 1: {cmd(d, 'pair 1')}"]
-    rg = t.rounds[r]
-    if rg.unresolved:
+    if s.phase == "names_pending":
         return [f"Round {r} has boards with names instead of IDs. Look them up: {cmd(d, f'pair {r}')}"]
-    if not round_started(t, r) and not rg.has_results:
+    if s.phase == "paired":
         return [f"Round {r} is paired. Print {fpath(d, f'round_{r}.pdf')} and round_{r}_alphabetical.pdf "
                 f"and put them up.",
                 f"When the games begin: {cmd(d, f'start {r}')}"] + results_steps(t, d, r)
-    if not rg.complete:
-        missing = sum(1 for g in rg.games if g.result is None)
-        return [f"Round {r} is running; {missing} result(s) still missing."] + results_steps(t, d, r)
+    if s.phase == "running":
+        return [f"Round {r} is running; {s.missing} result(s) still missing."] + results_steps(t, d, r)
     return after_complete_round(t, d, r)
