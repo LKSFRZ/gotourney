@@ -311,3 +311,60 @@ def test_confirm_names_in_browser(make_tournament):
     assert "Round 1 paired" in page(r)
     pairs = {frozenset(g.players()) for g in Tournament.load(d).rounds[1].games}
     assert frozenset({1, 4}) in pairs and len(pairs) == 2
+
+
+def test_settings_page(make_tournament):
+    from gotourney.config import load_config
+    d = make_tournament([(2000,), (1990,)], rounds=3)
+    app, c = client_for(d)
+    r = c.get("/settings")
+    assert r.status_code == 200 and "Pairing rules" in page(r) and "Award ceremony" in page(r)
+    version = re.search(r'name="version" value="([^"]+)"', page(r)).group(1)
+    form = {"version": version, "name": "Renamed Cup", "place": "DE, Sampletown", "date_first": "2026-04-18",
+            "date_last": "2026-04-19", "class": "B", "time": "60", "rounds": "4", "comment": "",
+            "language": "de", "translation_file": "translation.toml", "k_factor": "2.5", "top_bar": "2d",
+            "reduction": "1", "komi_even": "7.0", "komi_handicap": "0.5", "random_seed": "7",
+            "rule_field_0": "Club", "rule_type_0": "avoid_same", "rule_points_0": "100", "rule_groups_0": "",
+            "rule_field_1000": "Age group", "rule_type_1000": "prefer_same", "rule_points_1000": "200",
+            "rule_groups_1000": "U7, U11 | U15",
+            "gor_outdated_years": "4", "rank_gor_tolerance": "250",
+            "xf_name_0": "Fee paid", "xf_values_0": "yes, no", "xf_name_1": "Age group",
+            "xf_values_1": "U7, U11, U15, U19", "xf_name_1000": "Email", "xf_values_1000": "",
+            "title_slide": "on", "pz_type_0": "place", "pz_title_0": "{place}. Platz", "pz_places_0": "3, 2, 1"}
+    r = post(c, app, "/settings", **form)
+    assert "Settings saved" in page(r)
+    cfg = load_config(d)
+    assert (cfg.tournament.name, cfg.tournament.dates, cfg.tournament.klass, cfg.tournament.rounds) == \
+        ("Renamed Cup", ["2026-04-18", "2026-04-19"], "B", 4)
+    assert (cfg.output.language, cfg.rating.k_factor, cfg.rating.top_bar, cfg.handicap.reduction) == ("de", 2.5, 2200, 1)
+    assert [(x.field, x.type, x.points, x.groups) for x in cfg.pairing.rules] == \
+        [("Club", "avoid_same", 100, []), ("Age group", "prefer_same", 200, [["U7", "U11"], ["U15"]])]
+    assert cfg.registration.extra_fields == ["Fee paid", "Age group", "Email"]
+    assert cfg.registration.values_for("Email") is None
+    assert [(p.type, p.title, p.places) for p in cfg.awards.prizes] == [("place", "{place}. Platz", [3, 2, 1])]
+    text = (d / "tournament.toml").read_text()
+    assert "# EGD metadata, written to the .h9 header" in text          # comments kept
+    # invalid input is not saved and explained
+    r = post(c, app, "/settings", **{**form, "version": re.search(r'name="version" value="([^"]+)"',
+                                                                    page(c.get("/settings"))).group(1),
+                                     "komi_even": "5.5"})
+    assert r.status_code == 422 and "komi_even" in page(r) and load_config(d).handicap.komi_even == 7.0
+    # stale form: file changed meanwhile
+    r = post(c, app, "/settings", **{**form, "version": "0-0"})
+    assert r.status_code == 422 and "changed elsewhere" in page(r)
+
+
+def test_settings_cannot_reduce_rounds_below_paired(make_tournament):
+    from gotourney.config import load_config
+    d = make_tournament([(2000,), (1990,)], rounds=3)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    from gotourney.settings import read_settings, save_settings
+    cfg, v = read_settings(d)
+    save_settings(d, {"tournament": {"rounds": 2}}, v)
+    assert load_config(d).tournament.rounds == 2
+    with pytest.raises(Exception, match="already paired"):
+        import shutil
+        shutil.copy(d / "round_1.ods", d / "round_2.ods")
+        cfg, v = read_settings(d)
+        save_settings(d, {"tournament": {"rounds": 1}}, v)

@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}{{ t("settings_title") }} – {{ cfg.tournament.name }}{% endblock %}
+
+{% macro field(label, name, value, help="", type="text", attrs="") -%}
+  <label>{{ label }}
+    <input name="{{ name }}" type="{{ type }}" value="{{ value }}" {{ attrs|safe }}>
+    {% if help %}<span class="help">{{ help }}</span>{% endif %}
+  </label>
+{%- endmacro %}
+
+{% macro rule_row(i, rule) -%}
+  <tr class="list-row">
+    <td><select name="rule_field_{{ i }}">
+      {% for f in rule_fields %}<option {% if rule and rule.field == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select></td>
+    <td><select name="rule_type_{{ i }}">
+      {% for ty in rule_types %}<option value="{{ ty }}" {% if rule and rule.type == ty %}selected{% endif %}>{{ t("rt_" ~ ty) }}</option>{% endfor %}
+    </select></td>
+    <td><input name="rule_points_{{ i }}" value="{{ '%g'|format(rule.points) if rule and rule.type in ('avoid_same', 'prefer_same') else '' }}" inputmode="decimal" size="5"></td>
+    <td><input name="rule_groups_{{ i }}" value="{{ groups_text(rule.all_groups) if rule else '' }}"></td>
+    <td><label class="check"><input type="checkbox" name="rule_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+  </tr>
+{%- endmacro %}
+
+{% macro field_row(i, name, values) -%}
+  <tr class="list-row">
+    <td><input name="xf_name_{{ i }}" value="{{ name }}"></td>
+    <td><input name="xf_values_{{ i }}" value="{{ values|join(', ') if values else '' }}"></td>
+    <td><label class="check"><input type="checkbox" name="xf_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+  </tr>
+{%- endmacro %}
+
+{% macro prize_row(i, p) -%}
+  <tr class="list-row">
+    <td><select name="pz_type_{{ i }}">
+      {% for ty in prize_types %}<option value="{{ ty }}" {% if p and p.type == ty %}selected{% endif %}>{{ t("pt_" ~ ty) }}</option>{% endfor %}
+    </select></td>
+    <td><input name="pz_title_{{ i }}" value="{{ p.title if p else '' }}"></td>
+    <td><input name="pz_places_{{ i }}" value="{{ p.places|join(', ') if p and p.places else '' }}" size="7"></td>
+    <td><input name="pz_min_wins_{{ i }}" value="{{ '%g'|format(p.min_wins) if p and p.min_wins else '' }}" size="4"></td>
+    <td><select name="pz_field_{{ i }}"><option value=""></option>
+      {% for f in rule_fields %}<option {% if p and p.group_field == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+    </select></td>
+    <td><input name="pz_groups_{{ i }}" value="{{ groups_text(p.all_groups) if p else '' }}"></td>
+    <td><input name="pz_count_{{ i }}" value="{{ p.count if p and p.count != 1 else '' }}" size="3"></td>
+    <td><label class="check"><input type="checkbox" name="pz_exclusive_{{ i }}" {% if p and p.exclusive %}checked{% endif %}> {{ t("st_pz_exclusive") }}</label>
+        <label class="check"><input type="checkbox" name="pz_delete_{{ i }}"> {{ t("st_delete") }}</label></td>
+  </tr>
+{%- endmacro %}
+
+{% block content %}
+<div class="title">
+  <h1>{{ t("settings_title") }}</h1>
+  <p class="muted">{{ t("st_intro") }}</p>
+</div>
+{% if errors %}
+  <div class="msg error"><strong>{{ t("st_errors") }}</strong>{% for e in errors %}<br>{{ e }}{% endfor %}</div>
+{% endif %}
+
+<form method="post" action="{{ url_for('settings_page') }}" class="settings">
+  <input type="hidden" name="csrf" value="{{ csrf }}">
+  <input type="hidden" name="version" value="{{ settings_version }}">
+
+  <section class="card">
+    <h2>{{ t("st_sec_tournament") }}</h2>
+    <div class="fields">
+      {{ field(t("st_name"), "name", cfg.tournament.name, attrs="required") }}
+      {{ field(t("st_place"), "place", cfg.tournament.place, t("st_place_help")) }}
+      {{ field(t("st_date_first"), "date_first", cfg.tournament.dates[0] if cfg.tournament.dates else "", type="date") }}
+      {{ field(t("st_date_last"), "date_last", cfg.tournament.dates[-1] if cfg.tournament.dates|length > 1 else "", type="date") }}
+      <label>{{ t("st_class") }}
+        <select name="class">{% for c in "ABCD" %}<option {% if cfg.tournament.klass == c %}selected{% endif %}>{{ c }}</option>{% endfor %}</select>
+        <span class="help">{{ t("st_class_help") }}</span></label>
+      {{ field(t("st_time"), "time", cfg.tournament.time, type="number", attrs='min="1" required') }}
+      {{ field(t("st_rounds"), "rounds", cfg.tournament.rounds, type="number", attrs='min="1" max="20" required') }}
+      {{ field(t("st_comment"), "comment", cfg.tournament.comment, t("st_comment_help")) }}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_output") }}</h2>
+    <div class="fields">
+      <label>{{ t("st_language") }}
+        <select name="language">
+          {% for code in ["en", "de", "fr"] %}<option value="{{ code }}" {% if cfg.output.language == code %}selected{% endif %}>{{ t("lang_" ~ code) }}</option>{% endfor %}
+          <option value="custom" {% if cfg.output.language == "custom" %}selected{% endif %}>{{ t("st_custom") }}</option>
+        </select></label>
+      {{ field(t("st_translation_file"), "translation_file", cfg.output.translation_file, t("st_translation_help")) }}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_rating") }} · {{ t("st_sec_handicap") }}</h2>
+    <div class="fields">
+      {{ field(t("st_k_factor"), "k_factor", "%g"|format(cfg.rating.k_factor), t("st_k_help"), attrs='inputmode="decimal" required') }}
+      {{ field(t("st_top_bar"), "top_bar", ("%g"|format(cfg.rating.top_bar)) if cfg.rating.top_bar is not none else "", t("st_top_bar_help")) }}
+      <label>{{ t("st_reduction") }}
+        <select name="reduction">{% for h in range(10) %}<option {% if cfg.handicap.reduction == h %}selected{% endif %}>{{ h }}</option>{% endfor %}</select>
+        <span class="help">{{ t("st_reduction_help") }}</span></label>
+      <label>{{ t("st_komi_even") }}
+        <select name="komi_even">{% for k in [6.5, 7.0, 7.5] %}<option value="{{ k }}" {% if cfg.handicap.komi_even == k %}selected{% endif %}>{{ "%g"|format(k) }}</option>{% endfor %}</select></label>
+      {{ field(t("st_komi_handicap"), "komi_handicap", "%g"|format(cfg.handicap.komi_handicap), attrs='inputmode="decimal" required') }}
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_pairing") }}</h2>
+    <div class="fields">
+      {{ field(t("st_random_seed"), "random_seed", cfg.pairing.random_seed, t("st_seed_help"), type="number", attrs="required") }}
+    </div>
+    <h3>{{ t("st_rules") }}</h3>
+    <p class="help">{{ t("st_rules_help") }}</p>
+    <table class="list">
+      <thead><tr><th>{{ t("st_rule_field") }}</th><th>{{ t("st_rule_type") }}</th><th>{{ t("st_rule_points") }}</th><th>{{ t("st_rule_values") }}</th><th></th></tr></thead>
+      <tbody data-list="rule">{% for rule in cfg.pairing.rules %}{{ rule_row(loop.index0, rule) }}{% endfor %}</tbody>
+    </table>
+    <template id="tpl-rule">{{ rule_row("__I__", none) }}</template>
+    <button type="button" class="link" data-add="rule">+ {{ t("st_add_rule") }}</button>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_registration") }}</h2>
+    <div class="fields">
+      {{ field(t("st_outdated"), "gor_outdated_years", cfg.registration.gor_outdated_years, type="number", attrs='min="0" required') }}
+      {{ field(t("st_tolerance"), "rank_gor_tolerance", cfg.registration.rank_gor_tolerance, type="number", attrs='min="0" required') }}
+    </div>
+    <h3>{{ t("st_extra_fields") }}</h3>
+    <p class="help">{{ t("st_extra_help") }}</p>
+    <table class="list">
+      <thead><tr><th>{{ t("st_xf_name") }}</th><th>{{ t("st_xf_values") }}</th><th></th></tr></thead>
+      <tbody data-list="field">{% for name in cfg.registration.extra_fields %}{{ field_row(loop.index0, name, cfg.registration.values_for(name)) }}{% endfor %}</tbody>
+    </table>
+    <template id="tpl-field">{{ field_row("__I__", "", none) }}</template>
+    <button type="button" class="link" data-add="field">+ {{ t("st_add_field") }}</button>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("st_sec_awards") }}</h2>
+    <label class="check"><input type="checkbox" name="title_slide" {% if cfg.awards.title_slide %}checked{% endif %}> {{ t("st_title_slide") }}</label>
+    <h3>{{ t("st_prizes") }}</h3>
+    <p class="help">{{ t("st_prizes_help") }}</p>
+    <div class="table-scroll">
+    <table class="list">
+      <thead><tr><th>{{ t("st_pz_type") }}</th><th>{{ t("st_pz_title") }}</th><th>{{ t("st_pz_places") }}</th><th>{{ t("st_pz_min_wins") }}</th>
+                 <th>{{ t("st_pz_field") }}</th><th>{{ t("st_pz_groups") }}</th><th>{{ t("st_pz_count") }}</th><th></th></tr></thead>
+      <tbody data-list="prize">{% for p in cfg.awards.prizes %}{{ prize_row(loop.index0, p) }}{% endfor %}</tbody>
+    </table>
+    </div>
+    <template id="tpl-prize">{{ prize_row("__I__", none) }}</template>
+    <button type="button" class="link" data-add="prize">+ {{ t("st_add_prize") }}</button>
+  </section>
+
+  <div class="save-bar"><button type="submit" class="primary">{{ t("st_save") }}</button></div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // add a row: copy the hidden template with the next free index
+  document.querySelectorAll("[data-add]").forEach(function (button) {
+    button.addEventListener("click", function () {
+      var kind = button.dataset.add;
+      var body = document.querySelector('tbody[data-list="' + kind + '"]');
+      var next = 1000 + body.querySelectorAll("tr").length;
+      var html = document.getElementById("tpl-" + kind).innerHTML.replace(/__I__/g, next);
+      body.insertAdjacentHTML("beforeend", html);
+    });
+  });
+</script>
+{% endblock %}

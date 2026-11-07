@@ -165,7 +165,7 @@ def create_app(directory: Path | None = None) -> Flask:
         l = lang()
         from ..i18n import builtin
         return {"t": lambda key, **kw: text(l, key, **kw), "lang": l, "languages": LANGUAGES,
-                "csrf": app.config["CSRF"], "version": __version__,
+                "csrf": app.config["CSRF"], "version": __version__, "has_tournament": tdir() is not None,
                 "dates": lambda ds: builtin(l).date_range(list(ds))}
 
     def say(category: str, key: str, **kw) -> None:
@@ -517,6 +517,40 @@ def create_app(directory: Path | None = None) -> Flask:
         return jsonify(ok=True, gor=p.gor, rank=rank_text(p), club=p.club, country=p.country,
                        last=p.last_appearance, surname=p.surname, first_name=p.first_name)
 
+    # ------------------------------------------------------------ settings
+
+    @app.route("/settings", methods=["GET", "POST"])
+    def settings_page():
+        from .. import settings as st
+        from ..config import RULE_BUILTIN_FIELDS, RULE_TYPES, PRIZE_TYPES
+        d = tdir()
+        if d is None:
+            return redirect(url_for("home", choose=1))
+        errors = []
+        if request.method == "POST":
+            try:
+                changes = settings_from_form(request.form)
+                st.save_settings(d, changes, request.form.get("version", ""))
+                say("success", "st_saved")
+                return redirect(url_for("settings_page"))
+            except ValueError as e:
+                errors.append(str(e))
+            except workflow.Problem as e:
+                errors.append(text(lang(), "st_changed") if e.code == "changed" else str(e))
+        try:
+            cfg, version = st.read_settings(d)
+        except workflow.Problem as e:
+            flash(str(e), "error")
+            return redirect(url_for("dashboard"))
+        try:
+            _, pl = workflow.load_registration(d)
+            extra = pl.extra_fields
+        except workflow.Problem:
+            extra = cfg.registration.extra_fields
+        return render_template("settings.html", cfg=cfg, settings_version=version, errors=errors,
+                               rule_fields=list(RULE_BUILTIN_FIELDS) + list(extra), rule_types=RULE_TYPES,
+                               prize_types=PRIZE_TYPES, groups_text=groups_text), (422 if errors else 200)
+
     # ------------------------------------------------------------ actions
 
     @app.post("/do/<action>")
@@ -596,6 +630,92 @@ def create_app(directory: Path | None = None) -> Flask:
             abort(404)
 
     return app
+
+
+def groups_text(groups) -> str:
+    """[['U7', 'U11'], ['U15']] -> 'U7, U11 | U15' (as shown in the settings form)."""
+    return " | ".join(", ".join(g) for g in groups)
+
+
+def _groups(text: str) -> list[list[str]]:
+    return [[v.strip() for v in part.split(",") if v.strip()] for part in text.split("|") if part.strip()]
+
+
+def settings_from_form(f) -> dict:
+    """The settings form as {section: {key: value}} in the structure of tournament.toml."""
+    def num(name, kind=float, label=None):
+        raw = f.get(name, "").strip().replace(",", ".")
+        try:
+            return kind(raw) if kind is float else int(raw)
+        except ValueError:
+            raise ValueError(f"{label or name}: {raw!r} is not a number") from None
+
+    dates = [x for x in (f.get("date_first", "").strip(), f.get("date_last", "").strip()) if x]
+    top_bar = f.get("top_bar", "").strip() or "none"
+    if top_bar.replace(".", "", 1).isdigit():
+        top_bar = float(top_bar)
+    changes = {
+        "tournament": {"name": f.get("name", "").strip(), "place": f.get("place", "").strip(), "dates": dates,
+                       "class": f.get("class", "A"), "time": num("time", int, "time"),
+                       "comment": f.get("comment", "").strip(), "rounds": num("rounds", int, "rounds")},
+        "output": {"language": f.get("language", "en"),
+                   "translation_file": f.get("translation_file", "").strip() or "translation.toml"},
+        "rating": {"k_factor": num("k_factor", float, "k-factor"), "top_bar": top_bar},
+        "handicap": {"reduction": num("reduction", int, "reduction"), "komi_even": num("komi_even"),
+                     "komi_handicap": num("komi_handicap")},
+        "pairing": {"random_seed": num("random_seed", int, "random seed"), "rules": []},
+        "registration": {"gor_outdated_years": num("gor_outdated_years", int),
+                         "rank_gor_tolerance": num("rank_gor_tolerance", int),
+                         "extra_fields": [], "field_values": {}},
+        "awards": {"title_slide": bool(f.get("title_slide")), "prizes": []},
+    }
+    indices = lambda prefix: sorted({int(k[len(prefix):]) for k in f if k.startswith(prefix) and k[len(prefix):].isdigit()})
+    for i in indices("rule_field_"):
+        if f.get(f"rule_delete_{i}") or not f.get(f"rule_field_{i}", "").strip():
+            continue
+        rule = {"field": f.get(f"rule_field_{i}").strip(), "type": f.get(f"rule_type_{i}", "avoid_same")}
+        if rule["type"] in ("avoid_same", "prefer_same"):
+            rule["points"] = num(f"rule_points_{i}", float, f"rule {i + 1}: points")
+        groups = _groups(f.get(f"rule_groups_{i}", ""))
+        if len(groups) == 1:
+            rule["values"] = groups[0]
+        elif groups:
+            rule["groups"] = groups
+        changes["pairing"]["rules"].append(rule)
+    for i in indices("xf_name_"):
+        name = f.get(f"xf_name_{i}", "").strip()
+        if not name or f.get(f"xf_delete_{i}"):
+            continue
+        changes["registration"]["extra_fields"].append(name)
+        values = [v.strip() for v in f.get(f"xf_values_{i}", "").split(",") if v.strip()]
+        if values:
+            changes["registration"]["field_values"][name] = values
+    for i in indices("pz_type_"):
+        if f.get(f"pz_delete_{i}"):
+            continue
+        prize = {"type": f.get(f"pz_type_{i}")}
+        if f.get(f"pz_title_{i}", "").strip():
+            prize["title"] = f.get(f"pz_title_{i}").strip()
+        if prize["type"] == "place":
+            try:
+                prize["places"] = [int(x) for x in f.get(f"pz_places_{i}", "").replace(" ", "").split(",") if x]
+            except ValueError:
+                raise ValueError(f"prize {i + 1}: places must be numbers like 3, 2, 1") from None
+        elif prize["type"] == "wins":
+            prize["min_wins"] = num(f"pz_min_wins_{i}", float, f"prize {i + 1}: minimum wins")
+        elif prize["type"] == "best_in_group":
+            prize["field"] = f.get(f"pz_field_{i}", "").strip()
+            groups = _groups(f.get(f"pz_groups_{i}", ""))
+            if len(groups) == 1:
+                prize["values"] = groups[0]
+            elif groups:
+                prize["groups"] = groups
+        if prize["type"] in ("best_in_group", "rating_gain") and f.get(f"pz_count_{i}", "").strip():
+            prize["count"] = num(f"pz_count_{i}", int, f"prize {i + 1}: count")
+        if f.get(f"pz_exclusive_{i}"):
+            prize["exclusive"] = True
+        changes["awards"]["prizes"].append(prize)
+    return changes
 
 
 def _folder_name(name: str) -> str:

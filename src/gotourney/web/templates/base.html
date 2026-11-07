@@ -12,7 +12,13 @@
     <span class="stones" aria-hidden="true">&#9675;&#9679;</span> {{ t("app_title") }}
   </a>
   <nav>
-    {% block nav %}{% endblock %}
+    {% if has_tournament %}
+      {% set here = request.path %}
+      <a href="{{ url_for('dashboard') }}" class="{{ 'current' if here == '/dashboard' }}">{{ t("dashboard") }}</a>
+      <a href="{{ url_for('players_page') }}" class="{{ 'current' if here == '/players' }}">{{ t("players_title") }}</a>
+      <a href="{{ url_for('settings_page') }}" class="{{ 'current' if here == '/settings' }}">{{ t("settings_title") }}</a>
+    {% endif %}
+    <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>
     <span class="lang" aria-label="{{ t('language') }}">
       {% for code in languages %}
         {% if code == lang %}<strong>{{ code|upper }}</strong>{% else %}<a href="{{ url_for('set_lang', code=code) }}">{{ code|upper }}</a>{% endif %}

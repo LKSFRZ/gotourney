@@ -243,3 +243,24 @@ details.manual summary { cursor: pointer; font-weight: 600; color: var(--accent)
 .manual-form, .names-form { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; margin-top: 8px; }
 .manual-form label, .names-form label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
 .names-form { flex-direction: column; align-items: flex-start; }
+
+/* ---------------- settings page */
+form.settings .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px 16px; }
+form.settings label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
+form.settings label.check { flex-direction: row; align-items: center; gap: 8px; font-weight: normal; font-size: 14px; }
+form.settings input, form.settings select { font-weight: normal; }
+form.settings input[type=checkbox] { width: auto; }
+form.settings h3 { margin: 18px 0 4px; font-size: 16px; }
+.help { font-size: 12px; font-weight: normal; color: var(--muted); }
+p.help { margin: 0 0 8px; }
+table.list { width: 100%; border-collapse: collapse; }
+table.list th { text-align: left; font-size: 12px; color: var(--muted); padding: 4px; }
+table.list td { padding: 4px; vertical-align: top; }
+table.list input, table.list select { width: 100%; min-width: 60px; }
+table.list td:last-child { white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.save-bar { position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(transparent, var(--bg) 30%); }
+nav a.current { font-weight: 700; text-decoration: none; }
+table.list input, table.list select { font-size: 14px; padding: 6px 8px; }
+table.list input[type=checkbox] { width: auto; min-width: 0; }
+table.list label.check { font-size: 13px; white-space: nowrap; }

@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block title %}{{ t("rp_title", r=r) }} – {{ tour.cfg.tournament.name }}{% endblock %}
-{% block nav %}<a href="{{ url_for('dashboard') }}">{{ t("dashboard") }}</a> <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>{% endblock %}
 
 {% block content %}
 <div class="title">

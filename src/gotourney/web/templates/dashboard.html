@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% block title %}{{ tour.cfg.tournament.name if tour else t("app_title") }}{% endblock %}
-{% block nav %}<a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>{% endblock %}
 
 {% macro action_form(a) -%}
   <form method="post" action="{{ url_for('do', action=a.action) }}"
