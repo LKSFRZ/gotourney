@@ -41,9 +41,11 @@ random_seed  = 12345         # colour choice and random tie-breaks
 #            "prefer_same"   different values: pair counts as `points` more TGoR difference
 #            "forbid_same"   same value: never paired automatically
 #            "require_same"  different values: never paired automatically
-#   values = optional: the rule only applies when a player has one of these values
-# An empty cell never counts as "same" for avoid_same / forbid_same (e.g. players without club);
-# for prefer_same / require_same, two empty cells count as the same value.
+#   values = optional: these values form one group and count as the same value; values outside
+#            the group count together as "the rest" (e.g. all children vs. everybody else)
+#   groups = optional, instead of values: several groups, e.g. [["U7", "U11"], ["U15", "U19"]]
+# An empty cell never counts as "same" for avoid_same / forbid_same (e.g. players without club),
+# and with values / groups these rules only apply inside a group.
 # Delete or comment out a rule to switch it off.
 
 [[pairing.rules]]
@@ -51,12 +53,19 @@ field  = "Club"
 type   = "avoid_same"
 points = 150
 
-# Example (off): children preferably play children of their own age group
+# Example (off): children (U7, U11, U15) preferably play other children
 # [[pairing.rules]]
 # field  = "Age group"
 # type   = "prefer_same"
 # points = 200
 # values = ["U7", "U11", "U15"]
+#
+# Example (off): younger and older children kept apart from each other and from adults
+# [[pairing.rules]]
+# field  = "Age group"
+# type   = "prefer_same"
+# points = 200
+# groups = [["U7", "U11"], ["U15", "U19"]]
 
 [registration]
 gor_outdated_years = 5       # warn if a player's last EGD tournament is older than this
@@ -114,7 +123,13 @@ class PairingRule:
     field: str
     type: str                  # one of RULE_TYPES
     points: float = 0.0        # for avoid_same / prefer_same
-    values: list[str] = field(default_factory=list)
+    values: list[str] = field(default_factory=list)          # one group (shorthand)
+    groups: list[list[str]] = field(default_factory=list)    # several groups
+
+    @property
+    def all_groups(self) -> list[list[str]]:
+        """The groups of values; empty = every value is its own group."""
+        return self.groups or ([self.values] if self.values else [])
 
     @property
     def hard(self) -> bool:
@@ -124,8 +139,9 @@ class PairingRule:
         text = f"{self.field}: {self.type.replace('_', ' ')}"
         if not self.hard:
             text += f" ({self.points:g} points)"
-        if self.values:
-            text += f" for {', '.join(self.values)}"
+        groups = self.all_groups
+        if groups:
+            text += " for " + " / ".join("{" + ", ".join(g) + "}" for g in groups)
         return text
 
 
@@ -213,7 +229,7 @@ def _rules(p: dict) -> list[PairingRule]:
         where = f"pairing.rules (rule {i})"
         if not isinstance(r, dict):
             raise ConfigError(f"{where}: expected a table")
-        unknown = set(r) - {"field", "type", "points", "values"}
+        unknown = set(r) - {"field", "type", "points", "values", "groups"}
         if unknown:
             raise ConfigError(f"{where}: unknown key(s) {', '.join(sorted(unknown))}")
         name = _get(r, "field", str, "", where).strip()
@@ -229,8 +245,29 @@ def _rules(p: dict) -> list[PairingRule]:
             if points < 0:
                 raise ConfigError(f"{where}: points must not be negative")
         values = [v.strip() for v in _get(r, "values", list, [], where) if v.strip()]
-        rules.append(PairingRule(name, typ, points or 0.0, values))
+        groups = _groups(r.get("groups", []), where)
+        if values and groups:
+            raise ConfigError(f"{where}: use either 'values' (one group) or 'groups', not both")
+        seen_values: set[str] = set()
+        for g in groups or [values]:
+            for v in g:
+                if v.casefold() in seen_values:
+                    raise ConfigError(f"{where}: value {v!r} appears in more than one group")
+                seen_values.add(v.casefold())
+        rules.append(PairingRule(name, typ, points or 0.0, values, groups))
     return rules
+
+
+def _groups(raw, where: str) -> list[list[str]]:
+    if not isinstance(raw, list) or not all(isinstance(g, list) for g in raw):
+        raise ConfigError(f"{where}: groups must be a list of lists, e.g. [[\"U7\", \"U11\"], [\"U15\"]]")
+    groups = []
+    for g in raw:
+        vals = [str(v).strip() for v in g if str(v).strip()]
+        if not vals:
+            raise ConfigError(f"{where}: groups must not contain an empty group")
+        groups.append(vals)
+    return groups
 
 
 def _field_values(g: dict) -> dict[str, list[str]]:

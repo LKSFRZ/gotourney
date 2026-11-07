@@ -352,7 +352,7 @@ field  = "Club"
 type   = "avoid_same"
 points = 150
 
-# children preferably play children of their own age group (switched off)
+# children (U7, U11, U15) preferably play other children (switched off)
 # [[pairing.rules]]
 # field  = "Age group"
 # type   = "prefer_same"
@@ -365,12 +365,16 @@ points = 150
   <tr><td><code>type = "prefer_same"</code></td><td>Players with <b>different</b> values: the pair counts as <code>points</code> more TGoR difference.</td></tr>
   <tr><td><code>type = "forbid_same"</code></td><td>Players with the same value are never paired automatically (e.g. a <i>Family</i> field).</td></tr>
   <tr><td><code>type = "require_same"</code></td><td>Players with different values are never paired automatically.</td></tr>
-  <tr><td><code>values</code></td><td>Optional. The rule only applies when a player has one of these values. With the example above, a U11 child against an adult costs 200 points, but adults among themselves are not affected.</td></tr>
+  <tr><td><code>values</code></td><td>Optional. These values form <b>one group</b> and count as the same value; all other values together form "the rest". With the example above, children play each other freely (U11 against U15 costs nothing), a child against an adult costs 200 points, and adults among themselves (including Ü50) are not affected.</td></tr>
+  <tr><td><code>groups</code></td><td>Optional, instead of <code>values</code>: several groups, e.g. <code>[["U7", "U11"], ["U15", "U19"]]</code>. Values in the same group count as the same; values in different groups, or one in a group and one outside, count as different. A value may only be in one group.</td></tr>
 </table>
 <ul>
   <li><b>Empty cells:</b> for <code>avoid_same</code> and <code>forbid_same</code> an empty cell never counts
   as "the same" (two players without a club are not in the same club). For <code>prefer_same</code> and
   <code>require_same</code> two empty cells count as the same value (two adults without an age group).</li>
+  <li><b>Groups with avoid_same / forbid_same:</b> the rule then only applies inside a group, and values of
+  one group count as the same. <code>groups = [["HH", "HHA"]]</code> on the Club field treats the two clubs
+  as one and ignores all other clubs.</li>
   <li>Values are compared without regard to case or surrounding spaces.</li>
   <li><b>How many points?</b> The points are added to the TGoR difference, so 200 points means "a child
   against an adult is as bad as a 200-point difference". A higher value makes the rule stronger, but the

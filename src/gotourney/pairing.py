@@ -39,15 +39,35 @@ def _norm(value: str) -> str:
     return value.strip().casefold()
 
 
+_REST = object()     # group of all values outside the configured groups
+
+
+def _group_key(rule: PairingRule, value: str):
+    """The rule's group of a value: the value itself, or the index of its group (with groups)."""
+    v = _norm(value)
+    groups = rule.all_groups
+    if not groups:
+        return v
+    for i, g in enumerate(groups):
+        if v in {_norm(x) for x in g}:
+            return i
+    return _REST
+
+
 def rule_applies(rule: PairingRule, value_a: str, value_b: str) -> bool:
-    """Does the rule apply to a pair whose players have these values in the rule's field?"""
-    a, b = _norm(value_a), _norm(value_b)
-    only = {_norm(v) for v in rule.values}
+    """Does the rule apply to a pair whose players have these values in the rule's field?
+
+    With values / groups, values of one group count as the same value and all other values
+    together form "the rest".
+    """
+    ka, kb = _group_key(rule, value_a), _group_key(rule, value_b)
     if rule.type in ("avoid_same", "forbid_same"):
-        # an empty cell is not a value: players without a club are not "in the same club"
-        return bool(a) and a == b and (not only or a in only)
-    # prefer_same / require_same: two empty cells count as the same value
-    return a != b and (not only or a in only or b in only)
+        # an empty cell is not a value (players without a club are not "in the same club"),
+        # and with groups only values inside a group count
+        return ka == kb and ka not in ("", _REST)
+    # prefer_same / require_same: different values / groups; two empty cells or two values
+    # from "the rest" count as the same
+    return ka != kb
 
 
 def check_rule_fields(t: Tournament) -> None:

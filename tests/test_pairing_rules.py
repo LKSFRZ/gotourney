@@ -71,6 +71,11 @@ def test_field_values_must_belong_to_extra_fields():
     ("prefer_same", [], "U11", "", True),
     ("prefer_same", ["U11"], "U19", "", False),   # rule only for U11
     ("prefer_same", ["U11"], "U11", "", True),
+    ("prefer_same", ["U7", "U11", "U15"], "U11", "U15", False),   # children among themselves
+    ("prefer_same", ["U7", "U11", "U15"], "U15", "", True),       # child vs adult
+    ("prefer_same", ["U7", "U11", "U15"], "Ü50", "", False),      # adults among themselves
+    ("avoid_same", ["HH", "HHA"], "HH", "hha", True),             # one group counts as the same
+    ("avoid_same", ["HH"], "B", "B", False),
     ("forbid_same", [], "Smith", "smith", True),
     ("require_same", [], "A", "B", True),
 ])
@@ -141,3 +146,41 @@ def test_check_warns_about_values_not_in_list(make_tournament):
     t = Tournament.load(d)
     warnings = [i.message for i in check_players(list(t.players.values()), t.cfg) if i.level == "warning"]
     assert any("Age group 'U12' is not one of" in w for w in warnings)
+
+
+@pytest.mark.parametrize("groups, a, b, applies", [
+    ([["U7", "U11"], ["U15", "U19"]], "U7", "U11", False),
+    ([["U7", "U11"], ["U15", "U19"]], "U11", "U15", True),
+    ([["U7", "U11"], ["U15", "U19"]], "U19", "", True),
+    ([["U7", "U11"], ["U15", "U19"]], "Ü50", "", False),
+])
+def test_prefer_same_with_groups(groups, a, b, applies):
+    assert rule_applies(PairingRule("Age group", "prefer_same", 200, [], groups), a, b) is applies
+
+
+@pytest.mark.parametrize("rule, msg", [
+    ({"values": ["U7"], "groups": [["U11"]]}, "not both"),
+    ({"groups": [["U7", "U11"], ["U11"]]}, "more than one group"),
+    ({"groups": ["U7", "U11"]}, "list of lists"),
+    ({"groups": [[]]}, "empty group"),
+])
+def test_invalid_groups(rule, msg):
+    with pytest.raises(ConfigError, match=msg):
+        parse_config({"pairing": {"rules": [dict(field="Age group", type="prefer_same", points=100, **rule)]}})
+
+
+def test_groups_in_template_describe():
+    rule = PairingRule("Age group", "prefer_same", 200, [], [["U7", "U11"], ["U15"]])
+    assert rule.describe() == "Age group: prefer same (200 points) for {U7, U11} / {U15}"
+
+
+def test_children_of_different_age_groups_play_each_other(make_tournament):
+    # an U11 and an U15 child between two adults: with one children's group they play each other
+    players = [(2000, None, None, None, {}), (1990, None, None, None, {"Age group": "U11"}),
+               (1900, None, None, None, {"Age group": "U15"}), (1890, None, None, None, {})]
+    rule = '[[pairing.rules]]\nfield = "Age group"\ntype = "prefer_same"\npoints = 200\n'
+    d = make_tournament(players, rounds=1, rules=rule + 'values = ["U7", "U11", "U15"]\n')
+    assert pairs(pair_round(Tournament.load(d), 1)) == {frozenset({2, 3}), frozenset({1, 4})}
+    # with separate groups for U11 and U15 they count as different, so rating decides again
+    d = make_tournament(players, rounds=1, rules=rule + 'groups = [["U7", "U11"], ["U15", "U19"]]\n')
+    assert pairs(pair_round(Tournament.load(d), 1)) == {frozenset({1, 2}), frozenset({3, 4})}
