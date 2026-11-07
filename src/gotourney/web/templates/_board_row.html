@@ -34,7 +34,7 @@
     </details>
   </td>
   <td class="player white {{ 'winner' if row.result in ('white', 'white_forfeit') else '' }}">
-    <span class="stone" aria-hidden="true">&#9675;</span> {{ row.white }}
+    <span class="stone" aria-hidden="true">&#x26AA;&#xFE0F;</span> {{ row.white }}
     <span class="tgor">{{ row.white_tgor }}</span>
   </td>
   <td class="result">
@@ -43,11 +43,11 @@
       <input type="hidden" name="board" value="{{ row.board }}">
       <div class="segmented" role="group" aria-label="{{ t('rp_result') }} {{ t('rp_board') }} {{ row.board }}">
         <button type="submit" name="result" value="white" aria-pressed="{{ 'true' if row.result == 'white' else 'false' }}"
-                title="{{ t('rp_white_wins') }}">&#9675; <span class="long">{{ t('rp_white_wins') }}</span><span class="short">{{ t('rp_white') }}</span></button>
+                title="{{ t('rp_white_wins') }}">&#x26AA;&#xFE0F; <span class="long">{{ t('rp_white_wins') }}</span><span class="short">{{ t('rp_white') }}</span></button>
         <button type="submit" name="result" value="jigo" aria-pressed="{{ 'true' if row.result == 'jigo' else 'false' }}"
                 title="{{ t('rp_jigo') }}">{{ t('rp_jigo') }}</button>
         <button type="submit" name="result" value="black" aria-pressed="{{ 'true' if row.result == 'black' else 'false' }}"
-                title="{{ t('rp_black_wins') }}">&#9679; <span class="long">{{ t('rp_black_wins') }}</span><span class="short">{{ t('rp_black') }}</span></button>
+                title="{{ t('rp_black_wins') }}">&#x26AB;&#xFE0F; <span class="long">{{ t('rp_black_wins') }}</span><span class="short">{{ t('rp_black') }}</span></button>
       </div>
       <details class="more">
         <summary>{{ t('rp_more') }}</summary>
@@ -64,7 +64,7 @@
     </form>
   </td>
   <td class="player black {{ 'winner' if row.result in ('black', 'black_forfeit') else '' }}">
-    <span class="stone" aria-hidden="true">&#9679;</span> {{ row.black }}
+    <span class="stone" aria-hidden="true">&#x26AB;&#xFE0F;</span> {{ row.black }}
     <span class="tgor">{{ row.black_tgor }}</span>
   </td>
   <td class="handicap">{{ row.handicap }}<span class="komi"> / {{ row.komi }}</span></td>

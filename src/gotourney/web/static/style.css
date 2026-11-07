@@ -50,7 +50,7 @@ header.top {
   padding: 12px 24px; background: var(--card); border-bottom: 1px solid var(--line);
 }
 .brand { font-weight: 700; font-size: 18px; text-decoration: none; color: var(--text); }
-.stones { color: var(--accent); letter-spacing: -2px; margin-right: 4px; }
+.stones { letter-spacing: 1px; margin-right: 4px; font-size: 16px; }
 nav { display: flex; align-items: center; gap: 18px; }
 .lang a, .lang strong { margin-left: 6px; font-size: 14px; }
 
@@ -151,10 +151,11 @@ table.boards td { padding: 8px 6px; border-bottom: 1px solid var(--line); vertic
 tr.board-row.open td.board-no { box-shadow: inset 4px 0 0 var(--warn); }
 td.board-no { font-weight: 700; width: 3.5em; text-align: center; }
 td.player { min-width: 170px; }
-td.player .stone { color: var(--muted); }
-td.player .tgor { display: block; font-size: 12px; color: var(--muted); margin-left: 1.3em; }
+/* stones are emoji (fixed colours, readable in light and dark mode) */
+td.player .stone { display: inline-block; line-height: 1; border-radius: 50%; }
+td.player .tgor { display: block; font-size: 12px; color: var(--muted); margin-left: 1.6em; }
 td.player.winner { font-weight: 700; }
-td.player.winner .stone { color: var(--ok); }
+td.player.winner .stone { box-shadow: 0 0 0 2px var(--card), 0 0 0 4px var(--ok); margin: 0 4px 0 3px; }
 td.handicap { white-space: nowrap; color: var(--muted); }
 .komi { font-size: 12px; }
 
