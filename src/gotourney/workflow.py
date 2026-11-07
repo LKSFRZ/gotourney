@@ -79,7 +79,8 @@ def translator(t: Tournament) -> tuple[Translator, list[str]]:
 class Status:
     """Where the tournament stands, for 'next step' hints and the dashboard.
 
-    phase: no_players | registration | names_pending | paired | running | round_complete | finished
+    phase: no_players | registration | names_pending | paired | running | round_complete | finished |
+           players_unfinished (rows entered by hand in players.ods must be completed before pairing)
     """
 
     phase: str
@@ -89,6 +90,7 @@ class Status:
     boards: int = 0
     missing: int = 0                # missing results in that round
     started: bool = False
+    unfinished: int = 0             # rows of players.ods entered by hand, not completed yet
 
 
 def round_started(t: Tournament, r: int) -> bool:
@@ -97,6 +99,15 @@ def round_started(t: Tournament, r: int) -> bool:
 
 
 def status(t: Tournament) -> Status:
+    s = _status(t)
+    s.unfinished = t.unfinished
+    # before the next pairing, players entered by hand must be completed first
+    if s.unfinished and s.phase in ("no_players", "registration", "round_complete"):
+        s.phase = "players_unfinished"
+    return s
+
+
+def _status(t: Tournament) -> Status:
     s = Status("registration", rounds=t.cfg.tournament.rounds, players=len(t.players))
     if not t.players:
         s.phase = "no_players"
@@ -280,6 +291,10 @@ def pair(directory: Path, round_no: int, *, force: bool = False,
     except TournamentError as e:
         raise Problem("load", str(e)) from None
     existing = t.rounds.get(round_no)
+    if t.unfinished:
+        raise Problem("players_unfinished", f"players.ods has {t.unfinished} row(s) entered by hand that are not "
+                      f"complete yet (no ID). Complete them first: gotourney players complete",
+                      {"n": t.unfinished})
     backup(directory, f"before_pairing_round_{round_no}")
     warnings: list[str] = [w for w in t.warnings if not w.startswith(f"round {round_no}:")]
     resolved: list[str] = []
@@ -679,7 +694,7 @@ def save_player(directory: Path, data: PlayerData, player_id: int | None = None)
     player.egd_gor = data.egd_gor if data.egd_gor is not None else (old.egd_gor if old else None)
     player.egd_last_tournament = data.egd_last_tournament or (old.egd_last_tournament if old else "")
     players = others + [player]
-    save_players(directory, players, cfg.tournament.rounds, merge_fields(pl.extra_fields, extra))
+    save_players(directory, players, cfg.tournament.rounds, merge_fields(pl.extra_fields, extra), pl.unfinished)
     issues = [i for i in check_players(players, cfg) if f"ID {player.id} (" in i.message]
     return player, issues
 
@@ -704,7 +719,8 @@ def remove_player(directory: Path, player_id: int):
         if any(player_id in g.players() for g in rg.games):
             raise Problem("in_round", f"{player.name} plays in round {r} and cannot be removed. Unregister them "
                           f"from later rounds instead.", {"round": r, "name": player.name})
-    save_players(directory, [p for p in pl.players if p.id != player_id], cfg.tournament.rounds, pl.extra_fields)
+    save_players(directory, [p for p in pl.players if p.id != player_id], cfg.tournament.rounds, pl.extra_fields,
+                 pl.unfinished)
     return player
 
 
@@ -721,8 +737,54 @@ def sync_player_columns(directory: Path) -> bool:
     if is_open_in_libreoffice(path):
         return False
     cfg, pl = load_registration(directory)
-    save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields)
+    save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields, pl.unfinished)
     return True
+
+# ---------------------------------------------------------------- players entered by hand
+
+@dataclass
+class CompletionOutcome:
+    completed: list            # completion.Completed
+    left: list                 # completion.RowPlan of rows that could not be completed yet
+
+
+def egd_lookup(online: bool):
+    """A function PIN -> fresh EGD data (or None), for completing players."""
+    from . import egd
+
+    def lookup(pin: str):
+        if not online:
+            return None
+        try:
+            return egd.fetch_by_pin(pin)
+        except egd.EGDError:
+            return None
+    return lookup
+
+
+def completion_plan(directory: Path, index, choices: dict[int, str] | None = None, lookup_pin=None):
+    """(config, player list, plans) for the rows of players.ods entered by hand. Changes nothing."""
+    from .completion import plan
+    cfg, pl = load_registration(directory)
+    return cfg, pl, plan(pl.unfinished, pl.players, index, lookup_pin, choices)
+
+
+def complete_players(directory: Path, index, choices: dict[int, str] | None = None,
+                     lookup_pin=None) -> CompletionOutcome:
+    """Complete the rows entered by hand (IDs, EGD data); rows that need a choice or more data stay."""
+    from .completion import apply
+    from .players import PLAYERS_FILE, save_players
+
+    cfg, pl, plans = completion_plan(directory, index, choices, lookup_pin)
+    # new players need a starting GoR at any time (also latecomers after round 1)
+    done, left = apply(plans, pl.players, fill_gor=True)
+    if done:
+        check_writable(Path(directory) / PLAYERS_FILE)
+        backup(directory, "before_completing_players")
+        save_players(directory, pl.players + [c.player for c in done], cfg.tournament.rounds, pl.extra_fields,
+                     [(rp.line, rp.player) for rp in left])
+    return CompletionOutcome(done, left)
+
 
 # ---------------------------------------------------------------- changing boards by hand
 

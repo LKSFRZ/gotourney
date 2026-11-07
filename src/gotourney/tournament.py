@@ -48,6 +48,7 @@ class Tournament:
     extra_fields: list[str] = field(default_factory=list)       # additional player data fields
     history: dict[int, list[PlayedGame]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
+    unfinished: int = 0                             # rows of players.ods entered by hand, not completed yet
 
     # ------------------------------------------------------------ loading
 
@@ -94,7 +95,7 @@ class Tournament:
             missing = sorted(set(range(1, existing[-1] + 1)) - set(existing))
             raise TournamentError(f"round file(s) missing for round(s) {', '.join(map(str, missing))}")
         t = cls(directory, cfg, players, rounds, start, [dict(start)], start_gor=start_gor,
-                extra_fields=pl.extra_fields, warnings=warnings)
+                extra_fields=pl.extra_fields, warnings=warnings, unfinished=len(pl.unfinished))
         t._compute()
         return t
 

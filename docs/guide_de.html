@@ -414,6 +414,17 @@ Verein, EGD-GoR und letztes Turnier. Der angegebene Rang wird nie geändert. Die
 nur gefüllt, wenn sie leer ist, damit Ihre Korrekturen nie überschrieben werden. Sobald Runde 1 ausgelost
 ist, stehen die Start-GoRs fest.</p>
 
+<h3>5.5a Spieler von Hand in players.ods eingetragen</h3>
+<pre>gotourney players complete              # live aus der EGD
+gotourney players complete --offline    # nur aus der heruntergeladenen Spielerliste</pre>
+<p>Zeilen, die ohne ID in <code>players.ods</code> eingetragen wurden – etwa nur eine EGD-PIN oder nur ein Name –,
+werden vervollständigt: Zeilen mit PIN oder mit einem Namen, der genau zu einem EGD-Spieler passt, bekommen die
+EGD-Daten (Name in EGD-Schreibweise, Land, Verein, Rang, GoR, letztes Turnier) und eine ID. Passen mehrere
+EGD-Spieler, zeigt der Befehl sie an und Sie wählen; Spieler, die nicht in der EGD stehen, brauchen einen Rang. Nur
+leere Zellen werden gefüllt. Leere Rundenzellen bedeuten in solchen Zeilen „spielt mit“; <code>-</code> heißt: diese
+Runde nicht. Solange nicht alle Zeilen vervollständigt sind, verweigert <code>pair</code> die Auslosung, und
+<code>players check</code> meldet sie als Fehler. In der Weboberfläche geht das auf der Spielerseite.</p>
+
 <h3>5.6 Zusätzliche Spielerangaben</h3>
 <p>Um mehr über jeden Spieler zu erfassen, etwa Startgeld, Altersklasse, E-Mail oder T-Shirt-Größe, tragen Sie
 die Felder in <code>tournament.toml</code> ein. Ein neues Turnier beginnt mit zwei Feldern, jeweils mit einer
@@ -837,6 +848,7 @@ Befehle, Optionen, Einstellungsnamen und Meldungen der Werkzeuge sind englisch.<
   <tr><td><code>gotourney players list</code></td><td>Angemeldete Spieler anzeigen</td></tr>
   <tr><td><code>gotourney players check</code></td><td>Anmeldung prüfen</td></tr>
   <tr><td><code>gotourney players sync [--offline]</code></td><td>EGD-Daten der angemeldeten Spieler aktualisieren</td></tr>
+  <tr><td><code>gotourney players complete [--offline]</code></td><td>Von Hand in players.ods eingetragene Spieler vervollständigen (nur Name oder PIN)</td></tr>
   <tr><td><code>gotourney egd update</code></td><td>EGD-Spielerliste herunterladen</td></tr>
   <tr><td><code>gotourney egd search &lt;Suche&gt;</code></td><td>In der EGD-Spielerliste suchen</td></tr>
   <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Runde r auslosen (finalisierte Bretter bleiben unverändert; Namen werden nachgeschlagen)</td></tr>

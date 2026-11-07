@@ -419,6 +419,7 @@ class RegistrationApp:
             messagebox.showerror("players.ods", str(e))
             return False
         self.players = pl.players
+        self.unfinished = pl.unfinished                 # rows entered by hand, kept when saving
         self.file_fields = pl.extra_fields
         self._file_mtime = self.path.stat().st_mtime if self.path.exists() else None
         self._fill_table()
@@ -454,7 +455,8 @@ class RegistrationApp:
             messagebox.showerror("players.ods", "players.ods is open in LibreOffice.\n"
                                  "Save and close it there first, then try again.")
             return False
-        save_players(self.dir, players, self.rounds, merge_fields(self.extra_fields, self.file_fields))
+        save_players(self.dir, players, self.rounds, merge_fields(self.extra_fields, self.file_fields),
+                     unfinished=getattr(self, "unfinished", []))
         self.players = players
         self._file_mtime = self.path.stat().st_mtime
         self._fill_table()

@@ -221,6 +221,8 @@ def create_app(directory: Path | None = None) -> Flask:
             say("error", "pr_open_results")
         elif e.code == "names_need_confirmation":
             say("error", "pr_names_need_confirmation", r=round_no)
+        elif e.code == "players_unfinished":
+            say("error", "pr_players_unfinished", n=d["n"])
         elif e.code == "no_joker":
             say("error", "pr_no_joker", r=d["round"], n=d["players"])
         elif e.code == "no_complete_pairing":
@@ -522,7 +524,11 @@ def create_app(directory: Path | None = None) -> Flask:
         fields = [{"name": f, "values": cfg.registration.values_for(f)} for f in pl.extra_fields]
         app.config["EGD"].ensure()
         players = sorted(pl.players, key=lambda p: (p.surname.casefold(), p.first_name.casefold()))
+        from ..completion import NOT_IN_EGD, plan
+        hand_rows = plan(pl.unfinished, pl.players, app.config["EGD"].index)      # preview, changes nothing
         return render_template("players.html", cfg=cfg, players=players, fields=fields, form=form,
+                               hand_rows=hand_rows, not_in_egd=NOT_IN_EGD,
+                               hand_ready=sum(1 for rp in hand_rows if rp.action in ("egd", "local", "choose")),
                                rounds=range(1, cfg.tournament.rounds + 1), egd_status=app.config["EGD"].status(),
                                locked=workflow.is_open_in_libreoffice(d / "players.ods"),
                                form_unsaved=status >= 400,            # shown again after an error: not saved
@@ -545,6 +551,31 @@ def create_app(directory: Path | None = None) -> Flask:
         except workflow.Problem as e:
             flash(str(e), "error")
             return redirect(url_for("dashboard"))
+
+    @app.post("/players/complete")
+    def players_complete():
+        """Complete the rows entered by hand in players.ods (with the choices made on the page)."""
+        d = tdir()
+        if d is None:
+            abort(404)
+        choices = {int(k[len("choice_"):]): v for k, v in request.form.items()
+                   if k.startswith("choice_") and k[len("choice_"):].isdigit() and v}
+
+        def lookup(pin):
+            try:
+                return app.config["EGD_FETCH"](pin)
+            except egd.EGDError:
+                return None
+        try:
+            out = workflow.complete_players(d, app.config["EGD"].index, choices, lookup)
+        except workflow.Problem as e:
+            explain(e)
+            return redirect(url_for("players_page"))
+        for c in out.completed:
+            say("success", "pc_done", name=c.player.name, id=c.player.id, changes=", ".join(c.changes) or "–")
+        if out.left:
+            say("warning", "pc_left", n=len(out.left))
+        return redirect(url_for("players_page"))
 
     @app.post("/players/save")
     def players_save():
@@ -1060,6 +1091,12 @@ def phase_card(t, lang: str) -> dict:
         "label": label, "action": action, "primary": primary, "confirm": confirm, "form": form}
     files = lambda *names: [{"label": label, "file": name} for label, name in names]   # created when opened
     card = {"title": "", "text": "", "extra": "", "actions": [], "files": [], "link": None, "link_primary": False}
+    if s.phase == "players_unfinished":
+        card.update(title=tx("ph_unfinished_title"), text=tx("ph_unfinished_text", n=s.unfinished),
+                    link={"label": tx("act_complete_players"), "href": "/players"}, link_primary=True)
+        return card
+    if s.unfinished:          # e.g. a latecomer typed into players.ods while a round is running
+        card["extra"] = tx("ph_unfinished_extra", n=s.unfinished)
     if s.phase == "no_players":
         card.update(title=tx("ph_no_players_title"), text=tx("ph_no_players_text"),
                     link={"label": tx("act_register"), "href": "/players"}, link_primary=True)
@@ -1088,7 +1125,7 @@ def phase_card(t, lang: str) -> dict:
                                 (tx("act_pdf_alpha"), f"round_{r}_alphabetical.pdf")))
         late = workflow.check_results(t, r).unpaired
         if late:
-            card["extra"] = tx("ph_running_late", names=", ".join(n for _, n in late))
+            card["extra"] = " ".join(x for x in (card["extra"], tx("ph_running_late", names=", ".join(n for _, n in late))) if x)
             card["actions"].insert(0, act(tx("act_pair_late"), "pair", round=r))
     elif s.phase == "round_complete":
         card.update(title=tx("ph_complete_title", r=r), text=tx("ph_complete_text", next=r + 1),

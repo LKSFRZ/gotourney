@@ -201,7 +201,7 @@ def players_add(
         player.egd_gor = float(egd_player.gor)
         player.egd_last_tournament = egd_player.last_appearance
     player.extra = extra_data
-    save_players(directory, pl.players + [player], cfg.tournament.rounds, pl.extra_fields)
+    save_players(directory, pl.players + [player], cfg.tournament.rounds, pl.extra_fields, pl.unfinished)
     rounds_text = ",".join(map(str, sorted(player.rounds))) or "none"
     typer.echo(f"Added ID {player.id}: {player.name}, {player.rank}, GoR {player.gor:.0f}, "
                f"rounds {rounds_text}{', joker' if player.joker else ''}.")
@@ -240,6 +240,11 @@ def players_check(directory: Path = typer.Option(Path("."), "--dir", "-d", help=
         typer.secho(f"{i.level.capitalize()}: {i.message}", fg=colours[i.level])
     errors = sum(i.level == "error" for i in issues)
     warnings = sum(i.level == "warning" for i in issues)
+    if pl.unfinished:
+        errors += 1
+        typer.secho(f"Error: {len(pl.unfinished)} row(s) entered by hand without an ID (rows "
+                    f"{', '.join(str(line) for line, _ in pl.unfinished)}); complete them: "
+                    f"{cmd(directory, 'players complete')}", fg=typer.colors.RED)
     typer.echo(f"{len(pl.players)} players, {errors} error(s), {warnings} warning(s).")
     if errors:
         hints.show([f"Fix the errors listed above in the registration window ({cmd(directory, 'gui')})\n"
@@ -325,6 +330,67 @@ def egd_search(
         typer.echo("No players found.")
 
 
+@players_app.command("complete")
+def players_complete(
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+    offline: bool = typer.Option(False, "--offline", help="Use only the cached EGD player list."),
+    yes: bool = typer.Option(False, "--yes", "-y", help="Do not ask; rows with several possible players are left."),
+) -> None:
+    """Complete players typed into players.ods by hand (e.g. only a name or an EGD PIN, no ID).
+
+    Rows with an EGD PIN, or a name that matches exactly one EGD player, get their data from the
+    EGD (name in EGD spelling, country, club, rank, GoR) and an ID. If several EGD players match,
+    you choose. Players not in the EGD need a rank. Values typed in players.ods are kept.
+    """
+    from . import workflow
+    from .completion import NOT_IN_EGD
+
+    try:
+        index = egd.PlayerIndex.load(refresh=False if offline else None)
+    except egd.EGDError as e:
+        warn(f"EGD player list not available ({e}); names cannot be looked up")
+        index = None
+    lookup = workflow.egd_lookup(online=not offline)
+    try:
+        _, pl, plans = workflow.completion_plan(directory, index, None, lookup)
+    except workflow.Problem as e:
+        explain(e, directory)
+    if not plans:
+        typer.echo("No rows entered by hand: every player in players.ods has an ID.")
+        raise typer.Exit()
+    choices = {}
+    for rp in plans:
+        if rp.action != "choose" or yes:
+            continue
+        typer.echo(f"\nRow {rp.line}: {rp.typed} – which EGD player is meant?")
+        for i, c in enumerate(rp.candidates, 1):
+            typer.echo(f"  {i}  {c.describe()}")
+        local = rp.player.rank is not None or rp.player.gor is not None
+        if local:
+            typer.echo("  0  not in the EGD (use the rank from players.ods)")
+        answer = typer.prompt("Number (Enter = leave the row for now)", default="", show_default=False).strip()
+        if answer.isdigit() and 1 <= int(answer) <= len(rp.candidates):
+            choices[rp.line] = rp.candidates[int(answer) - 1].pin
+        elif answer == "0" and local:
+            choices[rp.line] = NOT_IN_EGD
+    try:
+        out = workflow.complete_players(directory, index, choices, lookup)
+    except workflow.Problem as e:
+        explain(e, directory)
+    for c in out.completed:
+        typer.echo(f"ID {c.player.id} {c.player.name}: " + (", ".join(c.changes) or "complete"))
+    reasons = {"choose": "several EGD players match – run again to choose", "no_name": "no surname or EGD PIN",
+               "pin_unknown": "PIN not in the EGD – correct it or enter name and rank",
+               "not_in_egd_no_rank": "not found in the EGD – correct the name or enter a rank",
+               "no_rank": "not in the EGD – enter a rank", "egd_unavailable": "EGD list not available"}
+    for rp in out.left:
+        why = f"already registered as {rp.message}" if rp.action == "duplicate" else reasons.get(
+            rp.message or rp.action, rp.action)
+        warn(f"row {rp.line} ({rp.typed}): {why}")
+    typer.echo(f"{len(out.completed)} player(s) completed, {len(out.left)} row(s) left.")
+    hints.show([f"Check the registration: {cmd(directory, 'players check')}"])
+
+
 @players_app.command("sync")
 def players_sync(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
@@ -365,7 +431,7 @@ def players_sync(
             changed += 1
             typer.echo(f"ID {p.id} {p.name}: " + "; ".join(changes))
     if changed:
-        save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields)
+        save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields, pl.unfinished)
     typer.echo(f"{changed} player(s) updated.")
     if frozen:
         typer.echo("Round 1 is already paired: starting GoRs were not changed.")

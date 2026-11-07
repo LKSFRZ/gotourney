@@ -397,6 +397,16 @@ gotourney players sync --offline    # only the downloaded player list</pre>
 club, EGD GoR and last tournament. The declared rank is never changed. The GoR column (starting TGoR) is only filled when it is empty, so your
 corrections are never overwritten. Once round 1 has been paired, the starting GoRs are frozen.</p>
 
+<h3>5.5a Players typed into players.ods by hand <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney players complete              # live from the EGD
+gotourney players complete --offline    # only the downloaded player list</pre>
+<p>Rows typed into <code>players.ods</code> without an ID – for example only an EGD PIN, or only a name – are
+completed: rows with a PIN, or with a name that matches exactly one EGD player, get the EGD data (name in EGD
+spelling, country, club, rank, GoR, last tournament) and an ID. If several EGD players match, the command lists them
+and you choose; players not in the EGD need a rank. Only empty cells are filled. In such rows, empty round cells mean
+the player plays; <code>-</code> means not this round. Until all rows are completed, <code>pair</code> refuses, and
+<code>players check</code> reports them as an error. In the web interface the same is done on the Players page.</p>
+
 <h3>5.6 Additional player data <span class="badge now">AVAILABLE</span></h3>
 <p>To record more about each player, for example entry fee, age group, e-mail or T-shirt size, list
 the fields in <code>tournament.toml</code>. A new tournament starts with two fields, each with a fixed list
@@ -800,6 +810,7 @@ system.</p>
   <tr><td><code>gotourney players list</code></td><td>Show registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players check</code></td><td>Check the registration</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players sync [--offline]</code></td><td>Refresh EGD data of registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney players complete [--offline]</code></td><td>Complete players typed into players.ods by hand (only a name or a PIN)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd update</code></td><td>Download the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd search &lt;query&gt;</code></td><td>Search the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Pair round r (finalized boards stay unchanged; names are looked up)</td></tr>

@@ -74,6 +74,9 @@ class PlayerList:
     warnings: list[str]
     extra_fields: list[str] = field(default_factory=list)   # the configured additional fields
     other_fields: list[str] = field(default_factory=list)   # other columns in the file (kept, not shown)
+    # rows typed in by hand without an ID (e.g. only a name or an EGD PIN): (line, player with id 0).
+    # They are not part of ``players`` until they are completed (see completion.py).
+    unfinished: list[tuple[int, Player]] = field(default_factory=list)
 
     def by_id(self) -> dict[int, Player]:
         return {p.id: p for p in self.players}
@@ -103,6 +106,8 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
     sheet = read_sheet(path)
     require_columns(sheet, path, REQUIRED)
     players: list[Player] = []
+    unfinished: list[tuple[int, Player]] = []
+    unfinished_rows: list[Player] = []
     warnings: list[str] = []
     errors: list[str] = []
     seen_ids: dict[int, int] = {}
@@ -124,14 +129,15 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
         try:
             id_text = row.text("ID")
             if id_text == "":
-                raise OdsError(f"{where}: missing ID")
-            try:
-                pid = int(float(id_text))
-            except ValueError:
-                raise OdsError(f"{where}: ID {id_text!r} is not a number") from None
-            if pid in seen_ids:
-                raise OdsError(f"{where}: ID {pid} already used in row {seen_ids[pid]}")
-            seen_ids[pid] = row.line
+                pid = 0                                   # entered by hand: completed later
+            else:
+                try:
+                    pid = int(float(id_text))
+                except ValueError:
+                    raise OdsError(f"{where}: ID {id_text!r} is not a number") from None
+                if pid in seen_ids:
+                    raise OdsError(f"{where}: ID {pid} already used in row {seen_ids[pid]}")
+                seen_ids[pid] = row.line
 
             rank_text = row.text("Rank")
             rank = None
@@ -147,7 +153,10 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
                 warnings.append(f"{where}: EGD PIN {pin!r} does not look like an 8-digit PIN")
             player_rounds = {i for i in range(1, rounds + 1) if _flag(row.text(round_column(i)))}
             player_rounds |= new_rounds
-            players.append(
+            if pid == 0:     # typed by hand: an empty round cell means "plays"; only "-", "0", "no" mean no
+                player_rounds = {i for i in range(1, rounds + 1)
+                                 if row.text(round_column(i)).strip().lower() not in _NO - {""}}
+            (players if pid else unfinished_rows).append(
                 Player(
                     id=pid,
                     surname=row.text("Surname"),
@@ -165,23 +174,30 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
                     extra={f: row.text(f) for f in fields if row.text(f)},
                 )
             )
+            if pid == 0:
+                unfinished.append((row.line, unfinished_rows.pop()))
         except OdsError as e:
             errors.append(str(e))
     if errors:
         raise OdsError("\n".join(errors))
-    return PlayerList(players, warnings, configured, fields[len(configured):])
+    return PlayerList(players, warnings, configured, fields[len(configured):], unfinished)
 
 
-def save_players(directory: Path, players: list[Player], rounds: int, extra_fields=()) -> Path:
+def save_players(directory: Path, players: list[Player], rounds: int, extra_fields=(),
+                 unfinished=()) -> Path:
     """Write players.ods. Additional fields: those given (configured), then any other column
-    that still holds data. Empty columns of fields no longer configured disappear."""
+    that still holds data. Empty columns of fields no longer configured disappear.
+
+    ``unfinished`` (players or (line, player) pairs, as in PlayerList.unfinished) are rows entered
+    by hand that are not complete yet; they are written after the others, without an ID."""
     path = Path(directory) / PLAYERS_FILE
-    fields = merge_fields(extra_fields, (k for p in players for k in p.extra))
+    pending = [u[1] if isinstance(u, tuple) else u for u in unfinished]
+    fields = merge_fields(extra_fields, (k for p in list(players) + pending for k in p.extra))
     rows = []
-    for p in sorted(players, key=lambda p: p.id):
+    for p in sorted(players, key=lambda p: p.id) + pending:
         rows.append(
             [
-                p.id,
+                p.id or "",
                 p.surname,
                 p.first_name,
                 str(p.rank) if p.rank else "",

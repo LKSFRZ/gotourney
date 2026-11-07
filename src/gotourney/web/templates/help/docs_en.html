@@ -147,6 +147,20 @@ How ratings, pairing and handicap work is explained on the page <a href="{{ url_
     <li><span class="btnlike">Check registration</span> lists errors (e.g. missing rank) and warnings before pairing.</li>
     <li>Everything is stored in <code>players.ods</code>. Each player has a fixed <b>ID</b>, which the round files use.</li>
   </ul>
+  <h3>Entering players in players.ods by hand</h3>
+  <p>You can also type players straight into <code>players.ods</code> in LibreOffice – for example from a paper list.
+    Leave the <b>ID</b> empty and type only what you have: an <b>EGD PIN</b>, or a <b>name</b> (surname, ideally also
+    the first name). Round cells left empty mean the player plays; <code>-</code> means not this round.</p>
+  <p>The Overview and the Players page then show these rows under <i>Entered by hand</i> with what will become of each:</p>
+  <ul>
+    <li><b>PIN</b>, or a name that matches exactly one EGD player: completed from the EGD – name in EGD spelling, country,
+      club, rank, GoR, EGD PIN.</li>
+    <li><b>Several EGD players</b> with that name: choose the right one (sorted by their latest tournament).</li>
+    <li><b>Not in the EGD:</b> registered without EGD data; this needs a rank in the row.</li>
+  </ul>
+  <p><span class="btnlike">Complete players</span> gives them an ID and fills in the empty cells. Values you typed
+    (rank, club, rounds, additional data) are kept. Until all rows are completed, the next round cannot be paired, so
+    nobody is left out by mistake.</p>
 </section>
 
 <section id="pair">
