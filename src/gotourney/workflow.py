@@ -662,6 +662,13 @@ def save_player(directory: Path, data: PlayerData, player_id: int | None = None)
         old = next((p for p in pl.players if p.id == player_id), None)
         if old is None:
             raise Problem("no_player", f"there is no player with ID {player_id}", {"id": player_id})
+        # a different person (other EGD PIN and other surname) must not silently replace a registered player
+        from .egd import plain
+        pin = data.pin.strip()
+        if old.pin and pin and pin != old.pin and plain(old.surname) != plain(data.surname):
+            new_name = f"{data.surname} {data.first_name}".strip()
+            raise Problem("replaces_player", f"saving would replace {old.name} (ID {old.id}) by {new_name}. To register "
+                          f"{new_name}, add them as a new player.", {"old": old.name, "id": old.id, "new": new_name})
     others = [p for p in pl.players if p.id != player_id]
     gor_text = data.gor.strip().replace(",", ".")
     try:

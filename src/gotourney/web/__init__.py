@@ -606,6 +606,9 @@ def create_app(directory: Path | None = None) -> Flask:
         except workflow.Problem as e:
             if e.code == "file_open":
                 say("error", "pr_file_open", name="players.ods")
+            elif e.code == "replaces_player":
+                say("error", "pr_replaces_player", old=e.data["old"], id=e.data["id"], new=e.data["new"])
+                player_id = None                     # show the data as a new player, ready to be added
             else:
                 flash(str(e), "error")
             form = {"id": player_id or "", "surname": data.surname, "first_name": data.first_name, "rank": data.rank,

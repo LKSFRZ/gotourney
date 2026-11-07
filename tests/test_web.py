@@ -622,3 +622,38 @@ def test_pairing_problems_are_explained_for_the_browser(make_tournament):
     message = re.search(r'<p class="msg error">([^<]*)</p>', html).group(1)
     assert "3 players are registered for it" in message and "tick &#39;Joker&#39;" in message
     assert "players.ods" not in message
+
+
+# ---------------------------------------------------------------- editing must not replace a player by somebody else
+
+def test_saving_another_person_over_a_registered_player_is_refused(make_tournament):
+    from gotourney.players import load_players
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    workflow.save_player(d, workflow.PlayerData(surname="Binder", first_name="Em", rank="16k", pin="20750807",
+                                                rounds={1}), 2)
+    data = workflow.PlayerData(surname="Becker", first_name="Heiko", rank="6k", pin="14001482", rounds={1})
+    with pytest.raises(workflow.Problem) as e:                      # other PIN and other surname
+        workflow.save_player(d, data, 2)
+    assert e.value.code == "replaces_player"
+    # correcting the spelling, or the PIN of the same person, still works
+    workflow.save_player(d, workflow.PlayerData(surname="Binder", first_name="Emma", rank="16k", pin="20750808",
+                                                rounds={1}), 2)
+    # the web page explains it and offers the data as a new player
+    app, c = client_for(d)
+    r = post(c, app, "/players/save", id="2", surname="Becker", first_name="Heiko", rank="6k", pin="14001482",
+             round_1="on")
+    html = page(r)
+    assert r.status_code == 422 and "Not saved: this would replace Binder Emma (ID 2) by Becker Heiko" in html
+    assert 'name="id" value=""' in html and "Add player" in html
+    names = [p.name for p in load_players(d, 1, ["Fee paid", "Age group"]).players]
+    assert "Binder Emma" in names and "Becker Heiko" not in names
+
+
+def test_players_page_tells_the_script_who_is_being_edited(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    workflow.save_player(d, workflow.PlayerData(surname="Binder", first_name="Em", rank="16k", pin="20750807",
+                                                rounds={1}), 2)
+    app, c = client_for(d)
+    html = page(c.get("/players?edit=2"))
+    assert 'data-edit-name="Binder Em"' in html and 'data-edit-pin="20750807"' in html
+    assert 'data-edit-name=""' in page(c.get("/players"))           # new player: nothing to protect

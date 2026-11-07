@@ -75,7 +75,9 @@
     <p id="form-notes" class="note" hidden></p>
     <form method="post" action="{{ url_for('players_save') }}" id="player-form" class="player-form"
           data-unsaved="{{ 'true' if form_unsaved else 'false' }}"
-          data-egd-lookup="{{ (form.surname ~ ' ' ~ form.first_name)|trim if form.id and not form.pin else '' }}">
+          data-egd-lookup="{{ (form.surname ~ ' ' ~ form.first_name)|trim if form.id and not form.pin else '' }}"
+          data-edit-name="{{ (form.surname ~ ' ' ~ form.first_name)|trim if form.id else '' }}"
+          data-edit-surname="{{ form.surname if form.id else '' }}" data-edit-pin="{{ form.pin if form.id else '' }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="id" value="{{ form.id }}">
       <input type="hidden" name="egd_gor" id="f-egd_gor" value="{{ form.egd_gor }}">
@@ -169,6 +171,8 @@
 <script>
 (function () {
   var texts = {registered: {{ t("pl_registered", id="{id}")|tojson }}, outdated: {{ t("pl_outdated", years="{years}")|tojson }},
+               newTitle: {{ t("pl_new")|tojson }}, addButton: {{ t("pl_add")|tojson }},
+               switched: {{ t("pl_switched_to_new", name="{name}")|tojson }},
                none: {{ t("pl_no_results")|tojson }}, live: {{ t("pl_live_updated", old="{old}", new="{new}")|tojson }}};
   var input = document.getElementById("egd-search");
   var list = document.getElementById("egd-results");
@@ -206,27 +210,53 @@
     list.hidden = false;
   }
 
+  var resultsFor = "", pendingEnter = false;
   function search() {
     var q = input.value.trim();
-    if (!q) { results = []; render(); return; }
+    if (!q) { results = []; resultsFor = ""; render(); return; }
     fetch("{{ url_for('api_egd_search') }}?q=" + encodeURIComponent(q)).then(function (r) { return r.json(); })
       .then(function (data) {
         showStatus(data.status);
         if (!data.status.loaded && data.status.loading) { setTimeout(search, 800); return; }
-        results = data.results; active = results.length ? 0 : -1; render();
+        if (q !== input.value.trim()) return;          // an older search: its results are not shown
+        results = data.results; resultsFor = q; active = results.length ? 0 : -1; render();
+        if (pendingEnter) { pendingEnter = false; if (results.length) choose(0); }
       });
   }
 
   function set(id, value) { var el = document.getElementById(id); if (el) el.value = value == null ? "" : value; }
 
+  function plainName(s) {
+    return (s || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[\s_-]+/g, " ").trim();
+  }
+  // Editing a player and picking somebody else from the EGD must not overwrite that player:
+  // the form then becomes a new registration (completing a player without EGD PIN by the same name is fine).
+  function switchToNewPlayer(editedName) {
+    var form = document.getElementById("player-form");
+    form.querySelector("input[name=id]").value = "";
+    form.dataset.editPin = ""; form.dataset.editSurname = "";
+    document.querySelector("h2.form-title").textContent = texts.newTitle;
+    form.querySelector("button.primary").textContent = texts.addButton;
+    var remove = document.querySelector("form.remove-form"); if (remove) remove.hidden = true;
+    notes.textContent = texts.switched.replace("{name}", editedName); notes.hidden = false;
+    form.querySelectorAll("fieldset.rounds input[type=checkbox]").forEach(function (c) { c.checked = true; });
+    form.querySelectorAll("input[name=joker]").forEach(function (c) { c.checked = false; });
+    form.querySelectorAll("input[name=notes], input[name^=extra_]").forEach(function (c) { c.value = ""; });
+    form.querySelectorAll("select[name^=extra_]").forEach(function (c) { c.value = ""; });
+  }
+
   function choose(i) {
     var p = results[i];
     if (!p) return;
     if (p.registered) { window.location = "{{ url_for('players_page') }}?edit=" + p.registered; return; }
+    var f = document.getElementById("player-form").dataset;
+    var other = f.editName && (f.editPin ? f.editPin !== p.pin : plainName(f.editSurname) !== plainName(p.surname));
+    if (other) switchToNewPlayer(f.editName);
     set("f-surname", p.surname); set("f-first_name", p.first_name); set("f-rank", p.rank);
     set("f-gor", p.gor); set("f-pin", p.pin); set("f-country", p.country); set("f-club", p.club);
     set("f-egd_gor", p.gor); set("f-egd_last", p.last);
     var msg = p.outdated ? texts.outdated.replace("{years}", p.outdated) : "";
+    if (other) msg = notes.textContent + (msg ? " · " + msg : "");
     notes.textContent = msg; notes.hidden = !msg;
     list.hidden = true; input.value = "";
     // latest data straight from the EGD
@@ -251,7 +281,14 @@
   input.addEventListener("keydown", function (e) {
     if (e.key === "ArrowDown") { active = Math.min(active + 1, results.length - 1); render(); e.preventDefault(); }
     else if (e.key === "ArrowUp") { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
-    else if (e.key === "Enter") { e.preventDefault(); choose(active < 0 ? 0 : active); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (resultsFor !== input.value.trim()) {        // results of the current text not there yet: wait for them
+        pendingEnter = true; clearTimeout(timer); search();
+      } else {
+        choose(active < 0 ? 0 : active);
+      }
+    }
     else if (e.key === "Escape") { input.value = ""; results = []; render(); }
   });
   input.addEventListener("blur", function () { setTimeout(function () { list.hidden = true; }, 150); });

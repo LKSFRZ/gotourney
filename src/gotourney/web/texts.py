@@ -343,6 +343,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "pl_badge_hand_help": "Typed into players.ods by hand; its ID is saved with the next change or pairing.",
         "pl_rank_missing": "rank missing",
         "pr_players_unrated": "Not paired yet: {names} have neither rank nor GoR. Open them on the Players page, enter the rank (or pick them from the EGD search), then pair again.",
+        "pl_switched_to_new": "You were editing {name}; the player you picked is added as a new player instead – {name} stays as is.",
+        "pr_replaces_player": "Not saved: this would replace {old} (ID {id}) by {new}. The data is shown below as a new player – click 'Add player' to register {new}.",
     },
     "de": {
         "app_title": "Goturnier",
@@ -679,6 +681,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "pl_badge_hand_help": "Von Hand in players.ods eingetragen; die ID wird bei der nächsten Änderung oder Auslosung gespeichert.",
         "pl_rank_missing": "Rang fehlt",
         "pr_players_unrated": "Noch nicht ausgelost: {names} haben weder Rang noch GoR. Öffnen Sie sie auf der Spielerseite, tragen Sie den Rang ein (oder wählen Sie sie aus der EGD-Suche), dann erneut auslosen.",
+        "pl_switched_to_new": "Sie haben {name} bearbeitet; der gewählte Spieler wird stattdessen neu angemeldet – {name} bleibt, wie er ist.",
+        "pr_replaces_player": "Nicht gespeichert: Das würde {old} (ID {id}) durch {new} ersetzen. Die Angaben stehen unten als neuer Spieler – klicken Sie auf „Spieler hinzufügen“, um {new} anzumelden.",
     },
 }
 
