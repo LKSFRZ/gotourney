@@ -132,7 +132,9 @@ gotourney h9                   # result file for the EGD
 gotourney awards               # slides for the award ceremony (awards.pdf)
 ```
 
-Every command accepts `--help`, and `-d <folder>` selects the tournament folder.
+Every command accepts `--help`, and `-d <folder>` selects the tournament folder. After each step the
+tool prints **Next steps**, so you always know what to do next (switch off with
+`GOTOURNEY_NO_HINTS=1`).
 
 ## Development
 

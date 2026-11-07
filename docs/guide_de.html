@@ -129,6 +129,16 @@ Es gibt keine versteckte Datenbank.</p>
 <p>Alle Befehle verstehen die Option <code>-d &lt;Ordner&gt;</code>, mit der Sie den Turnierordner wählen.
 Ohne sie wird der aktuelle Ordner verwendet. Sie können also einmal <code>cd mein_turnier</code> ausführen
 oder bei jedem Befehl <code>-d mein_turnier</code> angeben.</p>
+<div class="note"><b>Wie geht es weiter?</b> Jeder Schritt endet mit einer kurzen Liste <i>Next steps</i>, die
+anhand des Turnierstands sagt, was jetzt zu tun ist, zum Beispiel:
+<pre>Next steps:
+  → Print round_1.pdf (by board) and round_1_alphabetical.pdf (players A-Z) and put them up.
+  → When the games begin: gotourney start 1
+  → Enter the results in round_1.ods: an x under 'White win', 'Draw' or 'Black win'
+  → Check them: gotourney results check 1</pre>
+Die vorgeschlagenen Befehle lassen sich direkt kopieren (mit <code>-d</code>, wenn Sie außerhalb des
+Turnierordners arbeiten). Die Hinweise sind englisch. Erfahrene Nutzer schalten sie mit der Umgebungsvariablen
+<code>GOTOURNEY_NO_HINTS=1</code> ab.</div>
 
 <h2>3. Installation</h2>
 <p><b>Voraussetzungen auf jedem System:</b> Python 3.11 oder neuer (mit Tkinter für das Anmeldefenster),

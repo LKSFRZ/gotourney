@@ -6,7 +6,8 @@ from pathlib import Path
 
 import typer
 
-from . import __version__, egd
+from . import __version__, egd, hints
+from .hints import cmd
 from .config import CONFIG_FILE, Config, ConfigError, load_config, write_template
 from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
@@ -146,7 +147,12 @@ def init(
     typer.echo(f"Created {directory / CONFIG_FILE}, {directory / PLAYERS_FILE} and "
                f"{directory / TRANSLATION_FILE} ({cfg.tournament.rounds} rounds, "
                f"language {cfg.output.language}).")
-    typer.echo(f"Edit {CONFIG_FILE} (name, place, dates, rounds, k_factor, ...) before registering players.")
+    hints.show([
+        f"Open {directory / CONFIG_FILE} in a text editor and fill in the tournament data: place, dates,\n"
+        f"time, rating and handicap settings, pairing rules, prizes (see section 4 of the guide).",
+        "Download the EGD player list once (needs internet): gotourney egd update",
+        f"Register the players in the registration window: {cmd(directory, 'gui')}",
+    ])
 
 
 # ---------------------------------------------------------------- players
@@ -206,6 +212,12 @@ def players_add(
     rounds_text = ",".join(map(str, sorted(player.rounds))) or "none"
     typer.echo(f"Added ID {player.id}: {player.name}, {player.rank}, GoR {player.gor:.0f}, "
                f"rounds {rounds_text}{', joker' if player.joker else ''}.")
+    t = Tournament.load(directory)
+    steps = [f"Add more players the same way, or use the registration window: {cmd(directory, 'gui')}"]
+    if t.last_round and t.last_round in player.rounds and t.rounds[t.last_round].games:
+        steps.append(f"Round {t.last_round} is already paired. To let {player.name} play it as a latecomer:\n"
+                     f"{cmd(directory, f'pair {t.last_round}')}")
+    hints.show(steps + hints.overall(t, directory))
 
 
 @players_app.command("list")
@@ -237,7 +249,16 @@ def players_check(directory: Path = typer.Option(Path("."), "--dir", "-d", help=
     warnings = sum(i.level == "warning" for i in issues)
     typer.echo(f"{len(pl.players)} players, {errors} error(s), {warnings} warning(s).")
     if errors:
+        hints.show([f"Fix the errors listed above in the registration window ({cmd(directory, 'gui')})\n"
+                    f"or in players.ods, then check again: {cmd(directory, 'players check')}"])
         raise typer.Exit(1)
+    steps = ["Look at the warnings above; they do not stop the tournament."] if warnings else []
+    t = Tournament.load(directory)
+    if t.last_round == 0:
+        steps.append(f"Registration is OK. Pair round 1: {cmd(directory, 'pair 1')}")
+        hints.show(steps)
+    else:
+        hints.show(steps + hints.overall(t, directory))
 
 
 @app.command()
@@ -249,6 +270,11 @@ def gui(
     cfg, _ = load(directory)
     from . import gui as gui_module  # Tkinter is only needed here
     gui_module.run(directory, cfg, refresh_list=True if update_list else None)
+    try:
+        t = Tournament.load(directory)
+    except (ConfigError, OdsError, TournamentError):
+        return
+    hints.show(hints.overall(t, directory))
 
 
 # ---------------------------------------------------------------- egd
@@ -262,6 +288,8 @@ def egd_update() -> None:
         fail(str(e))
     index = egd.PlayerIndex.load(refresh=False)
     typer.echo(f"Saved {len(index.players)} players to {path}.")
+    hints.show(["The list is now available offline. Register players with the registration window:\n"
+                "gotourney gui -d <tournament folder>"])
 
 
 @egd_app.command("search")
@@ -326,6 +354,9 @@ def players_sync(
     typer.echo(f"{changed} player(s) updated.")
     if frozen:
         typer.echo("Round 1 is already paired: starting GoRs were not changed.")
+    t = Tournament.load(directory)
+    hints.show(([f"Check the registration: {cmd(directory, 'players check')}"] if t.last_round == 0 else [])
+               + hints.overall(t, directory))
     issues = [i for i in check_players(pl.players, cfg) if i.level == "warning"]
     for i in issues:
         warn(i.message)
@@ -394,9 +425,14 @@ def pair(
         parts = [(pid, labels[pid], ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
                  if p.plays(round_no)]
         save_round(path, [], labels, ratings, participants=parts)
-        typer.echo(f"Wrote {path}. Enter manual boards (White ID and Black ID, or names in the White / "
-                   f"Black columns, and 'x' in Finalized), save, close, then run 'gotourney pair {round_no}'. "
-                   f"Players of the round are listed on the 'Participants' sheet.")
+        typer.echo(f"Wrote {path}.")
+        hints.show([
+            f"Open {path.name} and enter the boards you want to pair yourself, one per row:\n"
+            f"White ID and Black ID (or names in the White / Black columns) and an x in 'Finalized'.\n"
+            f"The sheet 'Participants' lists the players of the round.",
+            "Save the file in .ods format and close it.",
+            f"Then pair all other players: {cmd(directory, f'pair {round_no}')}",
+        ])
         return
 
     finalized = []
@@ -423,6 +459,19 @@ def pair(
         typer.echo(f"Rule {rule}: applies to {n} board{'s' if n != 1 else ''}")
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
     _write_pairing_pdf(directory, round_no)
+    r = round_no
+    started_before = bool(existing and existing.games and all(g.finalized for g in existing.games))
+    if started_before and new_boards:            # latecomers were paired in a running round
+        steps = [f"Print the updated {hints.fpath(directory, f'round_{r}.pdf')} / round_{r}_alphabetical.pdf and tell the players their\n"
+                 f"new board(s): {', '.join(map(str, new_boards))}.",
+                 f"When these games begin, finalize them too: {cmd(directory, f'start {r}')}"]
+    else:
+        steps = [f"Print {hints.fpath(directory, f'round_{r}.pdf')} (by board) and round_{r}_alphabetical.pdf "
+                 f"(players A-Z)\nand put them up.",
+                 f"To change a board: edit {hints.fpath(directory, f'round_{r}.ods')} (an x in 'Finalized' keeps a board as it is),\n"
+                 f"save, close and run {cmd(directory, f'pair {r}')} again.",
+                 f"When the games begin: {cmd(directory, f'start {r}')}"]
+    hints.show(steps + hints.results_steps(t, directory, r))
 
 
 def _finalized_boards(t: Tournament, rg, round_no: int, ratings, warn_checks: bool = False) -> list:
@@ -559,6 +608,8 @@ def pairing_pdf_command(
     round_<r>_alphabetical.pdf: all players by surname, with board, colour, opponent and handicap.
     """
     _write_pairing_pdf(directory, round_no)
+    hints.show([f"Print {hints.fpath(directory, f'round_{round_no}.pdf')} and round_{round_no}_alphabetical.pdf "
+                f"and put them up."])
 
 
 # ---------------------------------------------------------------- results and standings
@@ -594,7 +645,14 @@ def results_check(
     done = len(rg.games) - problems
     typer.echo(f"Round {round_no}: {done} of {len(rg.games)} results entered.")
     if problems:
+        hints.show([f"Enter the missing results in {hints.fpath(directory, f'round_{round_no}.ods')} (an x under 'White win', 'Draw' or\n"
+                    f"'Black win'), save in .ods format, close the file and check again:\n"
+                    f"{cmd(directory, f'results check {round_no}')}"])
         raise typer.Exit(1)
+    if round_no == t.last_round:
+        hints.show(hints.after_complete_round(t, directory, round_no))
+    else:
+        hints.show(hints.overall(t, directory))
 
 
 @app.command()
@@ -629,6 +687,16 @@ def standings(
         warn(f"PDF not written: {e}")
         return
     typer.echo(f"Wrote {pdf} (printable standings).")
+    last = t.last_round
+    if r == last and last and t.rounds[last].complete:
+        if last < t.cfg.tournament.rounds:
+            hints.show([f"Print {hints.fpath(directory, 'standings.pdf')} and put it up.",
+                        f"Pair the next round: {cmd(directory, f'pair {last + 1}')}"])
+        else:
+            hints.show([f"Print {hints.fpath(directory, 'standings.pdf')} and put it up."]
+                       + hints.after_complete_round(t, directory, last))
+    else:
+        hints.show(hints.overall(t, directory))
 
 
 @app.command()
@@ -644,6 +712,12 @@ def wall(directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP)
         fail(str(e))
     show_warnings(t)
     typer.echo(f"Wrote {path} ({len(t.players)} players, {t.last_round} rounds).")
+    hints.show([
+        f"Check {hints.fpath(directory, path.name)} (e.g. the spelling of names) and correct it by hand if needed;\n"
+        f"save in .ods format and close it.",
+        f"Create the result file for the EGD: {cmd(directory, 'h9')}",
+        f"Create the slides for the award ceremony: {cmd(directory, 'awards')}",
+    ])
 
 
 @app.command()
@@ -668,6 +742,11 @@ def h9(
     path = output or directory / h9_filename(cfg)
     path.write_text(h9_text(cfg, lines), encoding="utf-8")
     typer.echo(f"Wrote {path} ({len(lines)} players).")
+    steps = [f"Send {path} to the EGD: usually to your national rating officer, who uploads it\n"
+             f"(see europeangodatabase.eu). If you correct wall_list.ods later, run this command again."]
+    if not (directory / "awards.pdf").exists():
+        steps.append(f"Create the slides for the award ceremony: {cmd(directory, 'awards')}")
+    hints.show(steps)
 
 
 # ---------------------------------------------------------------- award ceremony
@@ -703,6 +782,12 @@ def awards(
         fail(f"PDF not written: {e}")
     slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
     typer.echo(f"Wrote {path} ({slides} slides).")
+    steps = [f"Open {path} in a PDF viewer and switch to full-screen / presentation mode for the\n"
+             f"ceremony. Prizes are set in the [awards] section of {CONFIG_FILE}; run this command again\n"
+             f"after changing them."]
+    if not any(directory.glob("*.h9")):
+        steps.append(f"Don't forget the EGD result file: {cmd(directory, 'wall')}, then {cmd(directory, 'h9')}")
+    hints.show(steps)
 
 
 @app.command("translation-file")
@@ -758,5 +843,9 @@ def start(
     number_boards(rg.games, ratings)
     labels = {pid: player_label(p) for pid, p in t.players.items()}
     save_round(path, rg.games, labels, ratings, not_playing=read_not_playing(path))
-    typer.echo(f"Round {round_no} started: {len(rg.games)} board(s) finalized ({newly} newly). "
-               f"'gotourney pair {round_no}' will now only pair latecomers.")
+    typer.echo(f"Round {round_no} started: {len(rg.games)} board(s) finalized ({newly} newly).")
+    hints.show([
+        f"Latecomers: register them for round {round_no} (registration window, or an x in column R{round_no}\n"
+        f"of {hints.fpath(directory, 'players.ods')}), then run {cmd(directory, f'pair {round_no}')} - they are paired among each\n"
+        f"other on new boards; the running boards stay as they are.",
+    ] + hints.results_steps(t, directory, round_no))
