@@ -32,7 +32,8 @@
 
     <h2 class="form-title">{% if form.id %}{{ t("pl_edit", id=form.id) }}{% else %}{{ t("pl_new") }}{% endif %}</h2>
     <p id="form-notes" class="note" hidden></p>
-    <form method="post" action="{{ url_for('players_save') }}" id="player-form" class="player-form">
+    <form method="post" action="{{ url_for('players_save') }}" id="player-form" class="player-form"
+          data-unsaved="{{ 'true' if form_unsaved else 'false' }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="id" value="{{ form.id }}">
       <input type="hidden" name="egd_gor" id="f-egd_gor" value="{{ form.egd_gor }}">
@@ -73,6 +74,7 @@
       <div class="actions">
         <button type="submit" class="primary">{% if form.id %}{{ t("pl_save") }}{% else %}{{ t("pl_add") }}{% endif %}</button>
         {% if form.id %}<a class="button" href="{{ url_for('players_page') }}">{{ t("pl_cancel") }}</a>{% endif %}
+        <span id="unsaved" class="unsaved" hidden>{{ t("pl_unsaved") }}</span>
       </div>
     </form>
     {% if form.id %}
@@ -189,6 +191,7 @@
         if (!live.ok || document.getElementById("f-pin").value !== p.pin) return;
         var old = document.getElementById("f-gor").value;
         set("f-club", live.club); set("f-country", live.country); set("f-egd_last", live.last); set("f-egd_gor", live.gor);
+        checkDirty();
         if (String(live.gor) !== String(old)) {
           set("f-gor", live.gor);
           notes.textContent = (notes.textContent ? notes.textContent + " · " : "") +
@@ -196,6 +199,7 @@
           notes.hidden = false;
         }
       }).catch(function () {});
+    checkDirty();
     document.querySelector("#player-form button.primary").focus();
   }
 
@@ -213,8 +217,33 @@
       document.querySelectorAll("fieldset.rounds input[type=checkbox]").forEach(function (c) {
         c.checked = b.dataset.rounds === "all";
       });
+      checkDirty();
     });
   });
+
+  // ---- unsaved changes: compare the form with its state when the page was loaded
+  var form = document.getElementById("player-form");
+  var unsavedNote = document.getElementById("unsaved");
+  function snapshot() {
+    var parts = [];
+    new FormData(form).forEach(function (value, key) { if (key !== "csrf") parts.push(key + "=" + value); });
+    return parts.join("&");
+  }
+  var initial = snapshot(), leaving = false;
+  var startDirty = form.dataset.unsaved === "true";       // shown again after an error
+  function isDirty() { return startDirty || snapshot() !== initial; }
+  function checkDirty() { unsavedNote.hidden = !isDirty(); }
+  form.addEventListener("input", checkDirty);
+  form.addEventListener("change", checkDirty);
+  form.addEventListener("submit", function () { leaving = true; });
+  var removeForm = document.querySelector("form.remove-form");
+  if (removeForm) removeForm.addEventListener("submit", function () { leaving = true; });
+  window.addEventListener("beforeunload", function (event) {
+    if (leaving || !isDirty()) return;
+    event.preventDefault();
+    event.returnValue = "";
+  });
+  checkDirty();
   document.getElementById("player-filter").addEventListener("input", function () {
     var q = this.value.trim().toLowerCase();
     document.querySelectorAll("table.players tbody tr").forEach(function (tr) {
@@ -233,8 +262,8 @@
   // reload when players.ods changed elsewhere, unless the form is being filled in
   setInterval(function () {
     fetch("{{ url_for('api_version') }}").then(function (r) { return r.json(); }).then(function (d) {
-      var typing = document.getElementById("f-surname").value && !{{ (form.id != "")|tojson }};
-      if (d.v && d.v !== version && !typing && document.activeElement === document.body) window.location.reload();
+      // never reload over unsaved input; the page updates after saving
+      if (d.v && d.v !== version && !isDirty() && document.activeElement === document.body) window.location.reload();
     }).catch(function () {});
   }, 3000);
 })();

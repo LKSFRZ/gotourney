@@ -567,3 +567,12 @@ def test_tournament_name_is_the_headline(make_tournament):
         assert 'class="tournament-name" href="/dashboard" title="Test">Test</a>' in page(c.get(url)), url
     app, c = client_for(None)
     assert "tournament-name" not in page(c.get("/"))
+
+
+def test_players_form_marks_unsaved_input_after_an_error(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(d)
+    html = page(c.get("/players"))
+    assert 'data-unsaved="false"' in html and 'id="unsaved"' in html
+    r = post(c, app, "/players/save", surname="Neu", rank="99x")      # invalid rank: form is shown again
+    assert r.status_code == 422 and 'data-unsaved="true"' in page(r)

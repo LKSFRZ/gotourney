@@ -517,6 +517,7 @@ def create_app(directory: Path | None = None) -> Flask:
         return render_template("players.html", cfg=cfg, players=players, fields=fields, form=form,
                                rounds=range(1, cfg.tournament.rounds + 1), egd_status=app.config["EGD"].status(),
                                locked=workflow.is_open_in_libreoffice(d / "players.ods"),
+                               form_unsaved=status >= 400,            # shown again after an error: not saved
                                folder_version=folder_version(d)), status
 
     @app.get("/players")
