@@ -88,7 +88,7 @@
   <li><b>Auslosung:</b> Die Spieler werden mit dem Blossom-Algorithmus so gepaart, dass die TGoR-Unterschiede
   möglichst klein sind. Zwei Spieler treffen bei der automatischen Auslosung nie zweimal aufeinander, und
   Paarungen aus demselben Verein werden nach Möglichkeit vermieden.</li>
-  <li><b>Vorgabe:</b> Standardmäßig wird mit <b>voller Vorgabe</b> gespielt, ein Stein pro 100 TGoR-Punkte
+  <li><b>Vorgabe:</b> Standardmäßig wird mit <b>voller Vorgabe</b> gespielt, ein Stein pro volle 100 TGoR-Punkte
   Unterschied. Eine Reduzierung („voll minus N“) kann eingestellt werden. Die Spieler können für ihre Partie
   eine andere Vorgabe vereinbaren.</li>
   <li><b>Sieger:</b> Es gewinnt der Spieler mit der höchsten End-TGoR. Haben zwei Spieler dieselbe End-TGoR,
@@ -577,15 +577,15 @@ points = 150
 <h3>6.5 Vorgabe, Komi und Farben</h3>
 <table>
   <thead><tr><th style="width:30%">TGoR-Unterschied</th><th style="width:20%">Volle Vorgabe</th><th>Partie</th></tr></thead>
-  <tr><td>0 – 50</td><td>0</td><td>Ohne Vorgabe, Komi <code>komi_even</code>, Farben ausgeglichen</td></tr>
-  <tr><td>51 – 150</td><td>1</td><td>Der Schwächere nimmt Schwarz, keine Steine, Komi <code>komi_handicap</code></td></tr>
-  <tr><td>151 – 250</td><td>2</td><td>Der Schwächere nimmt Schwarz mit 2 Steinen, Komi <code>komi_handicap</code></td></tr>
+  <tr><td>0 – 99</td><td>0</td><td>Ohne Vorgabe, Komi <code>komi_even</code>, Farben ausgeglichen</td></tr>
+  <tr><td>100 – 199</td><td>1</td><td>Der Schwächere nimmt Schwarz, keine Steine, Komi <code>komi_handicap</code></td></tr>
+  <tr><td>200 – 299</td><td>2</td><td>Der Schwächere nimmt Schwarz mit 2 Steinen, Komi <code>komi_handicap</code></td></tr>
   <tr><td>…</td><td>…</td><td>…</td></tr>
-  <tr><td>851 und mehr</td><td>9</td><td>Maximum</td></tr>
+  <tr><td>900 und mehr</td><td>9</td><td>Maximum</td></tr>
 </table>
 <ul>
-  <li>Der Unterschied wird durch 100 geteilt und gerundet, genaue Hälften werden <b>abgerundet</b> (150 → 1,
-  151 → 2).</li>
+  <li>Ein Stein pro <b>vollen</b> 100 Punkten: Der Unterschied wird durch 100 geteilt und immer
+  <b>abgerundet</b> (99 → 0, 150 → 1, 199 → 1, 200 → 2).</li>
   <li>Mit einer Reduzierung N ist die Vorgabe <code>min(voll, 9) − N</code>, aber nie unter 0. In einem
   h2-Turnier ist die Standardvorgabe also höchstens 7. Bleibt nach der Reduzierung 1 übrig, ist das eine
   Partie mit Vorgabe 1, keine Partie ohne Vorgabe.</li>

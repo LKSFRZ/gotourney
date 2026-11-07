@@ -7,17 +7,17 @@ from gotourney.rounds import load_round, save_round
 from gotourney.tournament import Tournament
 
 
-@pytest.mark.parametrize("diff, stones", [(0, 0), (50, 0), (51, 1), (150, 1), (151, 2), (250, 2),
-                                          (251, 3), (850, 8), (851, 9), (2000, 20), (-151, 2)])
-def test_full_handicap_halves_round_down(diff, stones):
+@pytest.mark.parametrize("diff, stones", [(0, 0), (50, 0), (99.9, 0), (100, 1), (150, 1), (199, 1),
+                                          (200, 2), (299, 2), (899, 8), (900, 9), (2000, 20), (-151, 1)])
+def test_full_handicap_always_rounds_down(diff, stones):
     assert full_handicap(diff) == stones
 
 
 def test_default_handicap_reduction_and_cap():
     assert default_handicap(2000, 0) == 9
     assert default_handicap(2000, 2) == 7
-    assert default_handicap(151, 1) == 1      # stays a handicap-1 game
-    assert default_handicap(120, 1) == 0
+    assert default_handicap(251, 1) == 1      # stays a handicap-1 game
+    assert default_handicap(199, 1) == 0
     assert default_handicap(40, 3) == 0
 
 

@@ -22,8 +22,8 @@ class PairingError(Exception):
 
 
 def full_handicap(diff: float) -> int:
-    """Stones for a TGoR difference: one per 100 points, exact halves rounded down (150 -> 1)."""
-    return max(0, math.ceil(abs(diff) / 100.0 - 0.5))
+    """Stones for a TGoR difference: one per full 100 points, always rounded down (199 -> 1, 200 -> 2)."""
+    return int(math.floor(abs(diff) / 100.0))
 
 
 def default_handicap(diff: float, reduction: int) -> int:

@@ -193,7 +193,7 @@ handicap reduction (h0 = full handicap, h2 = reduced by 2 stones, h9 = no handic
 - Jokers have a TGoR and appear on the wall list and in the `.h9` like everybody else.
 
 ### 6.4 Handicap and komi (defaults)
-- `full = round_half_down(|ΔTGoR| / 100)` (e.g. 150 → 1, 151 → 2)
+- `full = floor(|ΔTGoR| / 100)`: always rounded down (e.g. 99 → 0, 150 → 1, 199 → 1, 200 → 2)
 - `H = max(min(full, 9) − reduction, 0)`, so the implicit handicap never exceeds `9 − reduction`
   (e.g. ≤ 7 in an h2 tournament). A handicap entered per game in the round file overrides this.
 - H = 0: even game, komi `komi_even`, colours balanced (§6.5)
