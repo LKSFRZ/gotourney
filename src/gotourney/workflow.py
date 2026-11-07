@@ -563,3 +563,112 @@ def set_result(directory: Path, round_no: int, board: int, value: str) -> SetRes
     save_round(path, rg.games, labels, t.rating_before(round_no), not_playing=read_not_playing(path))
     return SetResultOutcome(t, round_no, game, len(rg.games), sum(1 for g in rg.games if g.result is None),
                             finalized_now, any(r > round_no for r in t.rounds))
+
+
+# ---------------------------------------------------------------- registration
+
+@dataclass
+class PlayerData:
+    """What a registration form sends. ``gor`` and ``rank`` are text as typed."""
+
+    surname: str
+    first_name: str = ""
+    rank: str = ""
+    gor: str = ""
+    pin: str = ""
+    country: str = ""
+    club: str = ""
+    joker: bool = False
+    rounds: set[int] = field(default_factory=set)
+    notes: str = ""
+    extra: dict[str, str] = field(default_factory=dict)
+    egd_gor: float | None = None
+    egd_last_tournament: str = ""
+
+
+def load_registration(directory: Path):
+    """(config, player list) of a tournament folder."""
+    from .config import load_config
+    from .players import load_players
+
+    try:
+        cfg = load_config(directory)
+        return cfg, load_players(directory, cfg.tournament.rounds, cfg.registration.extra_fields)
+    except (ConfigError, OdsError) as e:
+        raise Problem("load", str(e)) from None
+
+
+def save_player(directory: Path, data: PlayerData, player_id: int | None = None):
+    """Add a player (player_id None) or change one. Returns (player, issues about this player)."""
+    from .players import PLAYERS_FILE, merge_fields, save_players
+    from .rank import RankError
+    from .registration import RegistrationError, check_players, new_player
+
+    cfg, pl = load_registration(directory)
+    check_writable(Path(directory) / PLAYERS_FILE)
+    old = None
+    if player_id is not None:
+        old = next((p for p in pl.players if p.id == player_id), None)
+        if old is None:
+            raise Problem("no_player", f"there is no player with ID {player_id}", {"id": player_id})
+    others = [p for p in pl.players if p.id != player_id]
+    gor_text = data.gor.strip().replace(",", ".")
+    try:
+        gor = float(gor_text) if gor_text else None
+    except ValueError:
+        raise Problem("invalid", f"GoR {data.gor!r} is not a number", {"field": "gor"}) from None
+    extra = {}
+    for name, value in data.extra.items():
+        value = value.strip()
+        allowed = cfg.registration.values_for(name)
+        if allowed is not None and value:
+            match = next((v for v in allowed if v.casefold() == value.casefold()), None)
+            if match is None:
+                raise Problem("invalid", f"{name}: {value!r} is not allowed (choose one of: {', '.join(allowed)})",
+                              {"field": name})
+            value = match
+        if value:
+            extra[name] = value
+    try:
+        player = new_player(others, surname=data.surname, first_name=data.first_name,
+                            rank=data.rank.strip() or None, gor=gor, pin=data.pin, country=data.country,
+                            club=data.club, rounds=set(data.rounds), joker=data.joker, notes=data.notes.strip())
+    except (RegistrationError, RankError) as e:
+        raise Problem("invalid", str(e)) from None
+    if old is not None:
+        player.id = old.id
+        # keep data of columns the form does not show (e.g. added to players.ods meanwhile)
+        player.extra = {**{k: v for k, v in old.extra.items()
+                           if k.casefold() not in {n.casefold() for n in data.extra}}, **extra}
+    else:
+        player.extra = extra
+    player.egd_gor = data.egd_gor if data.egd_gor is not None else (old.egd_gor if old else None)
+    player.egd_last_tournament = data.egd_last_tournament or (old.egd_last_tournament if old else "")
+    players = others + [player]
+    save_players(directory, players, cfg.tournament.rounds, merge_fields(pl.extra_fields, extra))
+    issues = [i for i in check_players(players, cfg) if f"ID {player.id} (" in i.message]
+    return player, issues
+
+
+def remove_player(directory: Path, player_id: int):
+    """Remove a player who does not appear in any round file."""
+    from .players import PLAYERS_FILE, save_players
+    from .rounds import load_round
+
+    cfg, pl = load_registration(directory)
+    check_writable(Path(directory) / PLAYERS_FILE)
+    player = next((p for p in pl.players if p.id == player_id), None)
+    if player is None:
+        raise Problem("no_player", f"there is no player with ID {player_id}", {"id": player_id})
+    for r in range(1, cfg.tournament.rounds + 1):
+        if not round_file(directory, r).exists():
+            continue
+        try:
+            rg = load_round(directory, r, cfg.handicap.komi_even)
+        except OdsError:
+            continue
+        if any(player_id in g.players() for g in rg.games):
+            raise Problem("in_round", f"{player.name} plays in round {r} and cannot be removed. Unregister them "
+                          f"from later rounds instead.", {"round": r, "name": player.name})
+    save_players(directory, [p for p in pl.players if p.id != player_id], cfg.tournament.rounds, pl.extra_fields)
+    return player

@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (in progress: W0, W1 and W2 done)
+## 11. Web interface (in progress: W0–W3 done)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -325,7 +325,7 @@ Each phase is usable on its own; the command line keeps working throughout.
 - **W2b – Pairing and starting.** Buttons for pair / start; the boards as a table; fix (finalize)
   or release boards; pair two players by hand (also by name search); latecomers; PDF downloads
   (by board, alphabetical); confirmation before anything that cannot be undone.
-- **W3 – Registration in the browser.** EGD search with autocomplete, player table with editing,
+- ✅ **W3 – Registration in the browser.** EGD search with autocomplete, player table with editing,
   rounds, joker, extra fields with dropdowns, registration check. Replaces the Tk window
   (`gotourney gui` then opens the browser page).
 - **W4 – Settings form.** All settings of `tournament.toml` with explanations and live checks,

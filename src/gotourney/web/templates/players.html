@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}{{ t("players_title") }} – {{ cfg.tournament.name }}{% endblock %}
+{% block nav %}<a href="{{ url_for('dashboard') }}">{{ t("dashboard") }}</a> <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>{% endblock %}
+
+{% block content %}
+<div class="title">
+  <h1>{{ t("players_title") }}</h1>
+  <p class="muted">{{ cfg.tournament.name }}</p>
+</div>
+{% if locked %}<p class="msg error">{{ t("pl_locked") }}</p>{% endif %}
+
+<div class="grid players-grid">
+  <section class="card">
+    <h2>{{ t("pl_search_title") }}</h2>
+    <div class="search-box">
+      <input type="search" id="egd-search" autocomplete="off" autofocus
+             placeholder="{{ t('pl_search_placeholder') }}" aria-label="{{ t('pl_search_title') }}"
+             aria-controls="egd-results">
+      <ul id="egd-results" class="suggestions" role="listbox" hidden></ul>
+    </div>
+    <p class="muted small" id="egd-status"
+       data-loading="{{ t('pl_egd_loading') }}"
+       data-error="{{ t('pl_egd_error', error='{error}') }}"
+       data-ok="{{ t('pl_egd_status', date='{date}', n='{n}') }}">
+      {% if egd_status.loaded %}{{ t("pl_egd_status", date=egd_status.date, n=egd_status.players) }}
+      {% elif egd_status.error %}{{ t("pl_egd_error", error=egd_status.error) }}
+      {% else %}{{ t("pl_egd_loading") }}{% endif %}
+    </p>
+    <p class="muted small">{{ t("pl_search_help") }}</p>
+    <form method="post" action="{{ url_for('egd_update') }}" class="inline">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="link small">{{ t("pl_egd_update") }}</button>
+    </form>
+
+    <h2 class="form-title">{% if form.id %}{{ t("pl_edit", id=form.id) }}{% else %}{{ t("pl_new") }}{% endif %}</h2>
+    <p id="form-notes" class="note" hidden></p>
+    <form method="post" action="{{ url_for('players_save') }}" id="player-form" class="player-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="id" value="{{ form.id }}">
+      <input type="hidden" name="egd_gor" id="f-egd_gor" value="{{ form.egd_gor }}">
+      <input type="hidden" name="egd_last_tournament" id="f-egd_last" value="{{ form.egd_last_tournament }}">
+      <div class="fields">
+        <label>{{ t("pl_surname") }}<input name="surname" id="f-surname" required value="{{ form.surname }}"></label>
+        <label>{{ t("pl_first_name") }}<input name="first_name" id="f-first_name" value="{{ form.first_name }}"></label>
+        <label class="narrow">{{ t("pl_rank") }}<input name="rank" id="f-rank" value="{{ form.rank }}" placeholder="5k"></label>
+        <label class="narrow">{{ t("pl_gor") }}<input name="gor" id="f-gor" value="{{ form.gor }}" inputmode="numeric"
+               title="{{ t('pl_gor_help') }}"></label>
+        <label>{{ t("pl_pin") }}<input name="pin" id="f-pin" value="{{ form.pin }}" inputmode="numeric"></label>
+        <label class="narrow">{{ t("pl_country") }}<input name="country" id="f-country" value="{{ form.country }}" maxlength="2"></label>
+        <label class="narrow">{{ t("pl_club") }}<input name="club" id="f-club" value="{{ form.club }}"></label>
+        {% for f in fields %}
+          <label>{{ f.name }}
+            {% if f["values"] %}
+              <select name="extra_{{ loop.index0 }}">
+                <option value=""></option>
+                {% for v in f["values"] %}<option {% if form.extra.get(f.name) == v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+              </select>
+            {% else %}
+              <input name="extra_{{ loop.index0 }}" value="{{ form.extra.get(f.name, '') }}">
+            {% endif %}
+          </label>
+        {% endfor %}
+      </div>
+      <fieldset class="rounds">
+        <legend>{{ t("pl_rounds") }}</legend>
+        {% for r in rounds %}
+          <label class="check"><input type="checkbox" name="round_{{ r }}"
+            {% if form.rounds is none or r in form.rounds %}checked{% endif %}> {{ r }}</label>
+        {% endfor %}
+        <button type="button" class="link small" data-rounds="all">{{ t("pl_all") }}</button>
+        <button type="button" class="link small" data-rounds="none">{{ t("pl_none") }}</button>
+      </fieldset>
+      <label class="check"><input type="checkbox" name="joker" {% if form.joker %}checked{% endif %}> {{ t("pl_joker") }}</label>
+      <label class="wide">{{ t("pl_notes") }}<input name="notes" value="{{ form.notes }}"></label>
+      <div class="actions">
+        <button type="submit" class="primary">{% if form.id %}{{ t("pl_save") }}{% else %}{{ t("pl_add") }}{% endif %}</button>
+        {% if form.id %}<a class="button" href="{{ url_for('players_page') }}">{{ t("pl_cancel") }}</a>{% endif %}
+      </div>
+    </form>
+    {% if form.id %}
+      <form method="post" action="{{ url_for('players_remove', pid=form.id) }}" class="remove-form"
+            onsubmit='return confirm({{ t("pl_confirm_remove", name=(form.surname ~ " " ~ form.first_name))|tojson }});'>
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="danger">{{ t("pl_remove") }}</button>
+      </form>
+    {% endif %}
+  </section>
+
+  <section class="card">
+    <h2>{{ t("pl_list_title", n=players|length) }}</h2>
+    <div class="tools">
+      <input type="search" id="player-filter" placeholder="{{ t('pl_filter') }}" aria-label="{{ t('pl_filter') }}">
+      <form method="post" action="{{ url_for('do', action='check_players') }}" class="inline">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="next" value="{{ url_for('players_page') }}">
+        <button type="submit">{{ t("act_check_players") }}</button>
+      </form>
+    </div>
+    {% if players %}
+    <table class="players">
+      <thead><tr><th>{{ t("pl_col_name") }}</th><th>{{ t("pl_rank") }}</th><th>{{ t("pl_gor") }}</th>
+                 <th>{{ t("pl_club") }}</th><th>{{ t("pl_col_rounds") }}</th></tr></thead>
+      <tbody>
+      {% for p in players %}
+        <tr data-search="{{ (p.name ~ ' ' ~ p.club ~ ' ' ~ p.pin)|lower }}" class="{{ 'editing' if form.id == p.id else '' }}">
+          <td><a href="{{ url_for('players_page', edit=p.id) }}">{{ p.name }}</a>
+              {% if p.joker %}<span class="badge">Joker</span>{% endif %}
+              <span class="muted small">ID {{ p.id }}</span></td>
+          <td>{{ p.rank or "" }}</td>
+          <td>{{ "" if p.gor is none else "%.0f"|format(p.gor) }}</td>
+          <td>{{ p.club }}{% if p.country %} <span class="muted small">{{ p.country }}</span>{% endif %}</td>
+          <td class="round-marks">{% for r in rounds %}<span class="{{ 'on' if r in p.rounds else 'off' }}">{{ r }}</span>{% endfor %}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+      <p class="muted">{{ t("pl_empty") }}</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var texts = {registered: {{ t("pl_registered", id="{id}")|tojson }}, outdated: {{ t("pl_outdated", years="{years}")|tojson }},
+               none: {{ t("pl_no_results")|tojson }}, live: {{ t("pl_live_updated", old="{old}", new="{new}")|tojson }}};
+  var input = document.getElementById("egd-search");
+  var list = document.getElementById("egd-results");
+  var statusLine = document.getElementById("egd-status");
+  var notes = document.getElementById("form-notes");
+  var results = [], active = -1, timer = null, version = {{ folder_version|tojson }};
+
+  function esc(s) { var d = document.createElement("div"); d.textContent = s == null ? "" : String(s); return d.innerHTML; }
+
+  function showStatus(st) {
+    if (st.loaded) statusLine.textContent = statusLine.dataset.ok.replace("{date}", st.date).replace("{n}", st.players);
+    else if (st.error) statusLine.textContent = statusLine.dataset.error.replace("{error}", st.error);
+    else statusLine.textContent = statusLine.dataset.loading;
+  }
+
+  function render() {
+    list.innerHTML = "";
+    if (!input.value.trim()) { list.hidden = true; return; }
+    if (!results.length) {
+      list.innerHTML = '<li class="empty">' + esc(texts.none) + "</li>"; list.hidden = false; return;
+    }
+    results.forEach(function (p, i) {
+      var li = document.createElement("li");
+      li.setAttribute("role", "option");
+      li.className = (i === active ? "active " : "") + (p.registered ? "registered" : "");
+      var extra = [];
+      if (p.registered) extra.push(texts.registered.replace("{id}", p.registered));
+      if (p.outdated) extra.push(texts.outdated.replace("{years}", p.outdated));
+      li.innerHTML = '<span class="n">' + esc(p.surname + " " + p.first_name) + '</span>' +
+        '<span class="d">' + esc([p.grade, p.country, p.club || "–", "GoR " + p.gor, p.pin, p.last].join(" · ")) + "</span>" +
+        (extra.length ? '<span class="x">' + esc(extra.join(" · ")) + "</span>" : "");
+      li.addEventListener("mousedown", function (e) { e.preventDefault(); choose(i); });
+      list.appendChild(li);
+    });
+    list.hidden = false;
+  }
+
+  function search() {
+    var q = input.value.trim();
+    if (!q) { results = []; render(); return; }
+    fetch("{{ url_for('api_egd_search') }}?q=" + encodeURIComponent(q)).then(function (r) { return r.json(); })
+      .then(function (data) {
+        showStatus(data.status);
+        if (!data.status.loaded && data.status.loading) { setTimeout(search, 800); return; }
+        results = data.results; active = results.length ? 0 : -1; render();
+      });
+  }
+
+  function set(id, value) { var el = document.getElementById(id); if (el) el.value = value == null ? "" : value; }
+
+  function choose(i) {
+    var p = results[i];
+    if (!p) return;
+    if (p.registered) { window.location = "{{ url_for('players_page') }}?edit=" + p.registered; return; }
+    set("f-surname", p.surname); set("f-first_name", p.first_name); set("f-rank", p.rank);
+    set("f-gor", p.gor); set("f-pin", p.pin); set("f-country", p.country); set("f-club", p.club);
+    set("f-egd_gor", p.gor); set("f-egd_last", p.last);
+    var msg = p.outdated ? texts.outdated.replace("{years}", p.outdated) : "";
+    notes.textContent = msg; notes.hidden = !msg;
+    list.hidden = true; input.value = "";
+    // latest data straight from the EGD
+    fetch("{{ url_for('api_egd_pin', pin='PIN') }}".replace("PIN", p.pin)).then(function (r) { return r.json(); })
+      .then(function (live) {
+        if (!live.ok || document.getElementById("f-pin").value !== p.pin) return;
+        var old = document.getElementById("f-gor").value;
+        set("f-club", live.club); set("f-country", live.country); set("f-egd_last", live.last); set("f-egd_gor", live.gor);
+        if (String(live.gor) !== String(old)) {
+          set("f-gor", live.gor);
+          notes.textContent = (notes.textContent ? notes.textContent + " · " : "") +
+            texts.live.replace("{old}", old).replace("{new}", live.gor);
+          notes.hidden = false;
+        }
+      }).catch(function () {});
+    document.querySelector("#player-form button.primary").focus();
+  }
+
+  input.addEventListener("input", function () { clearTimeout(timer); timer = setTimeout(search, 150); });
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowDown") { active = Math.min(active + 1, results.length - 1); render(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { active = Math.max(active - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === "Enter") { e.preventDefault(); choose(active < 0 ? 0 : active); }
+    else if (e.key === "Escape") { input.value = ""; results = []; render(); }
+  });
+  input.addEventListener("blur", function () { setTimeout(function () { list.hidden = true; }, 150); });
+
+  document.querySelectorAll("[data-rounds]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll("fieldset.rounds input[type=checkbox]").forEach(function (c) {
+        c.checked = b.dataset.rounds === "all";
+      });
+    });
+  });
+  document.getElementById("player-filter").addEventListener("input", function () {
+    var q = this.value.trim().toLowerCase();
+    document.querySelectorAll("table.players tbody tr").forEach(function (tr) {
+      tr.hidden = q && tr.dataset.search.indexOf(q) < 0;
+    });
+  });
+
+  // load the EGD list in the background if it is not ready yet
+  if (!{{ egd_status.loaded|tojson }}) {
+    var poll = setInterval(function () {
+      fetch("{{ url_for('api_egd_search') }}?q=").then(function (r) { return r.json(); }).then(function (d) {
+        showStatus(d.status); if (d.status.loaded || d.status.error) clearInterval(poll);
+      });
+    }, 1000);
+  }
+  // reload when players.ods changed elsewhere, unless the form is being filled in
+  setInterval(function () {
+    fetch("{{ url_for('api_version') }}").then(function (r) { return r.json(); }).then(function (d) {
+      var typing = document.getElementById("f-surname").value && !{{ (form.id != "")|tojson }};
+      if (d.v && d.v !== version && !typing && document.activeElement === document.body) window.location.reload();
+    }).catch(function () {});
+  }, 3000);
+})();
+</script>
+{% endblock %}

@@ -147,7 +147,9 @@ und Folien für die Siegerehrung erstellen. <b>Ergebnisse</b> tragen Sie auf der
 ein: <i>Weiß gewinnt</i>, <i>Jigo</i> oder <i>Schwarz gewinnt</i> (kampflose Partien unter <i>Mehr</i>);
 jeder Klick wird sofort in <code>round_r.ods</code> gespeichert. LibreOffice können Sie für dieselben
 Dateien weiterhin verwenden; die Seiten aktualisieren sich beim Speichern selbst. Die Seite gibt es auf
-Englisch und Deutsch. Anmeldung und Einstellungen im Browser folgen.</div>
+Englisch und Deutsch. <b>Spieler</b> melden Sie auf der Spielerseite an (EGD-Suche beim Tippen, Formular
+ausfüllen, Spieler in der Liste bearbeiten oder entfernen); <code>gotourney gui</code> öffnet sie direkt.
+Ein Einstellungsformular folgt.</div>
 
 <h2>3. Installation</h2>
 <p><b>Voraussetzungen auf jedem System:</b> Python 3.11 oder neuer (mit Tkinter für das Anmeldefenster),
@@ -301,7 +303,11 @@ translation_file = "translation.toml"</pre>
 <h2 class="pagebreak">5. Spieler anmelden</h2>
 
 <h3>5.1 Das Anmeldefenster</h3>
-<pre>gotourney gui -d mein_turnier</pre>
+<pre>gotourney gui -d mein_turnier            # Spielerseite im Browser
+gotourney gui -d mein_turnier --classic  # das unten gezeigte eigene Fenster</pre>
+<p><code>gotourney gui</code> öffnet die Spielerseite der Weboberfläche, die wie das hier beschriebene Fenster
+funktioniert (EGD-Suche mit Autovervollständigung, Formular, Spielerliste). Das eigene Fenster gibt es weiterhin
+mit <code>--classic</code>.</p>
 <figure>
   <img src="img/gui.png" alt="Anmeldefenster">
   <figcaption>Das Anmeldefenster: EGD-Suche (oben), Spielerformular (Mitte), angemeldete Spieler (unten).

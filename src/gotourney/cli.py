@@ -272,9 +272,17 @@ def web(
 def gui(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
     update_list: bool = typer.Option(False, "--update-list", help="Download a fresh EGD player list first."),
+    classic: bool = typer.Option(False, "--classic", help="Use the old registration window instead of the browser."),
+    port: int = typer.Option(8765, "--port", help="Port of the local web server."),
 ) -> None:
-    """Open the registration window (search the EGD with autocomplete)."""
+    """Register players: opens the players page of the web interface in the browser."""
     cfg, _ = load(directory)
+    if not classic:
+        from .web import run
+        if update_list:
+            egd.PlayerIndex.load(refresh=True)
+        run(directory, port, open_browser=True, start_path="/players")
+        return
     from . import gui as gui_module  # Tkinter is only needed here
     gui_module.run(directory, cfg, refresh_list=True if update_list else None)
     try:

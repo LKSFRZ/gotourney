@@ -143,8 +143,9 @@ next step: create or open a tournament, pair and start rounds, create standings,
 award slides. <b>Results</b> are entered on the page of the round by clicking <i>White wins</i>,
 <i>Jigo</i> or <i>Black wins</i> (forfeits under <i>More</i>); each click is saved immediately in
 <code>round_r.ods</code>. You can still use LibreOffice for the same files; the pages update themselves when
-you save there. The page is available in English and German. Registration and settings in the browser will
-follow.</div>
+you save there. <b>Players</b> are registered on the players page (search the EGD as you type, fill in the
+form, edit or remove players in the list); <code>gotourney gui</code> opens it directly. The page is
+available in English and German. A settings form will follow.</div>
 
 <h2>3. Installation</h2>
 <p><b>Requirements on every system:</b> Python 3.11 or newer (with Tkinter for the registration window),
@@ -292,7 +293,11 @@ translation_file = "translation.toml"</pre>
 <h2 class="pagebreak">5. Registering players</h2>
 
 <h3>5.1 The registration window <span class="badge now">AVAILABLE</span></h3>
-<pre>gotourney gui -d my_tournament</pre>
+<pre>gotourney gui -d my_tournament            # players page in the browser
+gotourney gui -d my_tournament --classic  # the separate window shown below</pre>
+<p><code>gotourney gui</code> opens the players page of the web interface, which works like the window
+described here (EGD search with autocomplete, form, player list). The separate window is still available
+with <code>--classic</code>.</p>
 <figure>
   <img src="img/gui.png" alt="Registration window">
   <figcaption>The registration window: EGD search (top), player form (middle), registered players (bottom).</figcaption>

@@ -186,3 +186,88 @@ def test_bad_result_values(make_tournament):
     r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "9", "result": "white"},
                headers={"X-Requested-With": "fetch"})
     assert r.status_code == 409 and "no board 9" in r.get_json()["message"]
+
+
+from gotourney import egd as egd_module
+
+FAKE_EGD = [
+    egd_module.EGDPlayer("34567890", "Mueller", "Andreas", "DE", "Mus", "1k", 2010, 25, "T260912A"),
+    egd_module.EGDPlayer("45678901", "Mueller", "Sophie", "DE", "Bsp", "4k", 1720, 12, "T150501B"),
+    egd_module.EGDPlayer("56789012", "Klein", "Tim", "AT", "Wien", "37k", -833, 6, "T250815C"),
+]
+
+
+def players_client(directory):
+    app, c = client_for(directory)
+    app.config["EGD"].index = egd_module.PlayerIndex(FAKE_EGD)
+    app.config["EGD_FETCH"] = lambda pin: next(p for p in FAKE_EGD if p.pin == pin)
+    return app, c
+
+
+def test_egd_search_api(make_tournament):
+    d = make_tournament([(2000,)], rounds=2)
+    app, c = players_client(d)
+    data = c.get("/api/egd/search?q=mueller").get_json()
+    assert [r["first_name"] for r in data["results"]] == ["Andreas", "Sophie"]
+    sophie = data["results"][1]
+    assert sophie["outdated"] and sophie["outdated"] >= 10            # last tournament 2015
+    assert c.get("/api/egd/search?q=klein").get_json()["results"][0]["rank"] == "29k"   # 37k is no rank -> from GoR
+    assert c.get("/api/egd/pin/34567890").get_json()["gor"] == 2010
+
+
+def test_register_edit_remove_players(make_tournament):
+    from gotourney.players import load_players
+    d = make_tournament([(2000,)], rounds=3)
+    app, c = players_client(d)
+    r = c.get("/players")
+    assert r.status_code == 200 and "Search the EGD" in page(r) and "Fee paid" in page(r)
+    r = post(c, app, "/players/save", surname="Mueller", first_name="Andreas", rank="1k", gor="2010",
+             pin="34567890", country="DE", club="Mus", round_1="on", round_3="on", extra_0="yes",
+             extra_1="U15", egd_gor="2010", egd_last_tournament="T260912A")
+    assert "Added Mueller Andreas (ID 2)" in page(r)
+    p = next(p for p in load_players(d, 3, ["Fee paid", "Age group"]).players if p.id == 2)
+    assert (p.rounds, p.club, p.extra, p.egd_last_tournament) == ({1, 3}, "Mus", {"Fee paid": "yes", "Age group": "U15"},
+                                                                  "T260912A")
+    # the same PIN again is refused, and the form keeps what was typed
+    r = post(c, app, "/players/save", surname="Mueller", first_name="Again", rank="1k", pin="34567890")
+    assert r.status_code == 422 and "already registered" in page(r) and 'value="Again"' in page(r)
+    # invalid dropdown value
+    r = post(c, app, "/players/save", surname="Neu", rank="5k", extra_1="U12")
+    assert r.status_code == 422 and "not allowed" in page(r)
+    # edit
+    assert 'value="Andreas"' in page(c.get("/players?edit=2"))
+    r = post(c, app, "/players/save", id="2", surname="Mueller", first_name="Andreas", rank="1k", gor="1950",
+             pin="34567890", round_2="on", joker="on")
+    assert "Saved Mueller Andreas" in page(r)
+    p = next(p for p in load_players(d, 3, ["Fee paid", "Age group"]).players if p.id == 2)
+    assert (p.gor, p.rounds, p.joker, p.egd_last_tournament) == (1950, {2}, True, "T260912A")
+    # remove
+    r = post(c, app, "/players/2/remove")
+    assert "Removed Mueller Andreas" in page(r)
+    assert [p.id for p in load_players(d, 3).players] == [1]
+
+
+def test_players_in_a_round_cannot_be_removed(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = players_client(d)
+    post(c, app, "/do/pair", round="1")
+    r = post(c, app, "/players/1/remove")
+    assert "cannot be removed" in page(r)
+
+
+def test_players_page_refuses_while_open_in_libreoffice(make_tournament):
+    d = make_tournament([(2000,)], rounds=1)
+    app, c = players_client(d)
+    (d / ".~lock.players.ods#").write_text("x")
+    assert "players.ods is open in LibreOffice" in page(c.get("/players"))
+    r = post(c, app, "/players/save", surname="Neu", rank="5k")
+    assert r.status_code == 422 and "LibreOffice" in page(r)
+
+
+def test_dashboard_links_to_players_page(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = players_client(d)
+    r = c.get("/dashboard")
+    assert "Register players" in page(r) and 'href="/players"' in page(r)
+    r = post(c, app, "/do/check_players", next="/players")
+    assert r.request.path == "/players"

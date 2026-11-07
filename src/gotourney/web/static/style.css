@@ -189,3 +189,41 @@ details.more .menu button.clear { color: var(--err); }
   .segmented .long { display: none; }
   .segmented .short { display: inline; }
 }
+
+/* ---------------- players page */
+.players-grid { grid-template-columns: minmax(340px, 1.1fr) minmax(320px, 1fr); align-items: start; }
+@media (max-width: 900px) { .players-grid { grid-template-columns: 1fr; } }
+.search-box { position: relative; }
+.search-box input { width: 100%; font-size: 17px; padding: 10px 12px; }
+ul.suggestions { position: absolute; z-index: 10; left: 0; right: 0; top: 100%; margin: 4px 0 0; padding: 4px;
+                 list-style: none; background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+                 box-shadow: 0 8px 24px rgba(0,0,0,.18); max-height: 420px; overflow-y: auto; }
+ul.suggestions li { padding: 7px 10px; border-radius: 6px; cursor: pointer; display: flex; flex-direction: column; }
+ul.suggestions li.active, ul.suggestions li:hover { background: var(--accent-soft); }
+ul.suggestions li.empty { cursor: default; color: var(--muted); }
+ul.suggestions li.registered .n { color: var(--muted); }
+ul.suggestions .n { font-weight: 600; }
+ul.suggestions .d { font-size: 13px; color: var(--muted); }
+ul.suggestions .x { font-size: 12px; color: var(--warn); }
+.form-title { margin-top: 20px; }
+.player-form .fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 12px; }
+.player-form label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
+.player-form label.check { flex-direction: row; align-items: center; font-weight: normal; font-size: 15px; margin: 8px 0; }
+.player-form label.wide { margin-top: 6px; }
+.player-form input, .player-form select { font-weight: normal; width: 100%; }
+fieldset.rounds { border: 1px solid var(--line); border-radius: 8px; margin: 12px 0 4px; padding: 8px 12px;
+                  display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+fieldset.rounds legend { font-size: 13px; font-weight: 600; padding: 0 4px; }
+fieldset.rounds label.check { margin: 0; }
+button.danger { border-color: var(--err); color: var(--err); }
+.remove-form { margin-top: 12px; }
+table.players { width: 100%; border-collapse: collapse; font-size: 15px; margin-top: 10px; }
+table.players th { text-align: left; font-size: 13px; color: var(--muted); padding: 6px; border-bottom: 1px solid var(--line); }
+table.players td { padding: 6px; border-bottom: 1px solid var(--line); }
+table.players tr.editing td { background: var(--accent-soft); }
+.round-marks span { display: inline-block; min-width: 1.4em; text-align: center; font-size: 12px; border-radius: 4px; margin-right: 2px; }
+.round-marks .on { background: var(--ok-soft); color: var(--ok); font-weight: 700; }
+.round-marks .off { color: var(--muted); opacity: .5; }
+.badge { margin-left: 4px; }
+.player-form input[type=checkbox] { width: auto; margin: 0; }
+.player-form label.check { gap: 8px; }

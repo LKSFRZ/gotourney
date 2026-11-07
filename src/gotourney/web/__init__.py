@@ -6,18 +6,20 @@ them fresh, every action writes them, and LibreOffice can be used for the same f
 
 from __future__ import annotations
 
+import datetime as dt
 import hashlib
 import json
 import os
 import secrets
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from flask import (Flask, abort, flash, jsonify, redirect, render_template, request, send_from_directory,
                    url_for)
 
-from .. import __version__, workflow
+from .. import __version__, egd, workflow
 from ..config import CONFIG_FILE
 from .texts import LANGUAGES, text
 
@@ -73,6 +75,46 @@ def start_registration_window(directory: Path) -> None:
     subprocess.Popen([sys.executable, "-m", "gotourney", "gui", "-d", str(directory)], env=env)
 
 
+class EgdIndex:
+    """The EGD player list, loaded once in the background and kept in memory."""
+
+    def __init__(self):
+        self.index: egd.PlayerIndex | None = None
+        self.error = ""
+        self.loading = False
+        self._lock = threading.Lock()
+
+    def ensure(self, refresh: bool | None = None) -> None:
+        with self._lock:
+            if self.loading or (self.index is not None and not refresh):
+                return
+            self.loading, self.error = True, ""
+        threading.Thread(target=self._load, args=(refresh,), daemon=True).start()
+
+    def _load(self, refresh) -> None:
+        try:
+            self.index = egd.PlayerIndex.load(refresh=refresh)
+        except Exception as e:                    # noqa: BLE001 - shown to the user
+            self.error = str(e)
+        finally:
+            self.loading = False
+
+    def status(self) -> dict:
+        age = egd.list_age()
+        date = (dt.datetime.fromtimestamp(egd.list_path().stat().st_mtime).strftime("%Y-%m-%d")
+                if age is not None and egd.list_path().exists() else "")
+        return {"loaded": self.index is not None, "loading": self.loading, "error": self.error,
+                "players": len(self.index.players) if self.index else 0, "date": date}
+
+
+def rank_text(p: "egd.EGDPlayer") -> str:
+    from ..rank import Rank, RankError
+    try:
+        return str(Rank.parse(p.grade))
+    except RankError:
+        return str(Rank.from_gor(p.gor))
+
+
 def folder_version(directory: Path) -> str:
     """Changes whenever a file in the tournament folder changes (for reloading open pages)."""
     h = hashlib.sha1()
@@ -95,6 +137,8 @@ def create_app(directory: Path | None = None) -> Flask:
     app.config["CSRF"] = secrets.token_urlsafe(24)
     app.config["OPENER"] = open_with_system
     app.config["REGISTRATION"] = start_registration_window
+    app.config["EGD"] = EgdIndex()
+    app.config["EGD_FETCH"] = egd.fetch_by_pin
 
     def lang() -> str:
         chosen = request.cookies.get("lang")
@@ -258,6 +302,143 @@ def create_app(directory: Path | None = None) -> Flask:
                            summary=round_summary(t, r), version=folder_version(d))
         return redirect(url_for("round_page", r=r) + f"#board-{board}")
 
+    # ------------------------------------------------------------ registration
+
+    def player_form(p=None) -> dict:
+        if p is None:
+            return {"id": "", "surname": "", "first_name": "", "rank": "", "gor": "", "pin": "", "country": "",
+                    "club": "", "joker": False, "rounds": None, "notes": "", "extra": {}, "egd_gor": "",
+                    "egd_last_tournament": ""}
+        return {"id": p.id, "surname": p.surname, "first_name": p.first_name, "rank": str(p.rank or ""),
+                "gor": "" if p.gor is None else f"{p.gor:g}", "pin": p.pin, "country": p.country, "club": p.club,
+                "joker": p.joker, "rounds": p.rounds, "notes": p.notes, "extra": dict(p.extra),
+                "egd_gor": "" if p.egd_gor is None else f"{p.egd_gor:g}",
+                "egd_last_tournament": p.egd_last_tournament}
+
+    def render_players(form: dict, status: int = 200):
+        d = tdir()
+        cfg, pl = workflow.load_registration(d)
+        fields = [{"name": f, "values": cfg.registration.values_for(f)} for f in pl.extra_fields]
+        app.config["EGD"].ensure()
+        players = sorted(pl.players, key=lambda p: (p.surname.casefold(), p.first_name.casefold()))
+        return render_template("players.html", cfg=cfg, players=players, fields=fields, form=form,
+                               rounds=range(1, cfg.tournament.rounds + 1), egd_status=app.config["EGD"].status(),
+                               locked=workflow.is_open_in_libreoffice(d / "players.ods"),
+                               folder_version=folder_version(d)), status
+
+    @app.get("/players")
+    def players_page():
+        d = tdir()
+        if d is None:
+            return redirect(url_for("home", choose=1))
+        try:
+            form = player_form()
+            edit_id = request.args.get("edit", type=int)
+            if edit_id is not None:
+                _, pl = workflow.load_registration(d)
+                p = next((x for x in pl.players if x.id == edit_id), None)
+                if p is not None:
+                    form = player_form(p)
+            return render_players(form)
+        except workflow.Problem as e:
+            flash(str(e), "error")
+            return redirect(url_for("dashboard"))
+
+    @app.post("/players/save")
+    def players_save():
+        d = tdir()
+        if d is None:
+            abort(404)
+        f = request.form
+        cfg, pl = workflow.load_registration(d)
+        rounds = {r for r in range(1, cfg.tournament.rounds + 1) if f.get(f"round_{r}")}
+        extra = {name: f.get(f"extra_{i}", "") for i, name in enumerate(pl.extra_fields)}
+        try:
+            egd_gor = float(f.get("egd_gor")) if f.get("egd_gor") else None
+        except ValueError:
+            egd_gor = None
+        data = workflow.PlayerData(
+            surname=f.get("surname", ""), first_name=f.get("first_name", ""), rank=f.get("rank", ""),
+            gor=f.get("gor", ""), pin=f.get("pin", ""), country=f.get("country", ""), club=f.get("club", ""),
+            joker=bool(f.get("joker")), rounds=rounds, notes=f.get("notes", ""), extra=extra,
+            egd_gor=egd_gor, egd_last_tournament=f.get("egd_last_tournament", ""))
+        player_id = f.get("id", type=int)
+        try:
+            player, issues = workflow.save_player(d, data, player_id)
+        except workflow.Problem as e:
+            if e.code == "file_open":
+                say("error", "pr_file_open", name="players.ods")
+            else:
+                flash(str(e), "error")
+            form = {"id": player_id or "", "surname": data.surname, "first_name": data.first_name, "rank": data.rank,
+                    "gor": data.gor, "pin": data.pin, "country": data.country, "club": data.club,
+                    "joker": data.joker, "rounds": rounds, "notes": data.notes, "extra": extra,
+                    "egd_gor": f.get("egd_gor", ""), "egd_last_tournament": data.egd_last_tournament}
+            return render_players(form, 422)
+        say("success", "pl_saved" if player_id else "pl_added", name=player.name, id=player.id)
+        for i in issues:
+            flash(i.message, {"error": "error", "warning": "warning"}.get(i.level, "info"))
+        return redirect(url_for("players_page"))
+
+    @app.post("/players/<int:pid>/remove")
+    def players_remove(pid: int):
+        d = tdir()
+        if d is None:
+            abort(404)
+        try:
+            player = workflow.remove_player(d, pid)
+            say("success", "pl_removed", name=player.name)
+        except workflow.Problem as e:
+            if e.code == "file_open":
+                say("error", "pr_file_open", name="players.ods")
+            else:
+                flash(str(e), "error")
+        return redirect(url_for("players_page"))
+
+    @app.post("/players/egd-update")
+    def egd_update():
+        app.config["EGD"].ensure(refresh=True)
+        say("info", "pl_egd_updating")
+        return redirect(url_for("players_page"))
+
+    @app.get("/api/egd/search")
+    def api_egd_search():
+        holder = app.config["EGD"]
+        holder.ensure()
+        if holder.index is None:
+            return jsonify(status=holder.status(), results=[])
+        q = request.args.get("q", "")
+        d = tdir()
+        registered, outdated_years = {}, 5
+        if d is not None:
+            try:
+                cfg, pl = workflow.load_registration(d)
+                registered = {p.pin: p.id for p in pl.players if p.pin}
+                outdated_years = cfg.registration.gor_outdated_years
+            except workflow.Problem:
+                pass
+        from ..registration import tournament_date
+        results = []
+        for p in holder.index.search(q, limit=25):
+            last = tournament_date(p.last_appearance or "")
+            years = round((dt.date.today() - last).days / 365.25) if last else None
+            results.append({"pin": p.pin, "surname": p.surname, "first_name": p.first_name, "country": p.country,
+                            "club": p.club, "grade": p.grade, "rank": rank_text(p), "gor": p.gor,
+                            "last": p.last_appearance, "registered": registered.get(p.pin),
+                            "outdated": years if years is not None and years > outdated_years else None})
+        return jsonify(status=holder.status(), results=results)
+
+    @app.get("/api/egd/pin/<pin>")
+    def api_egd_pin(pin: str):
+        if not pin.isdigit():
+            abort(404)
+        try:
+            p = app.config["EGD_FETCH"](pin)
+        except egd.EGDError as e:
+            return jsonify(ok=False, error=str(e))
+        return jsonify(ok=True, gor=p.gor, rank=rank_text(p), club=p.club, country=p.country,
+                       last=p.last_appearance, surname=p.surname, first_name=p.first_name)
+
     # ------------------------------------------------------------ actions
 
     @app.post("/do/<action>")
@@ -270,6 +451,9 @@ def create_app(directory: Path | None = None) -> Flask:
             run_action(action, d, r)
         except workflow.Problem as e:
             explain(e, r)
+        back = request.form.get("next", "")
+        if back.startswith("/") and not back.startswith("//"):
+            return redirect(back)
         return redirect(url_for("dashboard"))
 
     def run_action(action: str, d: Path, r: int | None) -> None:
@@ -411,11 +595,11 @@ def phase_card(t, lang: str) -> dict:
     card = {"title": "", "text": "", "extra": "", "actions": [], "files": [], "link": None, "link_primary": False}
     if s.phase == "no_players":
         card.update(title=tx("ph_no_players_title"), text=tx("ph_no_players_text"),
-                    actions=[act(tx("act_registration"), "registration", primary=True)])
+                    link={"label": tx("act_register"), "href": "/players"}, link_primary=True)
     elif s.phase == "registration":
         card.update(title=tx("ph_registration_title"), text=tx("ph_registration_text", n=s.players),
-                    actions=[act(tx("act_registration"), "registration"),
-                             act(tx("act_check_players"), "check_players"),
+                    link={"label": tx("act_register"), "href": "/players"},
+                    actions=[act(tx("act_check_players"), "check_players"),
                              act(tx("act_pair", r=1), "pair", primary=True, round=1)])
     elif s.phase == "names_pending":
         card.update(title=tx("ph_names_title", r=r), text=tx("ph_names_text", r=r),
@@ -453,13 +637,15 @@ def phase_card(t, lang: str) -> dict:
     return card
 
 
-def run(directory: Path | None = None, port: int = 8765, open_browser: bool = True) -> None:
+def run(directory: Path | None = None, port: int = 8765, open_browser: bool = True, start_path: str = "/") -> None:
     """Start the local web interface (blocks until stopped with Ctrl+C)."""
-    import threading
     import webbrowser
 
     app = create_app(directory)
-    url = f"http://127.0.0.1:{port}/"
+    app.config["EGD"].ensure()                    # load the EGD player list in the background
+    if directory is not None:
+        remember(Path(directory).resolve())
+    url = f"http://127.0.0.1:{port}{start_path}"
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     print(f"gotourney web interface: {url}   (stop with Ctrl+C)")
