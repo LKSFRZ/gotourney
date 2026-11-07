@@ -86,56 +86,91 @@ def write_hand_rows(d, rows, rounds=3):
     write_sheet(d / "players.ods", "Players", cols, old + [[row.get(t) for t in titles] for row in rows])
 
 
-def test_rows_without_id_no_longer_break_the_file(make_tournament):
+def test_rows_without_id_are_players_at_once(make_tournament):
     d = make_tournament([(2000,), (1990,)], rounds=3)
     write_hand_rows(d, [{"Surname": "Becker"}, {"EGD PIN": "44444444", "R2": "-", "Fee paid": "yes"}])
     pl = load_players(d, 3, FIELDS)
-    assert len(pl.players) == 2 and [line for line, _ in pl.unfinished] == [4, 5]
+    assert [p.id for p in pl.players] == [1, 2, 3, 4]                 # new IDs after the highest, in row order
+    assert [(line, p.id) for line, p in pl.unfinished] == [(4, 3), (5, 4)]
     assert pl.unfinished[0][1].rounds == {1, 2, 3}                    # empty round cells: plays
     assert pl.unfinished[1][1].rounds == {1, 3}                       # "-" means: not this round
-    # changing a registered player keeps the rows entered by hand
-    workflow.save_player(d, workflow.PlayerData(surname="P1", first_name="X", rank="1k", rounds={1, 2, 3}), 1)
-    assert len(load_players(d, 3, FIELDS).unfinished) == 2
+    # completing one player in the form saves its ID; the other row stays "entered by hand"
+    workflow.save_player(d, workflow.PlayerData(surname="Becker", first_name="Hans", rank="7k",
+                                                rounds={1, 2, 3}), 3)
+    pl = load_players(d, 3, FIELDS)
+    assert [p.id for p in pl.players] == [1, 2, 3, 4] and [p.id for _, p in pl.unfinished] == [4]
+    assert pl.by_id()[3].name == "Becker Hans"
+    # removing a row entered by hand works like for any player
+    workflow.remove_player(d, 4)
+    assert [p.id for p in load_players(d, 3, FIELDS).players] == [1, 2, 3]
 
 
-def test_pairing_waits_and_completion_writes_the_file(make_tournament):
-    d = make_tournament([(2000,), (1990,)], rounds=3)
-    write_hand_rows(d, [{"EGD PIN": "44444444", "Fee paid": "yes"}, {"Surname": "Becker"}])
-    t = workflow.load(d)
-    assert t.unfinished == 2 and workflow.status(t).phase == "players_unfinished"
+def test_players_without_rank_are_shown_and_paired_once_they_have_one(make_tournament):
+    d = make_tournament([(2000,)], rounds=2)
+    write_hand_rows(d, [{"Surname": "Weber", "First name": "Lena", "Rank": "3k"}, {"Surname": "Becker"}])
+    t = workflow.load(d)                                              # a missing rank does not break anything
+    assert sorted(t.players) == [1, 2] and [p.name for p in t.unrated] == ["Becker"]
+    assert workflow.status(t).unrated == ["Becker"]
     with pytest.raises(workflow.Problem) as e:
         workflow.pair(d, 1)
-    assert e.value.code == "players_unfinished"
+    assert e.value.code == "players_unrated" and e.value.data["names"] == ["Becker"]
+    workflow.save_player(d, workflow.PlayerData(surname="Becker", first_name="", rank="5k", rounds={1, 2}), 3)
+    workflow.save_player(d, workflow.PlayerData(surname="Neu", first_name="", rank="5k", rounds={1, 2}))
+    out = workflow.pair(d, 1)
+    paired = {out.tournament.players[pid].name for g in out.games for pid in g.players()}
+    assert paired == {"P1 X", "Weber Lena", "Becker", "Neu"}
+    pl = load_players(d, 2, FIELDS)
+    assert not pl.unfinished                                          # the IDs are in players.ods now
+    assert {p.id for p in pl.players} == {pid for g in out.games for pid in g.players()}
+
+
+def test_pairing_saves_the_ids_of_rows_entered_by_hand(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=2)
+    write_hand_rows(d, [{"Surname": "Weber", "First name": "Lena", "Rank": "3k"},
+                        {"Surname": "Klein", "Rank": "4k"}])
+    out = workflow.pair(d, 1)
+    assert sorted(pid for g in out.games for pid in g.players()) == [1, 2, 3, 4]
+    pl = load_players(d, 2, FIELDS)
+    assert not pl.unfinished and pl.by_id()[3].name == "Weber Lena" and pl.by_id()[4].name == "Klein"
+
+
+def test_completion_from_the_egd_keeps_the_ids(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=3)
+    write_hand_rows(d, [{"EGD PIN": "44444444", "Fee paid": "yes"}, {"Surname": "Becker"}])
     out = workflow.complete_players(d, INDEX)
-    assert [c.player.name for c in out.completed] == ["Schmidt Lena"] and [rp.line for rp in out.left] == [5]
+    assert [(c.player.id, c.player.name) for c in out.completed] == [(3, "Schmidt Lena")]
+    assert [rp.line for rp in out.left] == [5]
     assert any("before_completing_players" in p.name for p in (d / "backups").iterdir())
-    out = workflow.complete_players(d, INDEX, {5: "11111111"})
     pl = load_players(d, 3, FIELDS)
-    assert not pl.unfinished
-    lena = next(p for p in pl.players if p.pin == "44444444")
-    assert (lena.id, str(lena.rank), lena.gor, lena.club, lena.extra) == (3, "12k", 905.0, "Wien", {"Fee paid": "yes"})
-    assert workflow.pair(d, 1).games                                   # now it can be paired
+    lena = pl.by_id()[3]
+    assert (str(lena.rank), lena.gor, lena.club, lena.extra) == ("12k", 905.0, "Wien", {"Fee paid": "yes"})
+    assert [p.name for _, p in pl.unfinished] == ["Becker"]           # still waiting for a choice
+    workflow.complete_players(d, INDEX, {5: "11111111"})
+    pl = load_players(d, 3, FIELDS)
+    assert not pl.unfinished and pl.by_id()[4].name == "Becker Anna"
 
 
 # ---------------------------------------------------------------- web and command line
 
-def test_web_shows_the_rows_and_completes_them(make_tournament):
+def test_web_lists_the_rows_and_completes_them(make_tournament):
     from tests.test_web import client_for, page, post
     d = make_tournament([(2000,), (1990,)], rounds=3)
-    write_hand_rows(d, [{"Surname": "Becker"}, {"EGD PIN": "33333333"}])
+    write_hand_rows(d, [{"Surname": "Becker"}, {"EGD PIN": "33333333"}, {"Surname": "Zzyzx"}])
     application, c = client_for(d)
     application.config["EGD"].index = INDEX
     application.config["EGD_FETCH"] = lambda pin: next(p for p in EGD if p.pin == pin)
-    html = page(c.get("/dashboard"))
-    assert "Complete the players entered by hand" in html and "2 row(s) entered by hand" in html
+    assert "Rank missing for: Becker, ID 4, Zzyzx" in page(c.get("/dashboard"))
     html = page(c.get("/players"))
-    assert "Entered by hand in players.ods (2)" in html and 'name="choice_4"' in html
-    assert "Müller Jonas" in html and "PIN 33333333" in html             # what the PIN row will become
+    assert html.count("from players.ods</span>") == 3 and html.count("rank missing</span>") == 3   # in the list
+    assert "Can be completed from the EGD (2)" in html and 'name="choice_4"' in html
+    assert "Müller Jonas" in html and "PIN 33333333" in html
+    assert 'data-egd-lookup="Zzyzx"' in page(c.get("/players?edit=5"))     # the form looks the name up
     html = page(post(c, application, "/players/complete", choice_4="22222222"))
     messages = re.findall(r'<p class="msg [^"]*">([^<]*)</p>', html)
     assert any(m.startswith("Completed Becker Bernd (ID 3): PIN 22222222") for m in messages), messages
     assert any(m.startswith("Completed Müller Jonas (ID 4)") and "EGD GoR 2010," in m for m in messages), messages
-    assert "Entered by hand" not in html and not load_players(d, 3, FIELDS).unfinished
+    assert "Can be completed from the EGD" not in html
+    assert html.count("rank missing</span>") == 1                     # Zzyzx: to be completed in the form
 
 
 def test_cli_complete_asks_for_a_choice(make_tournament):

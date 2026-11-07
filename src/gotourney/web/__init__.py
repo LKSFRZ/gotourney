@@ -221,8 +221,8 @@ def create_app(directory: Path | None = None) -> Flask:
             say("error", "pr_open_results")
         elif e.code == "names_need_confirmation":
             say("error", "pr_names_need_confirmation", r=round_no)
-        elif e.code == "players_unfinished":
-            say("error", "pr_players_unfinished", n=d["n"])
+        elif e.code == "players_unrated":
+            say("error", "pr_players_unrated", names=", ".join(d["names"]))
         elif e.code == "no_joker":
             say("error", "pr_no_joker", r=d["round"], n=d["players"])
         elif e.code == "no_complete_pairing":
@@ -525,10 +525,15 @@ def create_app(directory: Path | None = None) -> Flask:
         app.config["EGD"].ensure()
         players = sorted(pl.players, key=lambda p: (p.surname.casefold(), p.first_name.casefold()))
         from ..completion import NOT_IN_EGD, plan
-        hand_rows = plan(pl.unfinished, pl.players, app.config["EGD"].index)      # preview, changes nothing
+        hand = {id(p) for _, p in pl.unfinished}
+        # rows entered by hand that the EGD can complete (preview, changes nothing); the others are
+        # completed in the form like any player
+        hand_rows = [rp for rp in plan(pl.unfinished, [p for p in pl.players if id(p) not in hand],
+                                       app.config["EGD"].index)
+                     if rp.action in ("egd", "choose", "duplicate") and rp.message != "egd_unavailable"]
         return render_template("players.html", cfg=cfg, players=players, fields=fields, form=form,
-                               hand_rows=hand_rows, not_in_egd=NOT_IN_EGD,
-                               hand_ready=sum(1 for rp in hand_rows if rp.action in ("egd", "local", "choose")),
+                               hand_rows=hand_rows, not_in_egd=NOT_IN_EGD, hand_ids={p.id for _, p in pl.unfinished},
+                               hand_ready=sum(1 for rp in hand_rows if rp.action in ("egd", "choose")),
                                rounds=range(1, cfg.tournament.rounds + 1), egd_status=app.config["EGD"].status(),
                                locked=workflow.is_open_in_libreoffice(d / "players.ods"),
                                form_unsaved=status >= 400,            # shown again after an error: not saved
@@ -1091,12 +1096,8 @@ def phase_card(t, lang: str) -> dict:
         "label": label, "action": action, "primary": primary, "confirm": confirm, "form": form}
     files = lambda *names: [{"label": label, "file": name} for label, name in names]   # created when opened
     card = {"title": "", "text": "", "extra": "", "actions": [], "files": [], "link": None, "link_primary": False}
-    if s.phase == "players_unfinished":
-        card.update(title=tx("ph_unfinished_title"), text=tx("ph_unfinished_text", n=s.unfinished),
-                    link={"label": tx("act_complete_players"), "href": "/players"}, link_primary=True)
-        return card
-    if s.unfinished:          # e.g. a latecomer typed into players.ods while a round is running
-        card["extra"] = tx("ph_unfinished_extra", n=s.unfinished)
+    if s.unrated:             # e.g. typed into players.ods by hand without a rank
+        card["extra"] = tx("ph_unrated_extra", names=", ".join(s.unrated))
     if s.phase == "no_players":
         card.update(title=tx("ph_no_players_title"), text=tx("ph_no_players_text"),
                     link={"label": tx("act_register"), "href": "/players"}, link_primary=True)

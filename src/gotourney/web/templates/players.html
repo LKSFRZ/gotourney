@@ -24,10 +24,8 @@
             {% if rp.action == "egd" %}
               <strong>{{ rp.egd.name }}</strong>
               <span class="muted small">{{ rp.egd.country }} {{ rp.egd.club }} · {{ rp.egd.grade }} · GoR {{ rp.egd.gor }} · PIN {{ rp.egd.pin }}</span>
-            {% elif rp.action == "local" %}
-              {{ t("pc_local", rank=(rp.player.rank or "–"), gor=("%.0f"|format(rp.player.gor) if rp.player.gor is not none else (rp.player.rank.to_gor() if rp.player.rank else "–"))) }}
             {% elif rp.action == "choose" %}
-              {% if rp.message == "egd_unavailable" %}<span class="warn-text small">{{ t("pc_egd_unavailable") }}</span><br>{% else %}{{ t("pc_choose") }}<br>{% endif %}
+              {{ t("pc_choose") }}<br>
               <select name="choice_{{ rp.line }}">
                 <option value="">{{ t("pc_choose_pick") }}</option>
                 {% for c in rp.candidates %}
@@ -36,10 +34,8 @@
                 {% if rp.player.rank or rp.player.gor is not none %}<option value="{{ not_in_egd }}">{{ t("pc_not_in_egd") }}</option>{% endif %}
               </select>
               {% if rp.candidates %}<br><span class="muted small">{{ t("pc_choose_hint") }}</span>{% endif %}
-            {% elif rp.action == "duplicate" %}
-              <span class="warn-text">{{ t("pc_duplicate", other=rp.message) }}</span>
             {% else %}
-              <span class="warn-text">{{ t("pc_missing_" ~ rp.message) }}</span>
+              <span class="warn-text">{{ t("pc_duplicate", other=rp.message) }}</span>
             {% endif %}
           </td>
         </tr>
@@ -78,7 +74,8 @@
     <h2 class="form-title">{% if form.id %}{{ t("pl_edit", id=form.id) }}{% else %}{{ t("pl_new") }}{% endif %}</h2>
     <p id="form-notes" class="note" hidden></p>
     <form method="post" action="{{ url_for('players_save') }}" id="player-form" class="player-form"
-          data-unsaved="{{ 'true' if form_unsaved else 'false' }}">
+          data-unsaved="{{ 'true' if form_unsaved else 'false' }}"
+          data-egd-lookup="{{ (form.surname ~ ' ' ~ form.first_name)|trim if form.id and not form.pin else '' }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <input type="hidden" name="id" value="{{ form.id }}">
       <input type="hidden" name="egd_gor" id="f-egd_gor" value="{{ form.egd_gor }}">
@@ -150,6 +147,8 @@
         <tr data-search="{{ (p.name ~ ' ' ~ p.club ~ ' ' ~ p.pin)|lower }}" class="{{ 'editing' if form.id == p.id else '' }}">
           <td><a href="{{ url_for('players_page', edit=p.id) }}">{{ p.name }}</a>
               {% if p.joker %}<span class="badge">Joker</span>{% endif %}
+              {% if p.id in hand_ids %}<span class="badge" title="{{ t('pl_badge_hand_help') }}">{{ t("pl_badge_hand") }}</span>{% endif %}
+              {% if p.rank is none and p.gor is none %}<span class="badge warn">{{ t("pl_rank_missing") }}</span>{% endif %}
               <span class="muted small">ID {{ p.id }}</span></td>
           <td>{{ p.rank or "" }}</td>
           <td>{{ "" if p.gor is none else "%.0f"|format(p.gor) }}</td>
@@ -295,6 +294,11 @@
       tr.hidden = q && tr.dataset.search.indexOf(q) < 0;
     });
   });
+
+  // editing a player without EGD PIN (e.g. typed into players.ods by hand): look the name up in the EGD,
+  // so the right player can be picked and the form is completed
+  var lookupName = document.getElementById("player-form").dataset.egdLookup;
+  if (lookupName) { input.value = lookupName; search(); }
 
   // load the EGD list in the background if it is not ready yet
   if (!{{ egd_status.loaded|tojson }}) {

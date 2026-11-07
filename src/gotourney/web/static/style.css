@@ -362,3 +362,4 @@ button.remove-row:hover { background: var(--err-soft); border-color: var(--err);
   .tournament-name { font-size: 22px; white-space: normal; max-width: none; }
   nav { flex-wrap: wrap; gap: 6px 14px; font-size: 15px; }
 }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }

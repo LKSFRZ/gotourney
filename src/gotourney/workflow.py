@@ -79,8 +79,7 @@ def translator(t: Tournament) -> tuple[Translator, list[str]]:
 class Status:
     """Where the tournament stands, for 'next step' hints and the dashboard.
 
-    phase: no_players | registration | names_pending | paired | running | round_complete | finished |
-           players_unfinished (rows entered by hand in players.ods must be completed before pairing)
+    phase: no_players | registration | names_pending | paired | running | round_complete | finished
     """
 
     phase: str
@@ -90,7 +89,8 @@ class Status:
     boards: int = 0
     missing: int = 0                # missing results in that round
     started: bool = False
-    unfinished: int = 0             # rows of players.ods entered by hand, not completed yet
+    unfinished: int = 0             # rows of players.ods entered by hand (ID not saved yet)
+    unrated: list = field(default_factory=list)   # names of players without rank and GoR (cannot be paired)
 
 
 def round_started(t: Tournament, r: int) -> bool:
@@ -101,9 +101,9 @@ def round_started(t: Tournament, r: int) -> bool:
 def status(t: Tournament) -> Status:
     s = _status(t)
     s.unfinished = t.unfinished
-    # before the next pairing, players entered by hand must be completed first
-    if s.unfinished and s.phase in ("no_players", "registration", "round_complete"):
-        s.phase = "players_unfinished"
+    s.unrated = [p.name or f"ID {p.id}" for p in t.unrated]
+    if s.phase == "no_players" and t.unrated:
+        s.phase = "registration"            # players are there, only their ranks are missing
     return s
 
 
@@ -291,11 +291,13 @@ def pair(directory: Path, round_no: int, *, force: bool = False,
     except TournamentError as e:
         raise Problem("load", str(e)) from None
     existing = t.rounds.get(round_no)
-    if t.unfinished:
-        raise Problem("players_unfinished", f"players.ods has {t.unfinished} row(s) entered by hand that are not "
-                      f"complete yet (no ID). Complete them first: gotourney players complete",
-                      {"n": t.unfinished})
+    unrated = [p for p in t.unrated if p.plays(round_no)]
+    if unrated:
+        names = [p.name or f"ID {p.id}" for p in unrated]
+        raise Problem("players_unrated", f"{', '.join(names)}: neither rank nor GoR in players.ods. Enter the rank "
+                      f"(gotourney gui, or in players.ods), then pair again.", {"names": names})
     backup(directory, f"before_pairing_round_{round_no}")
+    save_new_ids(directory, t)
     warnings: list[str] = [w for w in t.warnings if not w.startswith(f"round {round_no}:")]
     resolved: list[str] = []
     kept: list[Game] = []
@@ -766,7 +768,8 @@ def completion_plan(directory: Path, index, choices: dict[int, str] | None = Non
     """(config, player list, plans) for the rows of players.ods entered by hand. Changes nothing."""
     from .completion import plan
     cfg, pl = load_registration(directory)
-    return cfg, pl, plan(pl.unfinished, pl.players, index, lookup_pin, choices)
+    hand = {id(p) for _, p in pl.unfinished}
+    return cfg, pl, plan(pl.unfinished, [p for p in pl.players if id(p) not in hand], index, lookup_pin, choices)
 
 
 def complete_players(directory: Path, index, choices: dict[int, str] | None = None,
@@ -781,8 +784,8 @@ def complete_players(directory: Path, index, choices: dict[int, str] | None = No
     if done:
         check_writable(Path(directory) / PLAYERS_FILE)
         backup(directory, "before_completing_players")
-        save_players(directory, pl.players + [c.player for c in done], cfg.tournament.rounds, pl.extra_fields,
-                     [(rp.line, rp.player) for rp in left])
+        save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields,      # rows changed in place;
+                     [(rp.line, rp.player) for rp in left])                             # the rest stays as it was
     return CompletionOutcome(done, left)
 
 
@@ -798,7 +801,19 @@ def _load_round_for_change(directory: Path, round_no: int):
     return t, rg, path
 
 
+def save_new_ids(directory: Path, t: Tournament) -> None:
+    """Write the IDs of players entered by hand into players.ods before a round file refers to them."""
+    from .players import PLAYERS_FILE, save_players
+    if not t.unfinished:
+        return
+    check_writable(Path(directory) / PLAYERS_FILE)
+    cfg, pl = load_registration(directory)          # the same IDs as in t: they follow the order of the rows
+    save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields)
+    t.unfinished = 0
+
+
 def _save_round(t: Tournament, rg: RoundGames, path: Path, round_no: int) -> None:
+    save_new_ids(t.directory, t)
     labels = {pid: player_label(p) for pid, p in t.players.items()}
     save_round(path, rg.games, labels, t.rating_before(round_no), not_playing=read_not_playing(path))
 

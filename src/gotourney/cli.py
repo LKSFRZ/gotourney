@@ -241,10 +241,9 @@ def players_check(directory: Path = typer.Option(Path("."), "--dir", "-d", help=
     errors = sum(i.level == "error" for i in issues)
     warnings = sum(i.level == "warning" for i in issues)
     if pl.unfinished:
-        errors += 1
-        typer.secho(f"Error: {len(pl.unfinished)} row(s) entered by hand without an ID (rows "
-                    f"{', '.join(str(line) for line, _ in pl.unfinished)}); complete them: "
-                    f"{cmd(directory, 'players complete')}", fg=typer.colors.RED)
+        typer.echo(f"Info: {len(pl.unfinished)} player(s) typed in by hand (rows "
+                   f"{', '.join(str(line) for line, _ in pl.unfinished)}); their IDs are saved when the next round is "
+                   f"paired. EGD data can be filled in with {cmd(directory, 'players complete')}")
     typer.echo(f"{len(pl.players)} players, {errors} error(s), {warnings} warning(s).")
     if errors:
         hints.show([f"Fix the errors listed above in the registration window ({cmd(directory, 'gui')})\n"

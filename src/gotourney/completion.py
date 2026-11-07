@@ -166,7 +166,8 @@ def apply(plans: list[RowPlan], registered: list[Player], fill_gor: bool) -> tup
         if p.gor is None and p.rank is not None and p.rank.kind != "p":
             p.gor = float(p.rank.to_gor())
             changes.append(f"GoR {p.gor:.0f} (from rank)")
-        p.id = next_id(taken)
-        taken.append(p)
+        if not p.id:                                   # rows read from players.ods already have their new ID
+            p.id = next_id(taken)
+            taken.append(p)
         done.append(Completed(p, rp.line, changes))
     return done, left

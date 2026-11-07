@@ -151,16 +151,17 @@ How ratings, pairing and handicap work is explained on the page <a href="{{ url_
   <p>You can also type players straight into <code>players.ods</code> in LibreOffice – for example from a paper list.
     Leave the <b>ID</b> empty and type only what you have: an <b>EGD PIN</b>, or a <b>name</b> (surname, ideally also
     the first name). Round cells left empty mean the player plays; <code>-</code> means not this round.</p>
-  <p>The Overview and the Players page then show these rows under <i>Entered by hand</i> with what will become of each:</p>
+  <p>Such players appear in the player list at once (marked <i>from players.ods</i>) and are paired like everyone
+    else; their IDs are written to the file with the next change, at the latest when the next round is paired.</p>
   <ul>
-    <li><b>PIN</b>, or a name that matches exactly one EGD player: completed from the EGD – name in EGD spelling, country,
-      club, rank, GoR, EGD PIN.</li>
-    <li><b>Several EGD players</b> with that name: choose the right one (sorted by their latest tournament).</li>
-    <li><b>Not in the EGD:</b> registered without EGD data; this needs a rank in the row.</li>
+    <li><b>The EGD knows them</b> (a PIN, or a name that matches exactly one EGD player, or several to choose from): the box
+      <i>Can be completed from the EGD</i> shows what will be filled in – name in EGD spelling, country, club, rank, GoR,
+      EGD PIN. <span class="btnlike">Complete players</span> does it; values you typed are kept.</li>
+    <li><b>Anything else</b>: click the player in the list and complete the form. For a player without EGD PIN the EGD
+      search is filled in with the name, so you can simply pick the right player there.</li>
+    <li><b>Rank missing:</b> such players are marked in the list and on the Overview. Without a rank (or GoR) they cannot
+      be paired; pairing tells you who it is.</li>
   </ul>
-  <p><span class="btnlike">Complete players</span> gives them an ID and fills in the empty cells. Values you typed
-    (rank, club, rounds, additional data) are kept. Until all rows are completed, the next round cannot be paired, so
-    nobody is left out by mistake.</p>
 </section>
 
 <section id="pair">

@@ -402,10 +402,12 @@ corrections are never overwritten. Once round 1 has been paired, the starting Go
 gotourney players complete --offline    # only the downloaded player list</pre>
 <p>Rows typed into <code>players.ods</code> without an ID – for example only an EGD PIN, or only a name – are
 completed: rows with a PIN, or with a name that matches exactly one EGD player, get the EGD data (name in EGD
-spelling, country, club, rank, GoR, last tournament) and an ID. If several EGD players match, the command lists them
-and you choose; players not in the EGD need a rank. Only empty cells are filled. In such rows, empty round cells mean
-the player plays; <code>-</code> means not this round. Until all rows are completed, <code>pair</code> refuses, and
-<code>players check</code> reports them as an error. In the web interface the same is done on the Players page.</p>
+spelling, country, club, rank, GoR, last tournament). If several EGD players match, the command lists them and you
+choose. Only empty cells are filled. In such rows, empty round cells mean the player plays; <code>-</code> means not
+this round. Rows without an ID are players anyway: they get the next free IDs (written to the file at the latest
+when the next round is paired) and are paired like everyone else – only a player without rank and GoR cannot be
+paired, and <code>pair</code> says who it is. In the web interface the same is done on the Players page, where such
+players can also be completed in the form.</p>
 
 <h3>5.6 Additional player data <span class="badge now">AVAILABLE</span></h3>
 <p>To record more about each player, for example entry fee, age group, e-mail or T-shirt size, list

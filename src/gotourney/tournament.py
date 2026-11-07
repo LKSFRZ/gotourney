@@ -48,7 +48,8 @@ class Tournament:
     extra_fields: list[str] = field(default_factory=list)       # additional player data fields
     history: dict[int, list[PlayedGame]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
-    unfinished: int = 0                             # rows of players.ods entered by hand, not completed yet
+    unfinished: int = 0                             # rows of players.ods entered by hand (ID not saved yet)
+    unrated: list[Player] = field(default_factory=list)   # no rank and no GoR yet: cannot be paired
 
     # ------------------------------------------------------------ loading
 
@@ -64,11 +65,12 @@ class Tournament:
         warnings = list(pl.warnings)
         errors = []
         start_gor = {}
+        unrated = []
         for p in players.values():
             try:
                 start_gor[p.id] = starting_rating(p)
-            except ValueError as e:
-                errors.append(str(e))
+            except ValueError:
+                unrated.append(p)                   # e.g. typed into players.ods by hand, rank still missing
         bar = cfg.rating.top_bar
         start = {pid: (min(g, bar) if bar is not None else g) for pid, g in start_gor.items()}
         rounds: dict[int, RoundGames] = {}
@@ -88,6 +90,12 @@ class Tournament:
                 for pid in g.players():
                     if pid not in players:
                         errors.append(f"{rg.path.name}, board {g.board}: unknown player ID {pid}")
+                    elif pid not in start_gor:
+                        errors.append(f"{rg.path.name}, board {g.board}: player {pid} ({players[pid].name}) "
+                                      f"has neither GoR nor rank")
+        # players without a rating take no part until their rank is entered (they are listed in ``unrated``)
+        for p in unrated:
+            players.pop(p.id, None)
         if errors:
             raise TournamentError("\n".join(errors))
         existing = sorted(rounds)
@@ -95,7 +103,7 @@ class Tournament:
             missing = sorted(set(range(1, existing[-1] + 1)) - set(existing))
             raise TournamentError(f"round file(s) missing for round(s) {', '.join(map(str, missing))}")
         t = cls(directory, cfg, players, rounds, start, [dict(start)], start_gor=start_gor,
-                extra_fields=pl.extra_fields, warnings=warnings, unfinished=len(pl.unfinished))
+                extra_fields=pl.extra_fields, warnings=warnings, unfinished=len(pl.unfinished), unrated=unrated)
         t._compute()
         return t
 

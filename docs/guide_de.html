@@ -419,11 +419,13 @@ ist, stehen die Start-GoRs fest.</p>
 gotourney players complete --offline    # nur aus der heruntergeladenen Spielerliste</pre>
 <p>Zeilen, die ohne ID in <code>players.ods</code> eingetragen wurden – etwa nur eine EGD-PIN oder nur ein Name –,
 werden vervollständigt: Zeilen mit PIN oder mit einem Namen, der genau zu einem EGD-Spieler passt, bekommen die
-EGD-Daten (Name in EGD-Schreibweise, Land, Verein, Rang, GoR, letztes Turnier) und eine ID. Passen mehrere
-EGD-Spieler, zeigt der Befehl sie an und Sie wählen; Spieler, die nicht in der EGD stehen, brauchen einen Rang. Nur
-leere Zellen werden gefüllt. Leere Rundenzellen bedeuten in solchen Zeilen „spielt mit“; <code>-</code> heißt: diese
-Runde nicht. Solange nicht alle Zeilen vervollständigt sind, verweigert <code>pair</code> die Auslosung, und
-<code>players check</code> meldet sie als Fehler. In der Weboberfläche geht das auf der Spielerseite.</p>
+EGD-Daten (Name in EGD-Schreibweise, Land, Verein, Rang, GoR, letztes Turnier). Passen mehrere EGD-Spieler, zeigt
+der Befehl sie an und Sie wählen. Nur leere Zellen werden gefüllt. Leere Rundenzellen bedeuten in solchen Zeilen
+„spielt mit“; <code>-</code> heißt: diese Runde nicht. Zeilen ohne ID sind trotzdem Spieler: Sie bekommen die
+nächsten freien IDs (spätestens beim Auslosen der nächsten Runde in die Datei geschrieben) und werden wie alle
+anderen ausgelost – nur ein Spieler ohne Rang und GoR kann nicht ausgelost werden, und <code>pair</code> sagt, um
+wen es geht. In der Weboberfläche geht das auf der Spielerseite, wo solche Spieler auch im Formular ergänzt werden
+können.</p>
 
 <h3>5.6 Zusätzliche Spielerangaben</h3>
 <p>Um mehr über jeden Spieler zu erfassen, etwa Startgeld, Altersklasse, E-Mail oder T-Shirt-Größe, tragen Sie

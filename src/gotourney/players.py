@@ -74,8 +74,9 @@ class PlayerList:
     warnings: list[str]
     extra_fields: list[str] = field(default_factory=list)   # the configured additional fields
     other_fields: list[str] = field(default_factory=list)   # other columns in the file (kept, not shown)
-    # rows typed in by hand without an ID (e.g. only a name or an EGD PIN): (line, player with id 0).
-    # They are not part of ``players`` until they are completed (see completion.py).
+    # rows typed in by hand without an ID (e.g. only a name or an EGD PIN): (line, player). They are
+    # part of ``players`` with a new ID (in row order after the highest ID), which is written to the
+    # file the next time it is saved. completion.py can fill in their data from the EGD.
     unfinished: list[tuple[int, Player]] = field(default_factory=list)
 
     def by_id(self) -> dict[int, Player]:
@@ -107,7 +108,6 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
     require_columns(sheet, path, REQUIRED)
     players: list[Player] = []
     unfinished: list[tuple[int, Player]] = []
-    unfinished_rows: list[Player] = []
     warnings: list[str] = []
     errors: list[str] = []
     seen_ids: dict[int, int] = {}
@@ -156,7 +156,7 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
             if pid == 0:     # typed by hand: an empty round cell means "plays"; only "-", "0", "no" mean no
                 player_rounds = {i for i in range(1, rounds + 1)
                                  if row.text(round_column(i)).strip().lower() not in _NO - {""}}
-            (players if pid else unfinished_rows).append(
+            players.append(
                 Player(
                     id=pid,
                     surname=row.text("Surname"),
@@ -175,11 +175,16 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
                 )
             )
             if pid == 0:
-                unfinished.append((row.line, unfinished_rows.pop()))
+                unfinished.append((row.line, players[-1]))
         except OdsError as e:
             errors.append(str(e))
     if errors:
         raise OdsError("\n".join(errors))
+    # rows entered by hand get the next free IDs, in the order of the rows
+    next_free = max((p.id for p in players), default=0)
+    for _, p in unfinished:
+        next_free += 1
+        p.id = next_free
     return PlayerList(players, warnings, configured, fields[len(configured):], unfinished)
 
 
@@ -188,16 +193,21 @@ def save_players(directory: Path, players: list[Player], rounds: int, extra_fiel
     """Write players.ods. Additional fields: those given (configured), then any other column
     that still holds data. Empty columns of fields no longer configured disappear.
 
-    ``unfinished`` (players or (line, player) pairs, as in PlayerList.unfinished) are rows entered
-    by hand that are not complete yet; they are written after the others, without an ID."""
+    ``unfinished`` ((line, player) pairs as in PlayerList.unfinished, or players) marks players of
+    ``players`` that were entered by hand and are still written without an ID, after the others (so they
+    stay "entered by hand" until they are saved, completed or paired). Players not in ``players`` are
+    not written, whatever ``unfinished`` says."""
     path = Path(directory) / PLAYERS_FILE
-    pending = [u[1] if isinstance(u, tuple) else u for u in unfinished]
-    fields = merge_fields(extra_fields, (k for p in list(players) + pending for k in p.extra))
+    listed = {id(p) for p in players}
+    marked = {id(u[1] if isinstance(u, tuple) else u) for u in unfinished} & listed
+    regular = sorted((p for p in players if id(p) not in marked), key=lambda p: p.id)
+    pending = [p for p in players if id(p) in marked]
+    fields = merge_fields(extra_fields, (k for p in players for k in p.extra))
     rows = []
-    for p in sorted(players, key=lambda p: p.id) + pending:
+    for p in regular + pending:
         rows.append(
             [
-                p.id or "",
+                "" if id(p) in marked else p.id,
                 p.surname,
                 p.first_name,
                 str(p.rank) if p.rank else "",
