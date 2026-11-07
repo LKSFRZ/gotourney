@@ -439,7 +439,7 @@ def translator(t: Tournament):
 
 
 def _write_pairing_pdf(directory: Path, round_no: int) -> None:
-    from .printing import PrintError, pairing_pdf, pdf_path
+    from .printing import PrintError, alphabetical_pdf, alphabetical_pdf_path, pairing_pdf, pdf_path
 
     t = load_tournament(directory)
     rg = t.rounds.get(round_no)
@@ -448,10 +448,12 @@ def _write_pairing_pdf(directory: Path, round_no: int) -> None:
     tr = translator(t)
     try:
         path = pairing_pdf(t, rg, pdf_path(directory, round_no), tr)
+        alpha = alphabetical_pdf(t, rg, alphabetical_pdf_path(directory, round_no), tr)
     except (PrintError, OSError) as e:
         warn(f"PDF not written: {e}")
         return
-    typer.echo(f"Wrote {path} (printable pairing).")
+    typer.echo(f"Wrote {path} (printable pairing, by board).")
+    typer.echo(f"Wrote {alpha} (printable pairing, players in alphabetical order).")
 
 
 @app.command("pairing-pdf")
@@ -459,9 +461,10 @@ def pairing_pdf_command(
     round_no: int = typer.Argument(..., metavar="ROUND"),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Write a printable PDF of a round's pairing (round_<r>.pdf), e.g. after editing round_<r>.ods.
+    """Write the printable pairing PDFs of a round, e.g. after editing round_<r>.ods.
 
-    Contains board, players (colour stone, rank, name), result columns and handicap.
+    round_<r>.pdf: by board, with result columns and handicap.
+    round_<r>_alphabetical.pdf: all players by surname, with board, colour, opponent and handicap.
     """
     _write_pairing_pdf(directory, round_no)
 

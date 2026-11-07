@@ -65,3 +65,30 @@ def test_font_override_and_symbol_check(tmp_path, monkeypatch):
     monkeypatch.setenv(FONT_ENV, str(dejavu))
     regular, bold, star = find_fonts()
     assert regular == dejavu and bold == dejavu and star
+
+
+@pytest.mark.skipif(not shutil.which("pdftotext"), reason="pdftotext not installed")
+def test_alphabetical_pairing_pdf(tmp_path):
+    from gotourney.models import Player
+    from gotourney.players import save_players
+    from gotourney.rank import Rank
+    from gotourney.config import write_template
+    write_template(tmp_path, "Alpha Cup", 1)
+    names = [("Zimmer", "Zoe", False), ("Äbel", "Anna", False), ("Becker", "Ben", False),
+             ("Müller", "Max", False), ("Mueller", "Mia", True)]
+    players = [Player(i, s, f, Rank.parse("5k"), 1600.0 - i, joker=j, rounds={1})
+               for i, (s, f, j) in enumerate(names, start=1)]
+    save_players(tmp_path, players, 1)
+    r = runner.invoke(app, ["pair", "1", "-d", str(tmp_path)])
+    assert r.exit_code == 0, r.output
+    pdf = tmp_path / "round_1_alphabetical.pdf"
+    assert pdf.exists() and (tmp_path / "round_1.pdf").exists()
+    text = subprocess.run(["pdftotext", "-layout", str(pdf), "-"], capture_output=True, text=True).stdout
+    order = [n for n in ("Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe")
+             if n in text]
+    assert len(order) == 5
+    first_column = [l.strip().split(" (5k)")[0] for l in text.splitlines() if "(5k)" in l]
+    assert first_column == ["Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe"]
+    assert "does not play this round" in text                # the joker sits out
+    joker_line = next(l for l in text.splitlines() if l.strip().startswith("Mueller Mia"))
+    assert "does not play" in joker_line

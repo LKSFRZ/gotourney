@@ -4,6 +4,7 @@ handicap."""
 from __future__ import annotations
 
 import os
+import unicodedata
 from pathlib import Path
 
 from reportlab.lib import colors
@@ -324,3 +325,115 @@ def _esc(text: str) -> str:
 
 def pdf_path(directory: Path, r: int) -> Path:
     return Path(directory) / f"round_{r}.pdf"
+
+
+def alphabetical_pdf_path(directory: Path, r: int) -> Path:
+    return Path(directory) / f"round_{r}_alphabetical.pdf"
+
+
+def _sort_key(text: str) -> str:
+    """Case- and accent-insensitive sort key ('Äbel' sorts like 'Abel')."""
+    text = unicodedata.normalize("NFKD", text.casefold())
+    return "".join(c for c in text if not unicodedata.combining(c))
+
+
+def alphabetical_pdf(t: Tournament, rg: RoundGames, path: Path, tr: Translator | None = None) -> Path:
+    """Pairing of a round as a list of all players sorted by surname: board, colour, opponent, handicap.
+
+    Players registered for the round who are not on a board (e.g. the joker) are listed as well."""
+    tr = tr or builtin("en")
+    regular, bold = _register_fonts()
+    entries = []      # (player id, board, colour, opponent id, handicap)
+    for g in rg.games:
+        entries.append((g.white, g.board, "w", g.black, g.handicap))
+        entries.append((g.black, g.board, "b", g.white, g.handicap))
+    on_board = {e[0] for e in entries}
+    for pid, p in t.players.items():
+        if p.plays(rg.number) and pid not in on_board:
+            entries.append((pid, None, None, None, None))
+    entries.sort(key=lambda e: (_sort_key(t.players[e[0]].surname), _sort_key(t.players[e[0]].first_name), e[0]))
+
+    header = [tr.t("col_player"), tr.t("col_board"), tr.t("col_colour"), tr.t("col_opponent"),
+              tr.t("col_handicap")]
+    data = [header]
+    def name_rank(pid: int) -> str:
+        """'Surname First name (5k)' - surname first, so the list can be scanned by name."""
+        p = t.players[pid]
+        rank = player_label(p)[: -len(p.name)].strip() if player_label(p).endswith(p.name) else ""
+        return f"{p.name} ({rank})" if rank else p.name
+
+    for pid, board, colour, opp, handicap in entries:
+        name = name_rank(pid)
+        if board is None:
+            data.append([name, "–", tr.t("alpha_not_paired"), "", ""])      # spans columns 2-4
+            continue
+        stone = WHITE_STONE if colour == "w" else BLACK_STONE
+        colour_text = tr.t("col_white" if colour == "w" else "col_black").replace("\n", " ")
+        data.append([name, str(board), f"{stone} {colour_text}", name_rank(opp), str(handicap)])
+
+    page_w, _ = A4
+    margin = 15 * mm
+    usable = page_w - 2 * margin - 14          # frame padding
+    board_w, colour_w, handicap_w = 15 * mm, 26 * mm, 16 * mm
+    name_w = (usable - board_w - colour_w - handicap_w) / 2
+    widths = [name_w, board_w, colour_w, name_w, handicap_w]
+    body_size = 10.0
+    while body_size > 7 and any(pdfmetrics.stringWidth(str(row[c]), regular, body_size) > widths[c] - 8
+                                for row in data[1:] if row[1] != "–" for c in (0, 2, 3)):
+        body_size -= 0.5
+    for row in data[1:]:
+        for c in (0, 3):
+            row[c] = _fit(row[c], regular, body_size, widths[c] - 8)
+    header_size = 9.5
+    while header_size > 6 and any(pdfmetrics.stringWidth(line, bold, header_size) > w - 4
+                                  for text, w in zip(header, widths) for line in text.split("\n")):
+        header_size -= 0.5
+
+    table = Table(data, colWidths=widths, repeatRows=1)
+    style = [
+        ("FONT", (0, 0), (-1, 0), bold, header_size),
+        ("FONT", (0, 1), (-1, -1), regular, body_size),
+        ("FONT", (0, 1), (0, -1), bold, body_size),
+        ("FONT", (1, 1), (1, -1), bold, body_size),
+        ("ALIGN", (1, 0), (1, -1), "CENTER"),
+        ("ALIGN", (4, 0), (4, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#dde5ee")),
+        ("LINEBELOW", (0, 0), (-1, 0), 1.0, colors.HexColor("#1f4e79")),
+        ("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#9aa7b4")),
+        ("TOPPADDING", (0, 1), (-1, -1), 1.6),
+        ("BOTTOMPADDING", (0, 1), (-1, -1), 1.6),
+    ]
+    for i in range(2, len(data), 2):
+        style.append(("BACKGROUND", (0, i), (-1, i), colors.HexColor("#f3f6f9")))
+    for i, row in enumerate(data[1:], start=1):
+        if row[1] == "–":
+            style.append(("TEXTCOLOR", (1, i), (-1, i), colors.HexColor("#5f6b76")))
+            style.append(("SPAN", (2, i), (4, i)))
+            style.append(("FONT", (2, i), (4, i), "GT-Regular", body_size))
+    table.setStyle(TableStyle(style))
+
+    name = t.cfg.tournament.name or t.directory.resolve().name
+    title_text = tr.t("alpha_title", tournament=name, round=rg.number)
+    title_size = 16.0
+    while title_size > 11 and pdfmetrics.stringWidth(title_text, bold, title_size) > usable:
+        title_size -= 0.5
+    title_style = ParagraphStyle("title", fontName=bold, fontSize=title_size, leading=title_size + 4,
+                                 spaceAfter=2)
+    sub_style = ParagraphStyle("sub", fontName=regular, fontSize=10, leading=13,
+                               textColor=colors.HexColor("#5f6b76"))
+    story = [Paragraph(_esc(title_text), title_style),
+             Paragraph(_esc(tr.t("pairing_boards", n=len(rg.games))), sub_style),
+             Spacer(1, 4 * mm), table]
+
+    def footer(canvas, doc):
+        canvas.saveState()
+        canvas.setFont(regular, 8)
+        canvas.setFillColor(colors.HexColor("#5f6b76"))
+        canvas.drawRightString(page_w - margin, 8 * mm, tr.t("pairing_footer", round=rg.number, page=doc.page))
+        canvas.restoreState()
+
+    doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=margin, rightMargin=margin,
+                            topMargin=12 * mm, bottomMargin=14 * mm, title=title_text)
+    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    return path

@@ -117,7 +117,8 @@ Es gibt keine versteckte Datenbank.</p>
   translation.toml    Texte für eine eigene Sprache der PDFs       (Schritt 1)
   players.ods         angemeldete Spieler                          (Schritt 2)
   round_1.ods         Auslosung der Runde 1; Ergebnisse hier eintragen (Schritte 3, 4)
-  round_1.pdf         druckbare Auslosung der Runde 1              (Schritt 3)
+  round_1.pdf         druckbare Auslosung der Runde 1, nach Brett  (Schritt 3)
+  round_1_alphabetical.pdf   dieselbe, Spieler nach Nachname       (Schritt 3)
   round_2.ods         ...
   standings.ods       TGoR nach jeder Runde                        (Schritt 4)
   standings.pdf       druckbare Tabelle / Kreuztabelle             (Schritt 4)
@@ -432,10 +433,13 @@ extra_fields = ["Fee paid", "Age group"]
   ausgelost; zweimal <code>pair</code> ergibt also eine neue Auslosung.</li>
   <li><b>Prüfen und drucken.</b> <code>pair</code> schreibt auch <code>round_3.pdf</code>, eine druckbare
   Auslosung nur mit Brettnummern, Spielern (Farbstein, Rang, Name), Ergebnisspalten und Vorgabe – fertig zum
-  Aushängen oder zum Sammeln der Ergebnisse auf Papier. Die Spieler dürfen eine andere Vorgabe vereinbaren;
+  Aushängen oder zum Sammeln der Ergebnisse auf Papier. Außerdem entsteht
+  <code>round_3_alphabetical.pdf</code>: alle Spieler der Runde nach Nachnamen sortiert, jeweils mit Brett,
+  Farbe, Gegner und Vorgabe, damit jeder schnell sein Brett findet; Spieler, die aussetzen (z. B. der Joker),
+  stehen mit „setzt diese Runde aus“ in der Liste. Die Spieler dürfen eine andere Vorgabe vereinbaren;
   ändern Sie dann einfach die Zellen Handicap/Komi dieses Bretts in <code>round_3.ods</code>. Die Werkzeuge
   verwenden immer, was in der Datei steht. Nach Änderungen von Hand aktualisiert
-  <code>gotourney pairing-pdf 3</code> das PDF.</li>
+  <code>gotourney pairing-pdf 3</code> beide PDFs.</li>
 </ol>
 <div class="warn"><code>gotourney pair</code> überschreibt keine Rundendatei, die schon Ergebnisse enthält.
 Verwenden Sie <code>--force</code> nur, wenn Sie die Runde wirklich neu auslosen wollen. Eine Runde kann nur
@@ -739,7 +743,7 @@ Befehle, Optionen, Einstellungsnamen und Meldungen der Werkzeuge sind englisch.<
   <tr><td><code>gotourney egd update</code></td><td>EGD-Spielerliste herunterladen</td></tr>
   <tr><td><code>gotourney egd search &lt;Suche&gt;</code></td><td>In der EGD-Spielerliste suchen</td></tr>
   <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Runde r auslosen (Handbretter bleiben erhalten)</td></tr>
-  <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Druckbare Auslosung → round_r.pdf (schreibt auch <code>pair</code>)</td></tr>
+  <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Druckbare Auslosung → round_r.pdf (nach Brett) und round_r_alphabetical.pdf (nach Nachname); schreibt auch <code>pair</code></td></tr>
   <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Ergebnisse der Runde r prüfen</td></tr>
   <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR nach jeder Runde → standings.ods und standings.pdf</td></tr>
   <tr><td><code>gotourney wall</code></td><td>Wandtabelle → wall_list.ods</td></tr>
