@@ -46,9 +46,9 @@ def ensure_not_open(path: Path) -> None:
         fail(f"{path} is open in LibreOffice. Save and close it first, then run the command again.")
 
 
-def load_tournament(directory: Path) -> Tournament:
+def load_tournament(directory: Path, names_allowed_in_round: int | None = None) -> Tournament:
     try:
-        t = Tournament.load(directory)
+        t = Tournament.load(directory, names_allowed_in_round=names_allowed_in_round)
     except (ConfigError, OdsError, TournamentError) as e:
         fail(str(e))
     return t
@@ -351,12 +351,18 @@ def pair(
     round_no: int = typer.Argument(..., metavar="ROUND", help="Round number."),
     template: bool = typer.Option(False, "--template", help="Only write an empty round file for manual pairings."),
     force: bool = typer.Option(False, "--force", help="Overwrite a round file that already has results."),
+    yes: bool = typer.Option(False, "--yes", "-y",
+                             help="Accept unambiguous name matches on manual boards without asking."),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Pair a round. Boards marked 'x' in the Manual column of an existing round file are kept."""
+    """Pair a round. Boards marked 'x' in the Manual column of an existing round file are kept.
+
+    On manual boards, players can be given by (part of) their name instead of the ID; the tool
+    looks them up and asks for confirmation.
+    """
     from .pairing import PairingError, check_rule_fields, pair_round, pair_rules, rng_for, setup_game
 
-    t = load_tournament(directory)
+    t = load_tournament(directory, names_allowed_in_round=round_no)
     show_warnings(t, skip=(f"round {round_no}:",))
     path = round_file(directory, round_no)
     ensure_not_open(path)
@@ -383,12 +389,14 @@ def pair(
         parts = [(pid, labels[pid], ratings[pid], p.club) for pid, p in sorted(t.players.items(), key=lambda x: -ratings[x[0]])
                  if p.plays(round_no)]
         save_round(path, [], labels, ratings, participants=parts)
-        typer.echo(f"Wrote {path}. Enter manual boards (White ID, Black ID, 'x' in Manual), save, close, "
-                   f"then run 'gotourney pair {round_no}'. Players of the round are listed on the "
-                   f"'Participants' sheet.")
+        typer.echo(f"Wrote {path}. Enter manual boards (White ID and Black ID, or names in the White / "
+                   f"Black columns, and 'x' in Manual), save, close, then run 'gotourney pair {round_no}'. "
+                   f"Players of the round are listed on the 'Participants' sheet.")
         return
 
     manual = []
+    if existing and existing.unresolved:
+        _resolve_names(t, existing, round_no, yes)
     if existing:
         rng = rng_for(t.cfg, round_no, "manual")
         for i, g in enumerate(existing.games):
@@ -424,6 +432,65 @@ def pair(
         typer.echo(f"Rule {rule}: applies to {n} board{'s' if n != 1 else ''}")
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
     _write_pairing_pdf(directory, round_no)
+
+
+def _resolve_names(t: Tournament, rg, round_no: int, yes: bool) -> None:
+    """Look up players typed by name on manual boards and add those boards to rg.games."""
+    from .models import Game
+
+    used = {pid for g in rg.games for pid in g.players()}
+    for u in rg.unresolved:
+        u.white = u.white if u.white is not None else _choose_player(t, u.white_text, round_no, used,
+                                                                       f"row {u.line}, White", yes)
+        used.add(u.white)
+        u.black = u.black if u.black is not None else _choose_player(t, u.black_text, round_no, used,
+                                                                       f"row {u.line}, Black", yes)
+        used.add(u.black)
+        if u.white == u.black:
+            fail(f"row {u.line}: White and Black are the same player")
+        idx = len(rg.games)
+        if u.handicap is None:
+            rg.missing_handicap.add(idx)
+        if u.komi is None:
+            rg.missing_komi.add(idx)
+        rg.games.append(Game(board=idx + 1, white=u.white, black=u.black, handicap=u.handicap or 0,
+                             komi=u.komi if u.komi is not None else t.cfg.handicap.komi_even, manual=True))
+        typer.echo(f"Manual board (row {u.line}): {t.players[u.white].name} - {t.players[u.black].name}")
+    rg.unresolved = []
+
+
+def _choose_player(t: Tournament, text: str, round_no: int, used: set[int], where: str, yes: bool) -> int:
+    """Find the player meant by a (partial) name; ask for confirmation or a choice."""
+    from .resolve import match_players
+
+    candidates = [p for p in match_players(text, list(t.players.values())) if p.id not in used]
+    if not candidates:
+        fail(f"{where}: no player matches {text!r}. Enter the player's ID or more of the name.")
+    registered = [p for p in candidates if p.plays(round_no)]
+    candidates = registered or candidates
+
+    def describe(p) -> str:
+        extra = "" if p.plays(round_no) else f", not registered for round {round_no}"
+        return f"{p.name} ({p.rank or '?'}, ID {p.id}{', ' + p.club if p.club else ''}{extra})"
+
+    if len(candidates) == 1:
+        p = candidates[0]
+        if yes or typer.confirm(f"{where}: {text!r} -> {describe(p)}?", default=True):
+            return p.id
+        fail(f"{where}: cancelled. Enter the player's ID or more of the name in the round file.")
+    if yes:
+        fail(f"{where}: {text!r} matches several players: "
+             + "; ".join(describe(p) for p in candidates[:9]) + ". Enter more of the name or the ID.")
+    shown = candidates[:9]
+    typer.echo(f"{where}: {text!r} matches several players:")
+    for i, p in enumerate(shown, start=1):
+        typer.echo(f"  {i}) {describe(p)}")
+    if len(candidates) > len(shown):
+        typer.echo(f"  ... and {len(candidates) - len(shown)} more (type more of the name to narrow it down)")
+    choice = typer.prompt(f"Which player? (1-{len(shown)}, 0 = cancel)", type=int, default=1)
+    if not 1 <= choice <= len(shown):
+        fail(f"{where}: cancelled.")
+    return shown[choice - 1].id
 
 
 def translator(t: Tournament):

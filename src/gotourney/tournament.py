@@ -52,7 +52,10 @@ class Tournament:
     # ------------------------------------------------------------ loading
 
     @classmethod
-    def load(cls, directory: Path, cfg: Config | None = None) -> "Tournament":
+    def load(cls, directory: Path, cfg: Config | None = None,
+             names_allowed_in_round: int | None = None) -> "Tournament":
+        """Load the tournament. Boards with names instead of IDs are only allowed in the round
+        given by ``names_allowed_in_round`` (the round being paired); elsewhere they are an error."""
         directory = Path(directory)
         cfg = cfg or load_config(directory)
         pl = load_players(directory, cfg.tournament.rounds, cfg.registration.extra_fields)
@@ -76,6 +79,10 @@ class Tournament:
             except OdsError as e:
                 errors.append(str(e))
         for r, rg in rounds.items():
+            if rg.unresolved and r != names_allowed_in_round:
+                rows = ", ".join(str(u.line) for u in rg.unresolved)
+                errors.append(f"{rg.path.name}, row(s) {rows}: players given by name, not ID. "
+                              f"Run 'gotourney pair {r}' to look them up.")
             for g in rg.games:
                 for pid in g.players():
                     if pid not in players:

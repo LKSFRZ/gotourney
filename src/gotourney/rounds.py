@@ -78,12 +78,26 @@ def round_file(directory: Path, r: int) -> Path:
 
 
 @dataclass
+class UnresolvedBoard:
+    """A manual board where the director typed (part of) a name instead of a player ID."""
+
+    line: int                  # row in the sheet
+    white: int | None          # ID if given
+    black: int | None
+    white_text: str            # what was typed in the White / Black column
+    black_text: str
+    handicap: int | None
+    komi: float | None
+
+
+@dataclass
 class RoundGames:
     number: int
     games: list[Game]
     path: Path
     missing_handicap: set[int] = field(default_factory=set)   # boards (index) with empty handicap
     missing_komi: set[int] = field(default_factory=set)
+    unresolved: list[UnresolvedBoard] = field(default_factory=list)
 
     @property
     def has_results(self) -> bool:
@@ -113,18 +127,16 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
     games: list[Game] = []
     missing_h: set[int] = set()
     missing_k: set[int] = set()
+    unresolved: list[UnresolvedBoard] = []
     errors: list[str] = []
     for row in sheet.rows:
         where = f"{path.name}, row {row.line}"
         try:
             white = _int(row.text("White ID"), "White ID", where)
             black = _int(row.text("Black ID"), "Black ID", where)
-            if white is None and black is None:
+            white_text, black_text = name_text(row.text("White")), name_text(row.text("Black"))
+            if white is None and black is None and not white_text and not black_text:
                 continue      # e.g. a row with only notes
-            if white is None or black is None:
-                raise OdsError(f"{where}: both White ID and Black ID are needed")
-            if white == black:
-                raise OdsError(f"{where}: player {white} cannot play against themselves")
             handicap = _int(row.text("Handicap"), "Handicap", where)
             if handicap is not None and not 0 <= handicap <= 9:
                 raise OdsError(f"{where}: handicap must be between 0 and 9")
@@ -133,6 +145,14 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
                 komi = float(komi_text) if komi_text else None
             except ValueError:
                 raise OdsError(f"{where}: komi {komi_text!r} is not a number") from None
+            if white is None or black is None:
+                if (white is None and not white_text) or (black is None and not black_text):
+                    raise OdsError(f"{where}: give both players (ID, or a name in the White / Black column)")
+                unresolved.append(UnresolvedBoard(row.line, white, black, white_text, black_text,
+                                                  handicap, komi))
+                continue
+            if white == black:
+                raise OdsError(f"{where}: player {white} cannot play against themselves")
             try:
                 result = parse_marks(row.get("White win"), row.get("Draw"), row.get("Black win"))
             except ResultError as e:
@@ -161,7 +181,12 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
             seen[pid] = g.board
     if errors:
         raise OdsError("\n".join(errors))
-    return RoundGames(r, games, path, missing_h, missing_k)
+    return RoundGames(r, games, path, missing_h, missing_k, unresolved)
+
+
+def name_text(text: str) -> str:
+    """A player cell without the colour stone: '○ 5d Becker Anna' -> '5d Becker Anna'."""
+    return text.replace(WHITE_STONE, " ").replace(BLACK_STONE, " ").strip()
 
 
 def save_round(path: Path, games: list[Game], labels: dict[int, str], tgor: dict[int, float],
