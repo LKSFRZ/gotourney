@@ -77,7 +77,7 @@ def test_cli_full_flow(make_tournament):
     assert "Not playing: P5 X" in r.output
     assert runner.invoke(app, ["results", "check", "1", "-d", s]).exit_code == 1
     r = runner.invoke(app, ["pair", "2", "-d", s])
-    assert r.exit_code == 1 and "not complete" in r.output
+    assert r.exit_code == 1 and "missing result" in r.output
     t = Tournament.load(d)
     games = t.rounds[1].games
     for g in games:

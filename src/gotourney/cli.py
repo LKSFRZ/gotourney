@@ -401,7 +401,29 @@ def pair(
     if not 1 <= round_no <= t.cfg.tournament.rounds:
         fail(f"the tournament has rounds 1 to {t.cfg.tournament.rounds}")
     if round_no > t.last_round + 1:
-        fail(f"round {t.last_round + 1} has to be paired first")
+        nxt = t.last_round + 1
+        typer.secho(f"Round {nxt} has not been paired yet; rounds are paired one after the other.",
+                    fg=typer.colors.RED, err=True)
+        hints.show([f"Pair round {nxt} first: {cmd(directory, f'pair {nxt}')}"])
+        raise typer.Exit(1)
+    for r in range(1, round_no):
+        rg_prev = t.rounds.get(r)
+        missing = [g for g in rg_prev.games if g.result is None] if rg_prev else []
+        if missing:
+            typer.secho(f"Round {round_no} cannot be paired yet: round {r} still has {len(missing)} "
+                        f"missing result(s). The pairing depends on the TGoR after round {r}.",
+                        fg=typer.colors.RED, err=True)
+            for g in missing:
+                typer.echo(f"  board {g.board}: {t.players[g.white].name} - {t.players[g.black].name}", err=True)
+            hints.show([
+                f"Enter the missing results in {hints.fpath(directory, f'round_{r}.ods')} (an x under "
+                f"'White win', 'Draw' or 'Black win').",
+                "A game that will not be played (e.g. a player left): enter a forfeit, x! for the winner,\n"
+                "or ! under both 'White win' and 'Black win' if both lose. Forfeits are not rated.",
+                f"Save and close the file, check with {cmd(directory, f'results check {r}')},\n"
+                f"then run {cmd(directory, f'pair {round_no}')} again.",
+            ])
+            raise typer.Exit(1)
     later = [r for r in t.rounds if r > round_no]
     if later:
         fail(f"round {later[0]} already exists; re-pairing round {round_no} is not possible")

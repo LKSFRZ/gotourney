@@ -72,3 +72,17 @@ def test_no_folder_option_when_working_inside_the_folder(make_tournament, monkey
     monkeypatch.chdir(d)
     r = runner.invoke(app, ["pair", "1"])
     assert "gotourney start 1\n" in r.output and " -d " not in r.output
+
+
+def test_pairing_with_unfinished_previous_round_explains_what_to_do(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=3)
+    s = str(d)
+    runner.invoke(app, ["pair", "1", "-d", s])
+    r = runner.invoke(app, ["pair", "2", "-d", s])
+    assert r.exit_code == 1
+    assert "round 1 still has 2 missing result(s)" in r.output
+    assert "board 1:" in r.output and "board 2:" in r.output
+    assert "forfeit" in r.output and f"gotourney results check 1 -d {s}" in r.output
+    assert not (d / "round_2.ods").exists()
+    r = runner.invoke(app, ["pair", "3", "-d", s])
+    assert r.exit_code == 1 and f"gotourney pair 2 -d {s}" in r.output
