@@ -18,7 +18,12 @@ MAX_HANDICAP = 9
 
 
 class PairingError(Exception):
-    pass
+    """``code`` and ``data`` let other interfaces (web) explain the problem in their own words."""
+
+    def __init__(self, message: str, code: str = "pairing", data: dict | None = None):
+        super().__init__(message)
+        self.code = code
+        self.data = data or {}
 
 
 def full_handicap(diff: float) -> int:
@@ -173,7 +178,8 @@ def pair_round(t: Tournament, round_no: int, finalized_games: list[Game] | None 
         if not jokers:
             raise PairingError(
                 f"round {round_no} has an odd number of players to pair ({len(participants)}) and no "
-                f"joker among them. Mark a joker in players.ods (Joker column) and try again.")
+                f"joker among them. Mark a joker in players.ods (Joker column) and try again.",
+                "no_joker", {"round": round_no, "players": len(participants)})
         joker = choose_joker(t, round_no, jokers)
         participants.remove(joker)
         sitting_out.insert(0, (joker, "joker (odd number of players)"))
@@ -201,7 +207,8 @@ def pair_round(t: Tournament, round_no: int, finalized_games: list[Game] | None 
         raise PairingError(
             "no complete pairing without rematches" + (f" or forbidden pairs ({'; '.join(hard)})" if hard else "")
             + " is possible. Unpaired: " + ", ".join(unmatched)
-            + ". Pair some players by hand (finalized boards) and run pair again.")
+            + ". Pair some players by hand (finalized boards) and run pair again.",
+            "no_complete_pairing", {"round": round_no, "unpaired": unmatched, "hard": hard})
 
     games = list(finalized_games)
     total = 0.0

@@ -55,21 +55,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "locked_note": "{name} is open in LibreOffice.",
         # phases
         "ph_no_players_title": "Register the players",
-        "ph_no_players_text": "Add the players on the players page: search the EGD by name, check rank, rounds and "
-                              "extra data, and add them. Everything is saved in players.ods.",
+        "ph_no_players_text": "Add the players on the Players page: search the EGD by name, check rank, rounds and the extra data, and click 'Add player'.",
         "ph_registration_title": "Registration",
         "ph_registration_text": "{n} players are registered. Add more players if needed. When registration is "
                                 "complete, check it and pair round 1.",
         "ph_names_title": "Round {r}: confirm players given by name",
-        "ph_names_text": "round_{r}.ods contains boards where players were typed by name instead of ID. Confirm "
-                         "who is meant; then the round is paired.",
+        "ph_names_text": "Some boards of round {r} were entered with players' names. Confirm who is meant; then the round is paired.",
         "ph_paired_title": "Round {r} is paired",
         "ph_paired_text": "Print the pairing (by board and alphabetical) and put it up. When the games begin, "
                           "start the round – from then on the boards are fixed.",
         "ph_running_title": "Round {r} is running",
-        "ph_running_text": "{done} of {boards} results entered. Enter the results in round_{r}.ods: an x under "
-                           "'White win', 'Draw' or 'Black win'. Save in .ods format and close the file – "
-                           "this page updates itself.",
+        "ph_running_text": "{done} of {boards} results entered. Click 'Enter results' and then the winner of each game – every click is saved at once.",
         "ph_running_late": "Latecomers registered for this round but not paired: {names}.",
         "ph_complete_title": "Round {r} is complete",
         "ph_complete_text": "Show the standings, then pair round {next}.",
@@ -210,13 +206,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "rp_dissolved": "Board {board} dissolved. Pair again to give the players new opponents.",
         "rp_fixed_badge": "fixed",
         "rp_names_title": "Confirm players given by name",
-        "rp_names_help": "In round_{r}.ods some players were typed by name. Check the suggestions and confirm; then "
-                         "the round is paired.",
+        "rp_names_help": "Some players of this round were entered by name. Check the suggestions and confirm; then the round is paired.",
         "rp_names_submit": "Confirm and pair",
         "rp_title": "Round {r}",
         "rp_progress": "{done} of {boards} results entered",
-        "rp_help": "Click the winner of each game; it is saved immediately in round_{r}.ods. "
-                   "A forfeit counts as not played and is not rated.",
+        "rp_help": "Click the winner of each game; it is saved immediately. A forfeit counts as not played and is not rated.",
         "rp_only_missing": "Show only missing results",
         "rp_filter": "Find a player",
         "rp_board": "Board",
@@ -304,7 +298,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_awards": "Award slides",
         "act_pdf_board": "Pairing (by board)",
         "act_pdf_alpha": "Pairing (A–Z)",
-        "confirm_repair": "Pair round {r} again? All boards without 'Finalized' get new pairings.",
+        "confirm_repair": "Pair round {r} again? All boards that are not fixed (📌) get new pairings.",
         "confirm_start": "Start round {r}? The boards are fixed from now on.",
         # messages
         "msg_paired": "Round {r} paired: {boards} boards.",
@@ -323,21 +317,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "warning": "Note",
         # problems
         "pr_file_open": "{name} is open in LibreOffice. Save and close it there, then try again.",
-        "pr_previous_incomplete": "Round {next} cannot be paired yet: round {r} still has missing results. "
-                                  "Enter them in round_{r}.ods. A game that will not be played can be entered as a "
-                                  "forfeit (x! for the winner, or ! in both win columns).",
+        "pr_previous_incomplete": "Round {next} cannot be paired yet: round {r} still has missing results. Enter them on the page of round {r}. A game that will not be played is entered as a forfeit (under 'More').",
         "pr_open_results": "Some boards already have results but are not fixed. Start the round to keep them.",
-        "pr_names_need_confirmation": "round_{r}.ods has players given by name. Run 'gotourney pair {r}' in a terminal "
-                                      "to confirm them, or enter the player IDs.",
+        "pr_names_need_confirmation": "Round {r} has boards entered with players' names. Confirm them on the page of round {r}.",
         # help
         "help_title": "How does a tournament work?",
-        "help_steps": "1. Register the players.|2. Check the registration and pair round 1.|"
-                      "3. Print the pairing and start the round when the games begin.|"
-                      "4. Enter the results in the round file; check them.|"
-                      "5. Show the standings and pair the next round – until the last round.|"
-                      "6. Create the wall list, the EGD result file and the award slides.",
-        "help_files": "Everything is stored in the tournament folder as LibreOffice files. You can open and "
-                      "correct them by hand at any time; save in .ods format and close them afterwards.",
+        "help_steps": "1. Register the players.|2. Check the registration and pair round 1.|3. Print the pairing and start the round when the games begin.|4. Enter the results: click the winner of each game on the round page.|5. Show the standings and pair the next round – until the last round.|6. Create the wall list, the EGD result file and the award slides.",
+        "help_files": "Everything is saved automatically in the tournament folder. If you like, you can also open the files in LibreOffice – this page updates itself.",
+        "pr_no_complete_pairing": "Round {r} cannot be paired completely without rematches or forbidden pairs. Still without an opponent: {names}. On the round page, pair some of them by hand ('Pair two players by hand'), then pair again – or relax a pairing rule in the settings.",
+        "pr_no_joker": "Round {r} cannot be paired: {n} players are registered for it – an odd number – and none of them is a joker. On the Players page, tick 'Joker' for a player who may sit out (or untick this round for someone who is not playing), then pair again.",
     },
     "de": {
         "app_title": "Goturnier",
@@ -386,21 +374,17 @@ TEXTS: dict[str, dict[str, str]] = {
         "updated_on_disk": "Eine Datei wurde außerhalb dieser Seite geändert – die Seite wurde aktualisiert.",
         "locked_note": "{name} ist in LibreOffice geöffnet.",
         "ph_no_players_title": "Spieler anmelden",
-        "ph_no_players_text": "Melden Sie die Spieler auf der Spielerseite an: in der EGD nach Namen suchen, Rang, "
-                              "Runden und Zusatzangaben prüfen und hinzufügen. Alles wird in players.ods gespeichert.",
+        "ph_no_players_text": "Melden Sie die Spieler auf der Spielerseite an: in der EGD nach Namen suchen, Rang, Runden und Zusatzangaben prüfen und auf „Spieler hinzufügen“ klicken.",
         "ph_registration_title": "Anmeldung",
         "ph_registration_text": "{n} Spieler sind angemeldet. Melden Sie bei Bedarf weitere an. Wenn die Anmeldung "
                                 "abgeschlossen ist, prüfen Sie sie und losen Sie Runde 1 aus.",
         "ph_names_title": "Runde {r}: Spieler mit Namen bestätigen",
-        "ph_names_text": "round_{r}.ods enthält Bretter, bei denen Spieler mit Namen statt ID eingetragen sind. "
-                         "Bestätigen Sie, wer gemeint ist; dann wird die Runde ausgelost.",
+        "ph_names_text": "Bei einigen Brettern von Runde {r} wurden Spieler mit Namen eingetragen. Bestätigen Sie, wer gemeint ist; dann wird die Runde ausgelost.",
         "ph_paired_title": "Runde {r} ist ausgelost",
         "ph_paired_text": "Drucken Sie die Auslosung (nach Brett und alphabetisch) und hängen Sie sie aus. Wenn die "
                           "Partien beginnen, starten Sie die Runde – ab dann stehen die Bretter fest.",
         "ph_running_title": "Runde {r} läuft",
-        "ph_running_text": "{done} von {boards} Ergebnissen eingetragen. Tragen Sie die Ergebnisse in round_{r}.ods "
-                           "ein: ein x unter 'White win', 'Draw' oder 'Black win'. Im .ods-Format speichern und die "
-                           "Datei schließen – diese Seite aktualisiert sich selbst.",
+        "ph_running_text": "{done} von {boards} Ergebnissen eingetragen. Klicken Sie auf „Ergebnisse eintragen“ und dann bei jeder Partie auf den Sieger – jeder Klick wird sofort gespeichert.",
         "ph_running_late": "Nachzügler, die für diese Runde angemeldet, aber nicht gepaart sind: {names}.",
         "ph_complete_title": "Runde {r} ist abgeschlossen",
         "ph_complete_text": "Zeigen Sie die Tabelle an und losen Sie dann Runde {next} aus.",
@@ -541,13 +525,11 @@ TEXTS: dict[str, dict[str, str]] = {
         "rp_dissolved": "Brett {board} aufgelöst. Losen Sie neu aus, damit die Spieler neue Gegner bekommen.",
         "rp_fixed_badge": "fest",
         "rp_names_title": "Spieler mit Namen bestätigen",
-        "rp_names_help": "In round_{r}.ods wurden einige Spieler mit Namen eingetragen. Prüfen Sie die Vorschläge und "
-                         "bestätigen Sie; dann wird die Runde ausgelost.",
+        "rp_names_help": "Einige Spieler dieser Runde wurden mit Namen eingetragen. Prüfen Sie die Vorschläge und bestätigen Sie; dann wird die Runde ausgelost.",
         "rp_names_submit": "Bestätigen und auslosen",
         "rp_title": "Runde {r}",
         "rp_progress": "{done} von {boards} Ergebnissen eingetragen",
-        "rp_help": "Klicken Sie bei jeder Partie auf den Sieger; das wird sofort in round_{r}.ods gespeichert. "
-                   "Kampflose Partien zählen als nicht gespielt und werden nicht gewertet.",
+        "rp_help": "Klicken Sie bei jeder Partie auf den Sieger; das wird sofort gespeichert. Kampflose Partien zählen als nicht gespielt und werden nicht gewertet.",
         "rp_only_missing": "Nur fehlende Ergebnisse zeigen",
         "rp_filter": "Spieler suchen",
         "rp_board": "Brett",
@@ -637,7 +619,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_awards": "Folien Siegerehrung",
         "act_pdf_board": "Auslosung (nach Brett)",
         "act_pdf_alpha": "Auslosung (A–Z)",
-        "confirm_repair": "Runde {r} neu auslosen? Alle Bretter ohne 'Finalized' werden neu gepaart.",
+        "confirm_repair": "Runde {r} neu auslosen? Alle Bretter, die nicht festgehalten sind (📌), werden neu gepaart.",
         "confirm_start": "Runde {r} starten? Die Bretter stehen dann fest.",
         "msg_paired": "Runde {r} ausgelost: {boards} Bretter.",
         "msg_paired_late": "Nachzügler auf neuen Brettern ausgelost: {boards}.",
@@ -654,21 +636,15 @@ TEXTS: dict[str, dict[str, str]] = {
         "problem": "Nicht möglich",
         "warning": "Hinweis",
         "pr_file_open": "{name} ist in LibreOffice geöffnet. Dort speichern und schließen, dann erneut versuchen.",
-        "pr_previous_incomplete": "Runde {next} kann noch nicht ausgelost werden: In Runde {r} fehlen Ergebnisse. "
-                                  "Tragen Sie sie in round_{r}.ods ein. Eine Partie, die nicht gespielt wird, kann als "
-                                  "kampflos eingetragen werden (x! beim Sieger oder ! in beiden Siegspalten).",
+        "pr_previous_incomplete": "Runde {next} kann noch nicht ausgelost werden: In Runde {r} fehlen Ergebnisse. Tragen Sie sie auf der Seite von Runde {r} ein. Eine Partie, die nicht gespielt wird, wird als kampflos eingetragen (unter „Mehr“).",
         "pr_open_results": "Einige Bretter haben schon Ergebnisse, stehen aber nicht fest. Starten Sie die Runde, um "
                            "sie zu behalten.",
-        "pr_names_need_confirmation": "round_{r}.ods enthält Spieler mit Namen. Führen Sie 'gotourney pair {r}' im "
-                                      "Terminal aus, um sie zu bestätigen, oder tragen Sie die Spieler-IDs ein.",
+        "pr_names_need_confirmation": "In Runde {r} wurden Bretter mit Spielernamen eingetragen. Bestätigen Sie sie auf der Seite von Runde {r}.",
         "help_title": "Wie läuft ein Turnier ab?",
-        "help_steps": "1. Spieler anmelden.|2. Anmeldung prüfen und Runde 1 auslosen.|"
-                      "3. Auslosung drucken und die Runde starten, wenn die Partien beginnen.|"
-                      "4. Ergebnisse in die Rundendatei eintragen und prüfen.|"
-                      "5. Tabelle anzeigen und die nächste Runde auslosen – bis zur letzten Runde.|"
-                      "6. Wandtabelle, EGD-Ergebnisdatei und Folien für die Siegerehrung erstellen.",
-        "help_files": "Alles wird im Turnierordner als LibreOffice-Dateien gespeichert. Sie können sie jederzeit "
-                      "öffnen und von Hand korrigieren; im .ods-Format speichern und danach schließen.",
+        "help_steps": "1. Spieler anmelden.|2. Anmeldung prüfen und Runde 1 auslosen.|3. Auslosung drucken und die Runde starten, wenn die Partien beginnen.|4. Ergebnisse eintragen: auf der Rundenseite bei jeder Partie auf den Sieger klicken.|5. Tabelle anzeigen und die nächste Runde auslosen – bis zur letzten Runde.|6. Wandtabelle, EGD-Ergebnisdatei und Folien für die Siegerehrung erstellen.",
+        "help_files": "Alles wird automatisch im Turnierordner gespeichert. Wenn Sie möchten, können Sie die Dateien auch in LibreOffice öffnen – diese Seite aktualisiert sich selbst.",
+        "pr_no_complete_pairing": "Runde {r} lässt sich nicht vollständig ohne Wiederholungen oder verbotene Paare auslosen. Noch ohne Gegner: {names}. Paaren Sie einige von ihnen auf der Rundenseite von Hand („Zwei Spieler von Hand paaren“), dann erneut auslosen – oder lockern Sie eine Auslosungsregel in den Einstellungen.",
+        "pr_no_joker": "Runde {r} kann nicht ausgelost werden: {n} Spieler sind angemeldet – eine ungerade Zahl – und keiner ist Joker. Kreuzen Sie auf der Spielerseite bei einem Spieler, der aussetzen darf, „Joker“ an (oder wählen Sie die Runde bei jemandem ab, der nicht spielt), dann erneut auslosen.",
     },
 }
 

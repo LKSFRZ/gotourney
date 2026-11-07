@@ -592,3 +592,33 @@ def test_overview_has_a_button_per_round(make_tournament):
     html = page(c.get("/dashboard"))
     assert button(html, 1) == ("Show results", False)
     assert button(html, 2) is None                                             # not paired: no button
+
+
+# ---------------------------------------------------------------- the web interface explains itself
+
+def test_web_texts_never_send_the_user_to_the_command_line_or_file_columns():
+    from gotourney.web.texts import TEXTS
+    for lang, texts in TEXTS.items():
+        for key, value in texts.items():
+            for bad in ("gotourney ", "terminal", "Finalized", "x under", "x unter", "x!", "(Joker column)"):
+                assert bad not in value, (lang, key, bad)
+
+
+def test_running_round_next_step_is_the_browser(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=2)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    post(c, app, "/do/start", round="1")
+    html = page(c.get("/dashboard"))
+    assert "Click &#39;Enter results&#39; and then the winner" in html
+    card = html[html.index("Next step"):html.index("Rounds")]
+    assert "Open round_1.ods" not in card and "round_1.ods" not in card.split("Pairing (by board)")[0]
+
+
+def test_pairing_problems_are_explained_for_the_browser(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,)], rounds=1)        # odd, no joker
+    app, c = client_for(d)
+    html = page(post(c, app, "/do/pair", round="1"))
+    message = re.search(r'<p class="msg error">([^<]*)</p>', html).group(1)
+    assert "3 players are registered for it" in message and "tick &#39;Joker&#39;" in message
+    assert "players.ods" not in message

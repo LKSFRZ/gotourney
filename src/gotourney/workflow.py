@@ -291,7 +291,7 @@ def pair(directory: Path, round_no: int, *, force: bool = False,
     try:
         result = pair_round(t, round_no, kept)
     except PairingError as e:
-        raise Problem("pairing", str(e)) from None
+        raise Problem(e.code, str(e), e.data) from None
     labels = {pid: player_label(p) for pid, p in t.players.items()}
     save_round(path, result.games, labels, ratings,
                not_playing=[(pid, labels[pid], reason) for pid, reason in result.sitting_out])

@@ -221,6 +221,10 @@ def create_app(directory: Path | None = None) -> Flask:
             say("error", "pr_open_results")
         elif e.code == "names_need_confirmation":
             say("error", "pr_names_need_confirmation", r=round_no)
+        elif e.code == "no_joker":
+            say("error", "pr_no_joker", r=d["round"], n=d["players"])
+        elif e.code == "no_complete_pairing":
+            say("error", "pr_no_complete_pairing", r=d["round"], names=", ".join(d["unpaired"]))
         else:
             flash(str(e), "error")
 
@@ -1078,15 +1082,14 @@ def phase_card(t, lang: str) -> dict:
     elif s.phase == "running":
         card.update(title=tx("ph_running_title", r=r),
                     text=tx("ph_running_text", r=r, done=s.boards - s.missing, boards=s.boards),
-                    actions=[act(tx("act_open_round", r=r), "open_file", name=f"round_{r}.ods"),
-                             act(tx("act_check_results"), "check_results", round=r)],
+                    actions=[],
                     link={"label": tx("act_enter_results"), "href": f"/round/{r}"}, link_primary=True,
                     files=files((tx("act_pdf_board"), f"round_{r}.pdf"),
                                 (tx("act_pdf_alpha"), f"round_{r}_alphabetical.pdf")))
         late = workflow.check_results(t, r).unpaired
         if late:
             card["extra"] = tx("ph_running_late", names=", ".join(n for _, n in late))
-            card["actions"].insert(1, act(tx("act_pair_late"), "pair", round=r))
+            card["actions"].insert(0, act(tx("act_pair_late"), "pair", round=r))
     elif s.phase == "round_complete":
         card.update(title=tx("ph_complete_title", r=r), text=tx("ph_complete_text", next=r + 1),
                     link={"label": tx("documents_title"), "href": "/documents"},
