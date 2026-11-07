@@ -1040,9 +1040,11 @@ def round_summary(t, r: int) -> dict:
 
 
 def other_files(d: Path) -> list[dict]:
-    names = ["players.ods", "standings.pdf", "standings.ods", "wall_list.ods", "awards.pdf", CONFIG_FILE]
+    names = ["players.ods", SUMMARY_FILE, "standings.pdf", "standings.ods", "wall_list.ods", "awards.pdf", CONFIG_FILE]
     names += sorted(p.name for p in d.glob("*.h9"))
-    return [{"name": n, "locked": workflow.is_open_in_libreoffice(d / n)} for n in names if (d / n).exists()]
+    always = {SUMMARY_FILE}                         # created when opened, so listed even before it exists
+    return [{"name": n, "locked": workflow.is_open_in_libreoffice(d / n)} for n in names
+            if n in always or (d / n).exists()]
 
 
 def phase_card(t, lang: str) -> dict:

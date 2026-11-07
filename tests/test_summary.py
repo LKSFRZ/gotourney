@@ -120,3 +120,12 @@ def test_settings_form_saves_rules_and_clock(make_tournament):
         ("chinese", "canadian", 20, 10)
     assert cfg.tournament.time == 45 and cfg.game.byoyomi_seconds == 30      # empty hidden field: kept default
     assert "Chinese rules" in page(c.get("/system"))
+
+
+def test_dashboard_lists_the_summary(make_tournament):
+    from tests.test_web import client_for, page
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    assert not (d / SUMMARY_FILE).exists()
+    application, c = client_for(d)
+    assert f'href="/file/{SUMMARY_FILE}"' in page(c.get("/dashboard"))      # listed before it exists
+    assert c.get(f"/file/{SUMMARY_FILE}").mimetype == "application/pdf"      # and created when opened
