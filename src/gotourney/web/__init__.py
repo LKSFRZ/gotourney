@@ -237,7 +237,7 @@ def create_app(directory: Path | None = None) -> Flask:
         if d is None:
             return redirect(url_for("home", choose=1))
         try:
-            t = workflow.load(d)
+            t = workflow.load_for_display(d)
         except workflow.Problem as e:
             flash(str(e), "error")
             return render_template("dashboard.html", tour=None, d=d, rounds=[], files=[], card=None,
@@ -266,17 +266,95 @@ def create_app(directory: Path | None = None) -> Flask:
         if d is None:
             return redirect(url_for("home", choose=1))
         try:
-            t = workflow.load(d)
+            t = workflow.load(d, names_allowed_in_round=r)
         except workflow.Problem as e:
             flash(str(e), "error")
             return redirect(url_for("dashboard"))
         rg = t.rounds.get(r)
         if rg is None:
             return redirect(url_for("dashboard"))
+        started = bool(rg.games) and all(g.finalized for g in rg.games)
+        on_board = {pid for g in rg.games for pid in g.players()}
+        from ..rounds import read_not_playing
+        joker_out = {pid for pid, _, reason in read_not_playing(rg.path) if "joker" in reason.lower()}
+        waiting = [p for p in sorted(t.players.values(), key=lambda p: p.name.casefold())
+                   if p.plays(r) and p.id not in on_board]
+        unpaired = [p for p in waiting if p.id not in joker_out]
+        sitting_out = [p for p in waiting if p.id in joker_out]
+        ratings = t.rating_before(r)
+        board_of = {pid: g.board for g in rg.games for pid in g.players()}
+        participants = [{"id": p.id, "label": f"{p.name} ({p.rank or '?'}, {ratings[p.id]:.0f})",
+                         "board": board_of.get(p.id)}
+                        for p in sorted(t.players.values(), key=lambda p: p.name.casefold())
+                        if p.plays(r) or p.id in on_board]
         return render_template("round.html", tour=t, r=r, rows=board_rows(t, r),
-                               summary=round_summary(t, r), next_card=phase_card(t, lang()),
+                               summary=round_summary(t, r), started=started, unpaired=unpaired,
+                               sitting_out=sitting_out,
+                               participants=participants, names=workflow.name_candidates(d, r) if rg.unresolved else [],
                                locked=workflow.is_open_in_libreoffice(d / f"round_{r}.ods"),
                                later=any(x > r for x in t.rounds), folder_version=folder_version(d))
+
+    @app.post("/round/<int:r>/board")
+    def board_change(r: int):
+        d = tdir()
+        if d is None:
+            abort(404)
+        board = request.form.get("board", type=int)
+        what = request.form.get("what", "")
+        try:
+            if what == "fix":
+                workflow.update_board(d, r, board, finalized=True)
+            elif what == "release":
+                workflow.update_board(d, r, board, finalized=False)
+            elif what == "swap":
+                workflow.update_board(d, r, board, swap=True)
+            elif what == "handicap":
+                workflow.update_board(d, r, board, handicap=request.form.get("handicap", type=int))
+            elif what == "dissolve":
+                workflow.dissolve_board(d, r, board)
+                say("info", "rp_dissolved", board=board)
+            else:
+                abort(400)
+        except workflow.Problem as e:
+            explain(e, r)
+        return redirect(url_for("round_page", r=r) + (f"#board-{board}" if what != "dissolve" else ""))
+
+    @app.post("/round/<int:r>/manual")
+    def board_manual(r: int):
+        d = tdir()
+        if d is None:
+            abort(404)
+        white, black = request.form.get("white", type=int), request.form.get("black", type=int)
+        handicap = request.form.get("handicap", "")
+        try:
+            out = workflow.pair_by_hand(d, r, white, black, int(handicap) if handicap.isdigit() else None)
+            say("success", "rp_manual_done", board=next(g.board for g in out.games if set(g.players()) == {white, black}))
+            for w in out.warnings:
+                flash(w, "warning")
+        except workflow.Problem as e:
+            explain(e, r)
+        return redirect(url_for("round_page", r=r))
+
+    @app.post("/round/<int:r>/resolve")
+    def board_resolve(r: int):
+        d = tdir()
+        if d is None:
+            abort(404)
+        chosen = {}
+        for i, entry in enumerate(workflow.name_candidates(d, r)):
+            pid = request.form.get(f"pick_{i}", type=int)
+            if pid:
+                chosen[entry["where"]] = pid
+
+        def resolver(where, text, candidates, round_no):
+            return next((p for p in candidates if p.id == chosen.get(where)), None)
+
+        try:
+            out = workflow.pair(d, r, resolver=resolver)
+            say("success", "msg_paired", r=r, boards=len(out.games))
+        except workflow.Problem as e:
+            explain(e, r)
+        return redirect(url_for("round_page", r=r))
 
     @app.post("/round/<int:r>/result")
     def set_result(r: int):
@@ -565,6 +643,7 @@ def board_rows(t, r: int) -> list[dict]:
             "white": player_label(w), "black": player_label(b),
             "white_tgor": round(ratings.get(g.white, 0)), "black_tgor": round(ratings.get(g.black, 0)),
             "handicap": g.handicap, "komi": f"{g.komi:g}", "finalized": g.finalized,
+            "started": all(x.finalized for x in rg.games),
             "search": f"{w.name} {b.name}".lower(),
         })
     return rows
@@ -603,7 +682,7 @@ def phase_card(t, lang: str) -> dict:
                              act(tx("act_pair", r=1), "pair", primary=True, round=1)])
     elif s.phase == "names_pending":
         card.update(title=tx("ph_names_title", r=r), text=tx("ph_names_text", r=r),
-                    actions=[act(tx("act_open_round", r=r), "open_file", name=f"round_{r}.ods")])
+                    link={"label": tx("rp_names_title"), "href": f"/round/{r}"}, link_primary=True)
     elif s.phase == "paired":
         card.update(title=tx("ph_paired_title", r=r), text=tx("ph_paired_text"),
                     link={"label": tx("act_show_boards"), "href": f"/round/{r}"},

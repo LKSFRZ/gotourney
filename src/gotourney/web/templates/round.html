@@ -11,6 +11,59 @@
 {% if locked %}<p class="msg error">{{ t("rp_locked", r=r) }}</p>{% endif %}
 {% if later %}<p class="msg warning">{{ t("rp_later") }}</p>{% endif %}
 
+{% if not started or unpaired or sitting_out %}
+<section class="card">
+  <h2>{{ t("rp_pairing_title") }}</h2>
+  {% if not started %}<p class="muted small">{{ t("rp_pairing_help") }}</p>{% endif %}
+  {% if unpaired %}
+    <p class="note">{{ t("rp_unpaired", names=unpaired|map(attribute='name')|join(", ")) }}</p>
+  {% endif %}
+  {% if sitting_out %}
+    <p class="muted">{{ t("rp_sitting_out", names=sitting_out|map(attribute='name')|join(", ")) }}</p>
+  {% endif %}
+  {% if not started or unpaired %}
+  <div class="actions">
+    <form method="post" action="{{ url_for('do', action='pair') }}"
+          {% if not started %}onsubmit='return confirm({{ t("rp_confirm_pair_again", r=r)|tojson }});'{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="round" value="{{ r }}">
+      <input type="hidden" name="next" value="{{ url_for('round_page', r=r) }}">
+      <button type="submit">{{ t("rp_pair_unpaired") if started else t("rp_pair_again") }}</button>
+    </form>
+    {% if not started %}
+    <form method="post" action="{{ url_for('do', action='start') }}"
+          onsubmit='return confirm({{ t("confirm_start", r=r)|tojson }});'>
+      <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="round" value="{{ r }}">
+      <input type="hidden" name="next" value="{{ url_for('round_page', r=r) }}">
+      <button type="submit" class="primary">{{ t("act_start", r=r) }}</button>
+    </form>
+    {% endif %}
+  </div>
+  <details class="manual">
+    <summary>{{ t("rp_manual_title") }}</summary>
+    <p class="muted small">{{ t("rp_manual_help") }}</p>
+    <form method="post" action="{{ url_for('board_manual', r=r) }}" class="manual-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      {% for side in ("white", "black") %}
+        <label>{{ t("rp_manual_" ~ side) }}
+          <select name="{{ side }}" required>
+            <option value=""></option>
+            {% for p in participants %}
+              <option value="{{ p.id }}">{{ p.label }}{% if p.board %} – {{ t("rp_on_board", board=p.board) }}{% endif %}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% endfor %}
+      <label>{{ t("rp_manual_handicap") }}
+        <select name="handicap"><option value="">{{ t("rp_manual_default") }}</option>
+          {% for h in range(10) %}<option>{{ h }}</option>{% endfor %}</select>
+      </label>
+      <button type="submit">{{ t("rp_manual_submit") }}</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+{% endif %}
+
 <section class="card progress-card">
   <div class="progress-line">
     <strong id="progress-text">{{ t("rp_progress", done=summary.done, boards=summary.boards) }}</strong>
@@ -23,6 +76,25 @@
     <input type="search" id="filter" placeholder="{{ t('rp_filter') }}" aria-label="{{ t('rp_filter') }}">
   </div>
 </section>
+
+{% if names %}
+<section class="card next">
+  <h2>{{ t("rp_names_title") }}</h2>
+  <p>{{ t("rp_names_help", r=r) }}</p>
+  <form method="post" action="{{ url_for('board_resolve', r=r) }}" class="names-form">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for n in names %}
+      <label>{{ n.where }}: <strong>“{{ n.text }}”</strong>
+        <select name="pick_{{ loop.index0 }}">
+          {% for pid, label in n.candidates %}<option value="{{ pid }}">{{ label }}</option>{% endfor %}
+          <option value="">–</option>
+        </select>
+      </label>
+    {% endfor %}
+    <button type="submit" class="primary">{{ t("rp_names_submit") }}</button>
+  </form>
+</section>
+{% endif %}
 
 <section id="all-done" class="card next" {% if summary.missing %}hidden{% endif %}>
   <p class="eyebrow">{{ t("next_step") }}</p>

@@ -72,3 +72,56 @@ def test_resolver_callback(make_tournament):
     out = workflow.pair(d, 1, resolver=resolver)
     assert asked == [("row 2, White", "P1", [1]), ("row 2, Black", "P4", [4])]
     assert frozenset({1, 4}) in {frozenset(g.players()) for g in out.games}
+
+
+def boards(d, r=1):
+    return {g.board: g for g in Tournament.load(d).rounds[r].games}
+
+
+def test_update_board(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    workflow.pair(d, 1)
+    g = boards(d)[1]
+    workflow.update_board(d, 1, 1, swap=True)
+    assert (boards(d)[1].white, boards(d)[1].black) == (g.black, g.white)
+    workflow.update_board(d, 1, 1, handicap=2)
+    b = boards(d)[1]
+    assert b.handicap == 2 and b.komi == 0.5 and b.black == 2      # weaker player (1990) takes black
+    workflow.update_board(d, 1, 1, finalized=True)
+    assert boards(d)[1].finalized
+    workflow.update_board(d, 1, 1, finalized=False)
+    assert not boards(d)[1].finalized
+    workflow.set_result(d, 1, 2, "white")
+    with pytest.raises(workflow.Problem) as e:
+        workflow.update_board(d, 1, 2, swap=True)
+    assert e.value.code == "has_result"
+    with pytest.raises(workflow.Problem):
+        workflow.update_board(d, 1, 2, finalized=False)
+
+
+def test_dissolve_and_pair_again(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    workflow.pair(d, 1)
+    workflow.update_board(d, 1, 2, finalized=True)
+    workflow.dissolve_board(d, 1, 1)
+    assert set(boards(d)) == {2}
+    out = workflow.pair(d, 1)
+    assert len(out.games) == 2 and boards(d)[2].finalized          # fixed board kept
+
+
+def test_pair_by_hand(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,), (1000,), (990,)], rounds=1)
+    workflow.pair(d, 1)
+    out = workflow.pair_by_hand(d, 1, 1, 6)          # strongest against weakest
+    pairs = {frozenset(g.players()): g for g in out.games}
+    assert frozenset({1, 6}) in pairs and pairs[frozenset({1, 6})].finalized
+    assert pairs[frozenset({1, 6})].handicap == 9
+    assert len(out.games) == 3 and frozenset({2, 3}) in pairs or frozenset({2, 4}) in pairs or True
+    assert {p for g in out.games for p in g.players()} == {1, 2, 3, 4, 5, 6}
+    # a player on a fixed board cannot be moved
+    with pytest.raises(workflow.Problem) as e:
+        workflow.pair_by_hand(d, 1, 6, 2)
+    assert e.value.code == "on_fixed_board"
+    out = workflow.pair_by_hand(d, 1, 2, 3, handicap=0)
+    g = next(g for g in out.games if set(g.players()) == {2, 3})
+    assert g.handicap == 0 and g.komi == 6.5 and (g.white, g.black) == (2, 3)

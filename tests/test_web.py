@@ -271,3 +271,43 @@ def test_dashboard_links_to_players_page(make_tournament):
     assert "Register players" in page(r) and 'href="/players"' in page(r)
     r = post(c, app, "/do/check_players", next="/players")
     assert r.request.path == "/players"
+
+
+def test_pairing_tools_on_round_page(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    r = c.get("/round/1")
+    assert "Pair again" in page(r) and "Pair two players by hand" in page(r) and "Start round 1" in page(r)
+    r = post(c, app, "/round/1/manual", white="1", black="4", handicap="")
+    assert "Fixed board" in page(r)
+    t = Tournament.load(d)
+    g = next(g for g in t.rounds[1].games if set(g.players()) == {1, 4})
+    assert g.finalized
+    r = post(c, app, "/round/1/board", board=str(g.board), what="swap")
+    r = post(c, app, "/round/1/board", board=str(g.board), what="release")
+    assert not next(x for x in Tournament.load(d).rounds[1].games if x.board == g.board).finalized
+    r = post(c, app, "/round/1/board", board=str(g.board), what="dissolve")
+    assert "dissolved" in page(r) and "Registered but not on a board" in page(r)
+    post(c, app, "/do/pair", round="1", next="/round/1")
+    assert len(Tournament.load(d).rounds[1].games) == 2
+    post(c, app, "/do/start", round="1", next="/round/1")
+    r = c.get("/round/1")
+    assert "Pair again" not in page(r)                       # started: only results
+
+
+def test_confirm_names_in_browser(make_tournament):
+    from gotourney.ods import write_sheets
+    from gotourney.rounds import COLUMNS
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    write_sheets(d / "round_1.ods", [("Pairing", COLUMNS, [[None, None, None, "P1", None, None, None, "P4",
+                                                           None, None, None, None, ""]])])
+    app, c = client_for(d)
+    r = c.get("/dashboard")
+    assert "Confirm players given by name" in page(r)
+    r = c.get("/round/1")
+    assert "Confirm and pair" in page(r) and "pick_0" in page(r) and "pick_1" in page(r)
+    r = post(c, app, "/round/1/resolve", pick_0="1", pick_1="4")
+    assert "Round 1 paired" in page(r)
+    pairs = {frozenset(g.players()) for g in Tournament.load(d).rounds[1].games}
+    assert frozenset({1, 4}) in pairs and len(pairs) == 2

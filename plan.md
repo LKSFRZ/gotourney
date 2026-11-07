@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (in progress: W0–W3 done)
+## 11. Web interface (in progress: W0–W3 and W2b done)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -322,7 +322,7 @@ Each phase is usable on its own; the command line keeps working throughout.
   German/English switch; short help texts on every page.
 - ✅ **W2 – Results by clicking.** Board list of a round; per board *White / Jigo / Black* and forfeit
   options; missing results highlighted; immediate saving to `round_r.ods`; results check built in.
-- **W2b – Pairing and starting.** Buttons for pair / start; the boards as a table; fix (finalize)
+- ✅ **W2b – Pairing and starting.** Buttons for pair / start; the boards as a table; fix (finalize)
   or release boards; pair two players by hand (also by name search); latecomers; PDF downloads
   (by board, alphabetical); confirmation before anything that cannot be undone.
 - ✅ **W3 – Registration in the browser.** EGD search with autocomplete, player table with editing,

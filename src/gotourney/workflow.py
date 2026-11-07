@@ -55,6 +55,17 @@ def load(directory: Path, names_allowed_in_round: int | None = None) -> Tourname
         raise Problem("load", str(e)) from None
 
 
+def load_for_display(directory: Path) -> Tournament:
+    """Like load(), but allows boards given by name in the newest round file (to show them)."""
+    try:
+        return load(directory)
+    except Problem:
+        last = max((r for r in range(1, 100) if round_file(directory, r).exists()), default=0)
+        if not last:
+            raise
+        return load(directory, names_allowed_in_round=last)
+
+
 def translator(t: Tournament) -> tuple[Translator, list[str]]:
     try:
         return get_translator(t.cfg, t.directory)
@@ -672,3 +683,113 @@ def remove_player(directory: Path, player_id: int):
                           f"from later rounds instead.", {"round": r, "name": player.name})
     save_players(directory, [p for p in pl.players if p.id != player_id], cfg.tournament.rounds, pl.extra_fields)
     return player
+
+
+# ---------------------------------------------------------------- changing boards by hand
+
+def _load_round_for_change(directory: Path, round_no: int):
+    t = load(directory)
+    rg = t.rounds.get(round_no)
+    path = round_file(directory, round_no)
+    if rg is None:
+        raise Problem("no_round", f"{path.name} not found", {"round": round_no})
+    check_writable(path)
+    return t, rg, path
+
+
+def _save_round(t: Tournament, rg: RoundGames, path: Path, round_no: int) -> None:
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    save_round(path, rg.games, labels, t.rating_before(round_no), not_playing=read_not_playing(path))
+
+
+def _board(rg: RoundGames, board: int) -> Game:
+    game = next((g for g in rg.games if g.board == board), None)
+    if game is None:
+        raise Problem("no_board", f"round {rg.number} has no board {board}", {"board": board})
+    return game
+
+
+def update_board(directory: Path, round_no: int, board: int, *, finalized: bool | None = None,
+                 swap: bool = False, handicap: int | None = None) -> Game:
+    """Fix or release a board, swap its colours or set its handicap (and the matching komi)."""
+    t, rg, path = _load_round_for_change(directory, round_no)
+    g = _board(rg, board)
+    if (swap or handicap is not None) and g.result is not None:
+        raise Problem("has_result", f"board {board} already has a result; clear it first to change the board",
+                      {"board": board})
+    if swap:
+        g.white, g.black = g.black, g.white
+    if handicap is not None:
+        if not 0 <= handicap <= 9:
+            raise Problem("invalid", "the handicap must be between 0 and 9", {"board": board})
+        g.handicap = handicap
+        g.komi = t.cfg.handicap.komi_handicap if handicap > 0 else t.cfg.handicap.komi_even
+        ratings = t.rating_before(round_no)
+        if handicap > 0 and ratings[g.white] < ratings[g.black]:
+            g.white, g.black = g.black, g.white          # the weaker player takes black and the stones
+    if finalized is not None:
+        if not finalized and g.result is not None:
+            raise Problem("has_result", f"board {board} has a result and stays fixed", {"board": board})
+        g.finalized = finalized
+    _save_round(t, rg, path, round_no)
+    return g
+
+
+def dissolve_board(directory: Path, round_no: int, board: int) -> Game:
+    """Remove a board without result; both players are paired again by the next pairing."""
+    t, rg, path = _load_round_for_change(directory, round_no)
+    g = _board(rg, board)
+    if g.result is not None:
+        raise Problem("has_result", f"board {board} already has a result", {"board": board})
+    rg.games.remove(g)
+    _save_round(t, rg, path, round_no)
+    return g
+
+
+def pair_by_hand(directory: Path, round_no: int, white: int, black: int, handicap: int | None = None) -> PairOutcome:
+    """Put two players on a fixed board (removing the boards they were on) and pair the rest again."""
+    from .pairing import number_boards, setup_game, rng_for
+
+    t, rg, path = _load_round_for_change(directory, round_no)
+    for pid in (white, black):
+        if pid not in t.players:
+            raise Problem("no_player", f"there is no player with ID {pid}", {"id": pid})
+    if white == black:
+        raise Problem("same_player", "White and Black are the same player", {})
+    ratings = t.rating_before(round_no)
+    for g in list(rg.games):
+        if white in g.players() or black in g.players():
+            if g.finalized or g.result is not None:
+                other = t.players[white if white in g.players() else black].name
+                raise Problem("on_fixed_board", f"{other} is on board {g.board}, which is fixed. Release that board "
+                              f"first.", {"board": g.board, "name": other})
+            rg.games.remove(g)
+    if handicap is None:
+        game = setup_game(t, round_no, white, black, ratings, rng_for(t.cfg, round_no, "manual"), finalized=True)
+    else:
+        game = Game(0, white, black, handicap,
+                    t.cfg.handicap.komi_handicap if handicap > 0 else t.cfg.handicap.komi_even, finalized=True)
+    rg.games.append(game)
+    number_boards(rg.games, ratings)
+    _save_round(t, rg, path, round_no)
+    return pair(directory, round_no)
+
+
+def name_candidates(directory: Path, round_no: int) -> list[dict]:
+    """For boards given by name: each typed name with its candidates (best first)."""
+    from .resolve import match_players
+
+    t = load(directory, names_allowed_in_round=round_no)
+    rg = t.rounds.get(round_no)
+    if rg is None:
+        return []
+    out = []
+    for u in rg.unresolved:
+        for side, pid, text in (("White", u.white, u.white_text), ("Black", u.black, u.black_text)):
+            if pid is not None:
+                continue
+            cands = match_players(text, list(t.players.values()))
+            cands = [p for p in cands if p.plays(round_no)] + [p for p in cands if not p.plays(round_no)]
+            out.append({"where": f"row {u.line}, {side}", "text": text,
+                        "candidates": [(p.id, describe_candidate(p, round_no)) for p in cands[:12]]})
+    return out

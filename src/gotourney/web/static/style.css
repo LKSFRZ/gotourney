@@ -227,3 +227,19 @@ table.players tr.editing td { background: var(--accent-soft); }
 .badge { margin-left: 4px; }
 .player-form input[type=checkbox] { width: auto; margin: 0; }
 .player-form label.check { gap: 8px; }
+
+/* ---------------- pairing on the round page */
+td.board-no { position: relative; }
+.pin { font-size: 11px; margin-left: 2px; }
+details.board-menu { display: inline-block; margin-left: 2px; }
+details.board-menu summary { padding: 0 4px; font-size: 16px; }
+details.board-menu summary::after { content: ""; }
+details.board-menu .menu { left: 0; right: auto; text-align: left; font-weight: normal; }
+details.board-menu .menu form { display: flex; flex-direction: column; gap: 4px; margin: 0; }
+.handicap-form { flex-direction: row !important; align-items: center; }
+.handicap-form select { width: auto; }
+details.manual { margin-top: 14px; }
+details.manual summary { cursor: pointer; font-weight: 600; color: var(--accent); }
+.manual-form, .names-form { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: flex-end; margin-top: 8px; }
+.manual-form label, .names-form label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
+.names-form { flex-direction: column; align-items: flex-start; }

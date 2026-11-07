@@ -1,6 +1,38 @@
 <tr id="board-{{ row.board }}" class="board-row {{ 'done' if row.result else 'open' }}"
     data-search="{{ row.search }}" data-done="{{ 1 if row.result else 0 }}">
-  <td class="board-no">{{ row.board }}</td>
+  <td class="board-no">{{ row.board }}{% if row.finalized and not row.started %}<span class="pin" title="{{ t('rp_fixed_badge') }}">&#128204;</span>{% endif %}
+    <details class="more board-menu">
+      <summary aria-label="{{ t('rp_board_menu') }} {{ row.board }}">&#8943;</summary>
+      <div class="menu">
+        <form method="post" action="{{ url_for('board_change', r=r) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="board" value="{{ row.board }}">
+          {% if row.finalized %}
+            {% if not row.result %}<button type="submit" name="what" value="release">{{ t('rp_release') }}</button>{% endif %}
+          {% else %}
+            <button type="submit" name="what" value="fix">{{ t('rp_fix') }}</button>
+          {% endif %}
+          {% if not row.result %}
+            <button type="submit" name="what" value="swap">{{ t('rp_swap') }}</button>
+          {% endif %}
+        </form>
+        {% if not row.result %}
+        <form method="post" action="{{ url_for('board_change', r=r) }}" class="handicap-form">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="board" value="{{ row.board }}">
+          <input type="hidden" name="what" value="handicap">
+          <select name="handicap" aria-label="{{ t('rp_handicap') }}">
+            {% for h in range(10) %}<option {% if h == row.handicap %}selected{% endif %}>{{ h }}</option>{% endfor %}
+          </select>
+          <button type="submit">{{ t('rp_set_handicap') }}</button>
+        </form>
+        <form method="post" action="{{ url_for('board_change', r=r) }}"
+              onsubmit='return confirm({{ t("rp_confirm_dissolve", board=row.board)|tojson }});'>
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="board" value="{{ row.board }}">
+          <button type="submit" name="what" value="dissolve" class="clear">{{ t('rp_dissolve') }}</button>
+        </form>
+        {% endif %}
+      </div>
+    </details>
+  </td>
   <td class="player white {{ 'winner' if row.result in ('white', 'white_forfeit') else '' }}">
     <span class="stone" aria-hidden="true">&#9675;</span> {{ row.white }}
     <span class="tgor">{{ row.white_tgor }}</span>

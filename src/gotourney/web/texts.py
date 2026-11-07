@@ -57,9 +57,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "ph_registration_text": "{n} players are registered. Add more players if needed. When registration is "
                                 "complete, check it and pair round 1.",
         "ph_names_title": "Round {r}: confirm players given by name",
-        "ph_names_text": "round_{r}.ods contains boards where players were typed by name instead of ID. Confirming "
-                         "them in the browser will come in a later version; for now run "
-                         "'gotourney pair {r}' in a terminal, or enter the IDs in round_{r}.ods.",
+        "ph_names_text": "round_{r}.ods contains boards where players were typed by name instead of ID. Confirm "
+                         "who is meant; then the round is paired.",
         "ph_paired_title": "Round {r} is paired",
         "ph_paired_text": "Print the pairing (by board and alphabetical) and put it up. When the games begin, "
                           "start the round – from then on the boards are fixed.",
@@ -76,7 +75,38 @@ TEXTS: dict[str, dict[str, str]] = {
         # actions
         "act_enter_results": "Enter results",
         "act_show_boards": "Show boards",
-        "rp_title": "Round {r} – results",
+        "rp_pairing_title": "Pairing",
+        "rp_pairing_help": "Before the round starts you can still change the pairing. Fixed boards (📌) are kept "
+                           "when pairing again; all other boards get new pairings.",
+        "rp_sitting_out": "Sits out this round (joker): {names}",
+        "rp_pair_again": "Pair again",
+        "rp_confirm_pair_again": "Pair round {r} again? All boards that are not fixed get new pairings.",
+        "rp_unpaired": "Registered but not on a board: {names}",
+        "rp_pair_unpaired": "Pair them",
+        "rp_manual_title": "Pair two players by hand",
+        "rp_manual_help": "The two players get a fixed board; the boards they were on are dissolved and the other "
+                          "players are paired again.",
+        "rp_manual_white": "White",
+        "rp_manual_black": "Black",
+        "rp_manual_handicap": "Handicap",
+        "rp_manual_default": "default",
+        "rp_manual_submit": "Pair",
+        "rp_on_board": "board {board}",
+        "rp_manual_done": "Fixed board {board} created; the other players were paired again.",
+        "rp_board_menu": "Board",
+        "rp_fix": "Fix board (keep when pairing again)",
+        "rp_release": "Release board",
+        "rp_swap": "Swap colours",
+        "rp_set_handicap": "Set handicap",
+        "rp_dissolve": "Dissolve board",
+        "rp_confirm_dissolve": "Dissolve board {board}? Both players will be paired again.",
+        "rp_dissolved": "Board {board} dissolved. Pair again to give the players new opponents.",
+        "rp_fixed_badge": "fixed",
+        "rp_names_title": "Confirm players given by name",
+        "rp_names_help": "In round_{r}.ods some players were typed by name. Check the suggestions and confirm; then "
+                         "the round is paired.",
+        "rp_names_submit": "Confirm and pair",
+        "rp_title": "Round {r}",
         "rp_progress": "{done} of {boards} results entered",
         "rp_help": "Click the winner of each game; it is saved immediately in round_{r}.ods. "
                    "A forfeit counts as not played and is not rated.",
@@ -248,9 +278,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "ph_registration_text": "{n} Spieler sind angemeldet. Melden Sie bei Bedarf weitere an. Wenn die Anmeldung "
                                 "abgeschlossen ist, prüfen Sie sie und losen Sie Runde 1 aus.",
         "ph_names_title": "Runde {r}: Spieler mit Namen bestätigen",
-        "ph_names_text": "round_{r}.ods enthält Bretter, bei denen Spieler mit Namen statt ID eingetragen sind. Das "
-                         "Bestätigen im Browser kommt in einer späteren Version; bis dahin 'gotourney pair {r}' im "
-                         "Terminal ausführen oder die IDs in round_{r}.ods eintragen.",
+        "ph_names_text": "round_{r}.ods enthält Bretter, bei denen Spieler mit Namen statt ID eingetragen sind. "
+                         "Bestätigen Sie, wer gemeint ist; dann wird die Runde ausgelost.",
         "ph_paired_title": "Runde {r} ist ausgelost",
         "ph_paired_text": "Drucken Sie die Auslosung (nach Brett und alphabetisch) und hängen Sie sie aus. Wenn die "
                           "Partien beginnen, starten Sie die Runde – ab dann stehen die Bretter fest.",
@@ -266,7 +295,38 @@ TEXTS: dict[str, dict[str, str]] = {
                             "Siegerehrung.",
         "act_enter_results": "Ergebnisse eintragen",
         "act_show_boards": "Bretter anzeigen",
-        "rp_title": "Runde {r} – Ergebnisse",
+        "rp_pairing_title": "Auslosung",
+        "rp_pairing_help": "Bevor die Runde beginnt, können Sie die Auslosung noch ändern. Feste Bretter (📌) bleiben "
+                           "beim Neu-Auslosen erhalten; alle anderen Bretter werden neu gepaart.",
+        "rp_sitting_out": "Setzt diese Runde aus (Joker): {names}",
+        "rp_pair_again": "Neu auslosen",
+        "rp_confirm_pair_again": "Runde {r} neu auslosen? Alle Bretter, die nicht fest sind, werden neu gepaart.",
+        "rp_unpaired": "Angemeldet, aber an keinem Brett: {names}",
+        "rp_pair_unpaired": "Auslosen",
+        "rp_manual_title": "Zwei Spieler von Hand paaren",
+        "rp_manual_help": "Die beiden Spieler bekommen ein festes Brett; ihre bisherigen Bretter werden aufgelöst und "
+                          "die übrigen Spieler neu gepaart.",
+        "rp_manual_white": "Weiß",
+        "rp_manual_black": "Schwarz",
+        "rp_manual_handicap": "Vorgabe",
+        "rp_manual_default": "Standard",
+        "rp_manual_submit": "Paaren",
+        "rp_on_board": "Brett {board}",
+        "rp_manual_done": "Festes Brett {board} angelegt; die übrigen Spieler wurden neu gepaart.",
+        "rp_board_menu": "Brett",
+        "rp_fix": "Brett festhalten (bleibt beim Neu-Auslosen)",
+        "rp_release": "Brett freigeben",
+        "rp_swap": "Farben tauschen",
+        "rp_set_handicap": "Vorgabe setzen",
+        "rp_dissolve": "Brett auflösen",
+        "rp_confirm_dissolve": "Brett {board} auflösen? Beide Spieler werden neu gepaart.",
+        "rp_dissolved": "Brett {board} aufgelöst. Losen Sie neu aus, damit die Spieler neue Gegner bekommen.",
+        "rp_fixed_badge": "fest",
+        "rp_names_title": "Spieler mit Namen bestätigen",
+        "rp_names_help": "In round_{r}.ods wurden einige Spieler mit Namen eingetragen. Prüfen Sie die Vorschläge und "
+                         "bestätigen Sie; dann wird die Runde ausgelost.",
+        "rp_names_submit": "Bestätigen und auslosen",
+        "rp_title": "Runde {r}",
         "rp_progress": "{done} von {boards} Ergebnissen eingetragen",
         "rp_help": "Klicken Sie bei jeder Partie auf den Sieger; das wird sofort in round_{r}.ods gespeichert. "
                    "Kampflose Partien zählen als nicht gespielt und werden nicht gewertet.",
