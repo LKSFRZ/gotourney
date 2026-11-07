@@ -118,6 +118,7 @@ database.</p>
   round_2.ods         ...
   standings.ods       TGoR after each round                       (step 4)
   wall_list.ods       final wall list, editable                   (step 5)
+  awards.pdf          slides for the award ceremony               (step 5)
   &lt;name&gt;.h9           result file for the EGD                     (step 6)</pre>
 
 <p>All commands take the option <code>-d &lt;folder&gt;</code> to choose the tournament folder. Without it,
@@ -491,6 +492,51 @@ corrections are included. Send this file to the EGD. Header (TC stays empty, the
   <li><code>|PIN</code> at the end. Players without a PIN have nothing there.</li>
 </ul>
 
+<h3>8.3 The award ceremony <span class="badge now">AVAILABLE</span></h3>
+<pre>gotourney awards                 # writes awards.pdf
+gotourney awards -o ceremony.pdf</pre>
+<p>Creates a presentation (16:9 PDF, for a projector) with a title slide and one slide per prize winner:
+the prize, the player's name, rank, club and country, and place, wins and TGoR. Show it in full-screen
+mode with any PDF viewer. The command also lists the winners in the terminal. All results must be
+entered first.</p>
+<p>The prizes are set in the <code>[awards]</code> section of <code>tournament.toml</code>. The slides follow
+the order of the prizes, so you can go from special prizes to 3rd, 2nd and 1st place. A new tournament
+starts with these prizes:</p>
+<pre>[awards]
+title_slide = true
+
+[[awards.prizes]]
+type     = "wins"
+min_wins = 5                      # the number of rounds
+title    = "All {games} games won"
+
+[[awards.prizes]]
+type   = "best_in_group"
+field  = "Age group"
+values = ["U7", "U11", "U15"]
+title  = "Best child"
+
+[[awards.prizes]]
+type   = "place"
+places = [3, 2, 1]
+title  = "{ordinal} place"</pre>
+<table>
+  <thead><tr><th style="width:20%">type</th><th style="width:40%">Who gets the prize</th><th>Settings</th></tr></thead>
+  <tr><td><code>place</code></td><td>The players on these final places, in the given order.</td><td><code>places = [3, 2, 1]</code></td></tr>
+  <tr><td><code>wins</code></td><td>Everybody with at least this many wins (jigo = ½), in order of place.</td><td><code>min_wins = 4</code></td></tr>
+  <tr><td><code>best_in_group</code></td><td>The best placed player(s) of a group, e.g. the strongest child. With <code>groups</code>, one prize per group.</td><td><code>field</code>, <code>values = [...]</code> (one group) or <code>groups = [[...], [...]]</code>, <code>count = 1</code></td></tr>
+  <tr><td><code>rating_gain</code></td><td>The biggest TGoR gain (final TGoR minus starting TGoR).</td><td><code>count = 1</code></td></tr>
+</table>
+<ul>
+  <li><b>title</b> is the slide heading. It may contain <code>{place}</code>, <code>{ordinal}</code> (1st,
+  2nd, ...), <code>{wins}</code>, <code>{games}</code>, <code>{group}</code> and <code>{n}</code> (1, 2, ...
+  within the prize). For German titles write for example <code>title = "{place}. Platz"</code>.</li>
+  <li><b>exclusive = true</b> skips players who already received an earlier prize (earlier in the list),
+  e.g. so that the tournament winner does not also get the prize for the biggest gain.</li>
+  <li>A prize that nobody qualifies for (e.g. nobody won all games) is skipped with a note.</li>
+  <li>"Best" means best placed in the final standings, i.e. highest final TGoR.</li>
+</ul>
+
 <h2>9. How the ratings are calculated <span class="badge now">AVAILABLE</span></h2>
 <p>The TGoR update follows the EGF rating system as revised in 2021. For a game between A and B
 (Black receives <i>H</i> handicap stones):</p>
@@ -559,6 +605,7 @@ system.</p>
   <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney h9 [-o file]</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney awards [-o file]</code></td><td>Award ceremony slides → awards.pdf</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney version</code></td><td>Show the version</td><td><span class="badge now">AVAILABLE</span></td></tr>
 </table>
 <p class="small">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>

@@ -544,3 +544,37 @@ def h9(
     path = output or directory / h9_filename(cfg)
     path.write_text(h9_text(cfg, lines), encoding="utf-8")
     typer.echo(f"Wrote {path} ({len(lines)} players).")
+
+
+# ---------------------------------------------------------------- award ceremony
+
+@app.command()
+def awards(
+    output: Path = typer.Option(None, "--output", "-o", help="Output file (default: awards.pdf)."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Write the award ceremony presentation (awards.pdf): one slide per prize winner.
+
+    The prizes are configured in the [awards] section of tournament.toml.
+    """
+    from .awards import AWARDS_FILE, AwardError, awards_pdf, compute_awards
+    from .printing import PrintError
+
+    t = load_tournament(directory)
+    if t.last_round < t.cfg.tournament.rounds:
+        warn(f"only {t.last_round} of {t.cfg.tournament.rounds} rounds have been played")
+    try:
+        winners, notes = compute_awards(t)
+    except AwardError as e:
+        fail(str(e))
+    for n in notes:
+        warn(n)
+    for a in winners:
+        typer.echo(f"{a.title:<32} {t.players[a.player].name:<28} place {a.place}")
+    path = output or directory / AWARDS_FILE
+    try:
+        awards_pdf(t, winners, path)
+    except (PrintError, OSError) as e:
+        fail(f"PDF not written: {e}")
+    slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
+    typer.echo(f"Wrote {path} ({slides} slides).")

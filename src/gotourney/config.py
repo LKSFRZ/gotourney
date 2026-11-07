@@ -77,7 +77,45 @@ extra_fields = ["Fee paid", "Age group"]    # additional player data (columns in
 [registration.field_values]
 "Fee paid"  = ["yes", "no"]
 "Age group" = ["U7", "U11", "U15", "U19", "Ü50"]
+
+# Award ceremony: 'gotourney awards' writes awards.pdf with one slide per prize winner,
+# in the order of the prizes below. Prize types:
+#   "place"          places = [3, 2, 1]               players on these final places
+#   "wins"           min_wins = 4                     everybody with at least this many wins (jigo = 1/2)
+#   "best_in_group"  field = "Age group", values = [...] (one group) or groups = [[...], [...]]
+#                    (one prize per group), count = 1  best placed player(s) of the group
+#   "rating_gain"    count = 1                        biggest TGoR gain (final - start)
+# Optional for every prize:
+#   title     = slide heading; placeholders {{place}} {{ordinal}} {{wins}} {{games}} {{group}} {{n}}
+#   exclusive = true    skip players who already got an earlier prize
+[awards]
+title_slide = true           # first slide with tournament name, place and dates
+
+[[awards.prizes]]
+type     = "wins"
+min_wins = {rounds}
+title    = "All {{games}} games won"
+
+[[awards.prizes]]
+type   = "best_in_group"
+field  = "Age group"
+values = ["U7", "U11", "U15"]
+title  = "Best child"
+
+[[awards.prizes]]
+type   = "place"
+places = [3, 2, 1]
+title  = "{{ordinal}} place"
 """
+
+PRIZE_TYPES = ("place", "wins", "best_in_group", "rating_gain")
+PRIZE_PLACEHOLDERS = ("place", "ordinal", "wins", "games", "group", "n")
+DEFAULT_PRIZE_TITLES = {
+    "place": "{ordinal} place",
+    "wins": "{wins} wins",
+    "best_in_group": "Best player ({group})",
+    "rating_gain": "Biggest TGoR gain",
+}
 
 DEFAULT_EXTRA_FIELDS = ["Fee paid", "Age group"]
 DEFAULT_FIELD_VALUES = {"Fee paid": ["yes", "no"], "Age group": ["U7", "U11", "U15", "U19", "Ü50"]}
@@ -170,12 +208,44 @@ class RegistrationSettings:
 
 
 @dataclass
+class Prize:
+    type: str                                   # one of PRIZE_TYPES
+    title: str = ""
+    places: list[int] = field(default_factory=list)
+    min_wins: float = 0.0
+    group_field: str = ""                       # TOML key: field
+    values: list[str] = field(default_factory=list)
+    groups: list[list[str]] = field(default_factory=list)
+    count: int = 1
+    exclusive: bool = False
+
+    @property
+    def all_groups(self) -> list[list[str]]:
+        return self.groups or ([self.values] if self.values else [])
+
+
+def default_prizes(rounds: int) -> list[Prize]:
+    return [
+        Prize("wins", "All {games} games won", min_wins=float(rounds)),
+        Prize("best_in_group", "Best child", group_field="Age group", values=["U7", "U11", "U15"]),
+        Prize("place", "{ordinal} place", places=[3, 2, 1]),
+    ]
+
+
+@dataclass
+class AwardSettings:
+    title_slide: bool = True
+    prizes: list[Prize] = field(default_factory=list)
+
+
+@dataclass
 class Config:
     tournament: TournamentInfo = field(default_factory=TournamentInfo)
     rating: RatingSettings = field(default_factory=RatingSettings)
     handicap: HandicapSettings = field(default_factory=HandicapSettings)
     pairing: PairingSettings = field(default_factory=PairingSettings)
     registration: RegistrationSettings = field(default_factory=RegistrationSettings)
+    awards: AwardSettings = field(default_factory=AwardSettings)
 
 
 def _get(section: dict, key: str, typ, default, where: str):
@@ -270,6 +340,66 @@ def _groups(raw, where: str) -> list[list[str]]:
     return groups
 
 
+def _awards(a: dict, rounds: int) -> AwardSettings:
+    if not isinstance(a, dict):
+        raise ConfigError("awards: expected a table [awards]")
+    unknown = set(a) - {"title_slide", "prizes"}
+    if unknown:
+        raise ConfigError(f"awards: unknown key(s) {', '.join(sorted(unknown))}")
+    title_slide = a.get("title_slide", True)
+    if not isinstance(title_slide, bool):
+        raise ConfigError("awards.title_slide: expected true or false")
+    raw = a.get("prizes")
+    if raw is None:
+        return AwardSettings(title_slide, default_prizes(rounds))
+    if not isinstance(raw, list):
+        raise ConfigError("awards.prizes: write each prize as an [[awards.prizes]] table")
+    prizes = []
+    for i, p in enumerate(raw, start=1):
+        where = f"awards.prizes (prize {i})"
+        if not isinstance(p, dict):
+            raise ConfigError(f"{where}: expected a table")
+        unknown = set(p) - {"type", "title", "places", "min_wins", "field", "values", "groups",
+                            "count", "exclusive"}
+        if unknown:
+            raise ConfigError(f"{where}: unknown key(s) {', '.join(sorted(unknown))}")
+        typ = _get(p, "type", str, "", where).strip().lower()
+        if typ not in PRIZE_TYPES:
+            raise ConfigError(f"{where}: type must be one of {', '.join(PRIZE_TYPES)}")
+        title = _get(p, "title", str, DEFAULT_PRIZE_TITLES[typ], where)
+        try:
+            title.format(**{k: "x" for k in PRIZE_PLACEHOLDERS})
+        except (KeyError, IndexError, ValueError) as e:
+            raise ConfigError(f"{where}: title {title!r} has an unknown placeholder ({e}); "
+                              f"use {', '.join('{' + k + '}' for k in PRIZE_PLACEHOLDERS)}") from None
+        prize = Prize(typ, title, exclusive=bool(p.get("exclusive", False)))
+        count = p.get("count", 1)
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            raise ConfigError(f"{where}: count must be a whole number of at least 1")
+        prize.count = count
+        if typ == "place":
+            places = p.get("places")
+            if (not isinstance(places, list) or not places
+                    or not all(isinstance(x, int) and not isinstance(x, bool) and x >= 1 for x in places)):
+                raise ConfigError(f"{where}: 'places' must be a list of places, e.g. [3, 2, 1]")
+            prize.places = places
+        elif typ == "wins":
+            mw = _get(p, "min_wins", float, None, where)
+            if mw is None or mw <= 0:
+                raise ConfigError(f"{where}: 'min_wins' (a positive number) is required")
+            prize.min_wins = mw
+        elif typ == "best_in_group":
+            prize.group_field = _get(p, "field", str, "", where).strip()
+            if not prize.group_field:
+                raise ConfigError(f"{where}: 'field' is required, e.g. \"Age group\"")
+            prize.values = [v.strip() for v in _get(p, "values", list, [], where) if v.strip()]
+            prize.groups = _groups(p.get("groups", []), where)
+            if bool(prize.values) == bool(prize.groups):
+                raise ConfigError(f"{where}: give either 'values' (one group) or 'groups'")
+        prizes.append(prize)
+    return AwardSettings(title_slide, prizes)
+
+
 def _field_values(g: dict) -> dict[str, list[str]]:
     if "extra_fields" not in g and "field_values" not in g:
         return {k: list(v) for k, v in DEFAULT_FIELD_VALUES.items()}
@@ -322,6 +452,7 @@ def parse_config(data: dict) -> Config:
                                                   "registration")],
             field_values=_field_values(g),
         ),
+        awards=_awards(data.get("awards", {}), _get(t, "rounds", int, 5, "tournament")),
     )
     _validate(cfg)
     return cfg
