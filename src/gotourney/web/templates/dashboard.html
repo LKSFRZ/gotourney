@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ tour.cfg.tournament.name if tour else t("app_title") }}{% endblock %}
+{% block nav %}<a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>{% endblock %}
+
+{% macro action_form(a) -%}
+  <form method="post" action="{{ url_for('do', action=a.action) }}"
+        {% if a.confirm %}onsubmit='return confirm({{ a.confirm|tojson }});'{% endif %}>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    {% for key, value in a.form.items() %}<input type="hidden" name="{{ key }}" value="{{ value }}">{% endfor %}
+    <button type="submit" class="{{ 'primary' if a.primary else '' }}">{{ a.label }}</button>
+  </form>
+{%- endmacro %}
+
+{% macro open_form(name, label) -%}
+  <form method="post" action="{{ url_for('do', action='open_file') }}" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="name" value="{{ name }}">
+    <button type="submit" class="link">{{ label }}</button>
+  </form>
+{%- endmacro %}
+
+{% block content %}
+{% if tour %}
+<div class="title">
+  <h1>{{ tour.cfg.tournament.name }}</h1>
+  <p class="muted">
+    {{ tour.cfg.tournament.place }}{% if tour.cfg.tournament.place and tour.cfg.tournament.dates %} · {% endif %}{{ dates(tour.cfg.tournament.dates) }}
+    · {{ t("players_count", n=tour.players|length) }}
+    · {{ t("rounds_count", n=tour.cfg.tournament.rounds) }}
+  </p>
+</div>
+
+<section class="card next" aria-labelledby="next-title">
+  <p class="eyebrow">{{ t("next_step") }}</p>
+  <h2 id="next-title">{{ card.title }}</h2>
+  <p>{{ card.text }}</p>
+  {% if card.extra %}<p class="note">{{ card.extra }}</p>{% endif %}
+  <div class="actions">
+    {% for a in card.actions %}{{ action_form(a) }}{% endfor %}
+    {% for f in card.files %}
+      <a class="button" href="{{ url_for('download', name=f.file) }}" target="_blank" rel="noopener">{{ f.label }}</a>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="grid">
+  <section class="card">
+    <h2>{{ t("rounds_title") }}</h2>
+    <table class="rounds">
+      <thead><tr><th>{{ t("col_round") }}</th><th>{{ t("col_status") }}</th><th>{{ t("col_results") }}</th><th>{{ t("col_files") }}</th></tr></thead>
+      <tbody>
+      {% for row in rounds %}
+        <tr class="{{ row.status }}">
+          <td>{{ row.r }}</td>
+          <td><span class="badge {{ row.status }}">{{ t(row.status) }}</span></td>
+          <td>{% if row.boards %}{{ row.done }} / {{ row.boards }}{% endif %}</td>
+          <td class="files">
+            {% for f in row.files %}
+              {% if f.name.endswith('.ods') %}
+                {{ open_form(f.name, f.name) }}{% if f.locked %} <span class="lock" title="{{ t('locked_note', name=f.name) }}">&#128274;</span>{% endif %}
+              {% else %}
+                <a href="{{ url_for('download', name=f.name) }}" target="_blank" rel="noopener">{{ f.name }}</a>
+              {% endif %}
+            {% endfor %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("files_title") }}</h2>
+    <ul class="files">
+      {% for f in files %}
+        <li>
+          {% if f.name.endswith('.pdf') %}
+            <a href="{{ url_for('download', name=f.name) }}" target="_blank" rel="noopener">{{ f.name }}</a>
+          {% else %}
+            {{ open_form(f.name, f.name) }}
+          {% endif %}
+          {% if f.locked %}<span class="lock" title="{{ t('locked_note', name=f.name) }}">&#128274;</span>{% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+    <p class="muted small">{{ d }}</p>
+
+    <details class="help">
+      <summary>{{ t("help_title") }}</summary>
+      <ol>{% for step in t("help_steps").split("|") %}<li>{{ step[3:] }}</li>{% endfor %}</ol>
+      <p>{{ t("help_files") }}</p>
+    </details>
+  </section>
+</div>
+{% else %}
+<p class="muted small">{{ d }}</p>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Reload when a file of the tournament changes (e.g. saved in LibreOffice).
+  (function () {
+    var current = {{ folder_version|tojson }};
+    setInterval(function () {
+      fetch("{{ url_for('api_version') }}").then(function (r) { return r.json(); }).then(function (data) {
+        if (data.v && data.v !== current) { window.location.reload(); }
+      }).catch(function () {});
+    }, 3000);
+  })();
+</script>
+{% endblock %}

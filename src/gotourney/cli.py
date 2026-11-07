@@ -8,7 +8,7 @@ import typer
 
 from . import __version__, egd, hints
 from .hints import cmd
-from .config import CONFIG_FILE, Config, ConfigError, load_config, write_template
+from .config import CONFIG_FILE, Config, ConfigError, load_config
 from .ods import OdsError
 from .players import PLAYERS_FILE, PlayerList, load_players, save_players, starting_rating
 from .rank import RankError
@@ -130,20 +130,13 @@ def init(
                                  help="Language of the PDFs: en, de or fr (custom: edit tournament.toml)."),
 ) -> None:
     """Create a new tournament: tournament.toml, an empty players.ods and translation.toml."""
-    from .i18n import TRANSLATION_FILE, translation_template
+    from . import workflow
+    from .i18n import TRANSLATION_FILE
 
-    directory.mkdir(parents=True, exist_ok=True)
-    existing = [f for f in (CONFIG_FILE, PLAYERS_FILE) if (directory / f).exists()]
-    if existing:
-        fail(f"{directory} already contains {', '.join(existing)}; not overwriting.")
     try:
-        write_template(directory, name or directory.resolve().name, rounds, language)
-        cfg = load_config(directory)
-        save_players(directory, [], cfg.tournament.rounds, cfg.registration.extra_fields)
-    except (ConfigError, OdsError) as e:
+        cfg = workflow.create_tournament(directory, name, rounds, language)
+    except workflow.Problem as e:
         fail(str(e))
-    if not (directory / TRANSLATION_FILE).exists():
-        (directory / TRANSLATION_FILE).write_text(translation_template("de"), encoding="utf-8")
     typer.echo(f"Created {directory / CONFIG_FILE}, {directory / PLAYERS_FILE} and "
                f"{directory / TRANSLATION_FILE} ({cfg.tournament.rounds} rounds, "
                f"language {cfg.output.language}).")
@@ -259,6 +252,20 @@ def players_check(directory: Path = typer.Option(Path("."), "--dir", "-d", help=
         hints.show(steps)
     else:
         hints.show(steps + hints.overall(t, directory))
+
+
+@app.command()
+def web(
+    directory: Path = typer.Option(None, "--dir", "-d", help="Tournament folder to open (optional)."),
+    port: int = typer.Option(8765, "--port", help="Port of the local web server."),
+    no_browser: bool = typer.Option(False, "--no-browser", help="Do not open the browser automatically."),
+) -> None:
+    """Open the web interface in the browser (runs only on this computer)."""
+    from .web import run
+
+    if directory is None and Path(CONFIG_FILE).exists():
+        directory = Path(".")
+    run(directory, port, open_browser=not no_browser)
 
 
 @app.command()

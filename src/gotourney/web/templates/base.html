@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="{{ lang }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{{ t("app_title") }}{% endblock %}</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="{{ url_for('home', choose=1) }}">
+    <span class="stones" aria-hidden="true">&#9675;&#9679;</span> {{ t("app_title") }}
+  </a>
+  <nav>
+    {% block nav %}{% endblock %}
+    <span class="lang" aria-label="{{ t('language') }}">
+      {% for code in languages %}
+        {% if code == lang %}<strong>{{ code|upper }}</strong>{% else %}<a href="{{ url_for('set_lang', code=code) }}">{{ code|upper }}</a>{% endif %}
+      {% endfor %}
+    </span>
+  </nav>
+</header>
+<main>
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="messages" role="status">
+        {% for category, message in messages %}
+          <p class="msg {{ category }}">{{ message }}</p>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<footer>gotourney {{ version }}</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

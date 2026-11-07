@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="intro">{{ t("home_intro") }}</p>
+
+<div class="grid">
+  <section class="card">
+    <h2>{{ t("recent") }}</h2>
+    {% if recent %}
+      <ul class="recent">
+        {% for path in recent %}
+          <li>
+            <form method="post" action="{{ url_for('open_tournament') }}">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <input type="hidden" name="path" value="{{ path }}">
+              <button class="link" type="submit">{{ path.split('/')[-1].split('\\')[-1] }}</button>
+              <span class="muted small">{{ path }}</span>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">{{ t("no_recent") }}</p>
+    {% endif %}
+
+    <h2>{{ t("open_title") }}</h2>
+    <form method="post" action="{{ url_for('open_tournament') }}" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label for="path">{{ t("open_text") }}</label>
+      <input id="path" name="path" required placeholder="{{ default_folder }}">
+      <button type="submit">{{ t("open_button") }}</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>{{ t("create_title") }}</h2>
+    <form method="post" action="{{ url_for('create') }}" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label for="name">{{ t("create_name") }}</label>
+      <input id="name" name="name" required>
+      <label for="rounds">{{ t("create_rounds") }}</label>
+      <input id="rounds" name="rounds" type="number" min="1" max="20" value="5" required>
+      <label for="language">{{ t("create_language") }}</label>
+      <select id="language" name="language">
+        {% for code in ["en", "de", "fr"] %}
+          <option value="{{ code }}" {% if code == lang %}selected{% endif %}>{{ t("lang_" ~ code) }}</option>
+        {% endfor %}
+      </select>
+      <label for="folder">{{ t("create_folder") }}</label>
+      <input id="folder" name="folder" value="{{ default_folder }}">
+      <button class="primary" type="submit">{{ t("create_button") }}</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

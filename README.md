@@ -136,6 +136,18 @@ Every command accepts `--help`, and `-d <folder>` selects the tournament folder.
 tool prints **Next steps**, so you always know what to do next (switch off with
 `GOTOURNEY_NO_HINTS=1`).
 
+## Web interface (preview)
+
+```sh
+gotourney web                  # opens the browser; or: gotourney web -d my_tournament
+```
+
+A local web page (only reachable from your own computer) with an overview of the tournament and a
+button for the next step: create or open a tournament, pair and start rounds, check results, create
+standings, wall list, EGD file and award slides. Results are still entered in the round file
+(LibreOffice opens with one click); entering them in the browser, registration and a settings form
+will follow. The interface is available in English and German.
+
 ## Development
 
 ```sh

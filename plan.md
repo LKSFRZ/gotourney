@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (planned – not started)
+## 11. Web interface (in progress: W0 and W1 done)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -313,11 +313,11 @@ Because both may be used for the same step:
 
 Each phase is usable on its own; the command line keeps working throughout.
 
-- **W0 – Shared workflow layer.** Move workflow logic out of the command handlers (name lookup,
+- ✅ **W0 – Shared workflow layer.** Move workflow logic out of the command handlers (name lookup,
   finalized boards, start, hints as structured data, confirmations as callbacks) into functions
   that both the command line and the web interface call. No change in behaviour; covered by the
   existing tests.
-- **W1 – Skeleton + dashboard.** `gotourney web`; choose or create a tournament folder; dashboard
+- ✅ **W1 – Skeleton + dashboard.** `gotourney web`; choose or create a tournament folder; dashboard
   showing the phase ("Round 2 running – 3 results missing") and a big button for the next step;
   German/English switch; short help texts on every page.
 - **W2 – Results by clicking.** Board list of a round; per board *White / Jigo / Black* and forfeit

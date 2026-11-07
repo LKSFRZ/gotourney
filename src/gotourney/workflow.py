@@ -483,3 +483,28 @@ def make_awards(directory: Path, output: Path | None = None) -> AwardsOutcome:
         raise Problem("pdf", f"PDF not written: {e}") from None
     slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
     return AwardsOutcome(t, path, winners, slides, notes, warnings + tw)
+
+
+# ---------------------------------------------------------------- creating a tournament
+
+def create_tournament(directory: Path, name: str, rounds: int = 5, language: str = "en"):
+    """A new tournament folder: tournament.toml, an empty players.ods and translation.toml."""
+    from .config import CONFIG_FILE, load_config, write_template
+    from .i18n import TRANSLATION_FILE, translation_template
+    from .players import PLAYERS_FILE, save_players
+
+    directory = Path(directory)
+    existing = [f for f in (CONFIG_FILE, PLAYERS_FILE) if (directory / f).exists()]
+    if existing:
+        raise Problem("exists", f"{directory} already contains {', '.join(existing)}; not overwriting.",
+                      {"path": directory})
+    try:
+        directory.mkdir(parents=True, exist_ok=True)
+        write_template(directory, name or directory.resolve().name, rounds, language)
+        cfg = load_config(directory)
+        save_players(directory, [], cfg.tournament.rounds, cfg.registration.extra_fields)
+    except (ConfigError, OdsError, OSError) as e:
+        raise Problem("create", str(e)) from None
+    if not (directory / TRANSLATION_FILE).exists():
+        (directory / TRANSLATION_FILE).write_text(translation_template("de"), encoding="utf-8")
+    return cfg
