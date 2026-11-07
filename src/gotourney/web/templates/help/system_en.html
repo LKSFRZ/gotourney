@@ -26,6 +26,7 @@ wins.</p>
   k-factor {{ "%g"|format(cfg.rating.k_factor) }},
   top bar {% if cfg.rating.top_bar is not none %}{{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% else %}none{% endif %},
   {% if cfg.handicap.reduction %}handicap reduced by {{ cfg.handicap.reduction }}{% else %}full handicap{% endif %},
+  {% if cfg.handicap.floor is not none %}handicap floor {{ "%g"|format(cfg.handicap.floor) }} ({{ rank_of(cfg.handicap.floor) }}),{% endif %}
   {{ cfg.tournament.rounds }} rounds.
 </div>
 
@@ -144,6 +145,13 @@ new rating        r'  = r + k · con · (S − SE)
   <p>The handicap is <b>one stone per full 100 points</b> of rating difference (always rounded down, at most 9)
     {% if cfg.handicap.reduction %}, minus {{ cfg.handicap.reduction }}{% endif %}. Players may agree on another handicap
     before the game; the handicap that was actually played is used for the rating.</p>
+  {% if cfg.handicap.floor is not none %}
+  <p><b>Handicap floor:</b> for the handicap, ratings below {{ "%g"|format(cfg.handicap.floor) }}
+    ({{ rank_of(cfg.handicap.floor) }}) count as {{ "%g"|format(cfg.handicap.floor) }}. Ratings of beginners are often far
+    apart although they play at a similar level; without the floor a 25k and a 20k would play with 5 stones. With the floor
+    they play even, and a 25k gets at most the handicap of a {{ rank_of(cfg.handicap.floor) }}. Only the handicap is
+    affected – the ratings themselves and the pairing stay as they are.</p>
+  {% endif %}
   <table class="info">
     <thead><tr><th>Rating difference</th><th class="num">Handicap</th><th class="num">Komi</th></tr></thead>
     <tbody>
@@ -203,14 +211,16 @@ new rating        r'  = r + k · con · (S − SE)
 {% block scripts %}
 <script>
 (function () {
-  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }};
+  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }}, FLOOR = {{ cfg.handicap.floor|tojson }};
   var w = document.getElementById("c-white"), b = document.getElementById("c-black"), h = document.getElementById("c-h");
   var out = document.getElementById("c-out"), touched = false;
   function fmt(x) { return (x > 0 ? "+" : "") + Math.round(x); }
   function cls(x) { return x > 0 ? "up" : (x < 0 ? "down" : ""); }
   function cell(x) { return '<span class="' + cls(x) + '">' + fmt(x) + "</span>"; }
   function defaultHandicap() {
-    var stones = Math.min(Math.floor(Math.abs(w.value - b.value) / 100), 9) - RED;
+    var rw = Number(w.value), rb = Number(b.value);
+    if (FLOOR !== null) { rw = Math.max(rw, FLOOR); rb = Math.max(rb, FLOOR); }
+    var stones = Math.min(Math.floor(Math.abs(rw - rb) / 100), 9) - RED;
     return Math.max(stones, 0);
   }
   function update() {

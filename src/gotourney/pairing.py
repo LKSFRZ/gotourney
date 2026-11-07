@@ -30,6 +30,14 @@ def default_handicap(diff: float, reduction: int) -> int:
     return max(min(full_handicap(diff), MAX_HANDICAP) - reduction, 0)
 
 
+def handicap_for(cfg: Config, rating_a: float, rating_b: float) -> int:
+    """Default handicap of a pair: ratings below the handicap floor count as the floor."""
+    floor = cfg.handicap.floor
+    if floor is not None:
+        rating_a, rating_b = max(rating_a, floor), max(rating_b, floor)
+    return default_handicap(rating_a - rating_b, cfg.handicap.reduction)
+
+
 def pair_cost(r_a: float, r_b: float, extra_points: float = 0.0) -> float:
     """Cost of a pair: (TGoR difference + points of the rules that apply) squared."""
     return (abs(r_a - r_b) + extra_points) ** 2
@@ -110,7 +118,7 @@ def setup_game(t: Tournament, round_no: int, a: int, b: int, ratings: dict[int, 
                rng: random.Random, finalized: bool = False) -> Game:
     """Default handicap, komi and colours for a pair."""
     cfg = t.cfg
-    h = default_handicap(ratings[a] - ratings[b], cfg.handicap.reduction)
+    h = handicap_for(cfg, ratings[a], ratings[b])
     if h > 0:
         white, black = (a, b) if ratings[a] >= ratings[b] else (b, a)
     else:

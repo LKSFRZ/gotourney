@@ -325,7 +325,7 @@ def test_settings_page(make_tournament):
     form = {"version": version, "name": "Renamed Cup", "place": "DE, Sampletown", "date_first": "2026-04-18",
             "date_last": "2026-04-19", "class": "B", "time": "60", "rounds": "4", "comment": "",
             "language": "de", "translation_file": "translation.toml", "k_factor": "2.5", "top_bar": "2d",
-            "reduction": "1", "komi_even": "7.0", "komi_handicap": "0.5", "random_seed": "7",
+            "reduction": "1", "floor": "15k", "komi_even": "7.0", "komi_handicap": "0.5", "random_seed": "7",
             "rule_field_0": "Club", "rule_type_0": "avoid_same", "rule_points_0": "100", "rule_groups_0": "",
             "rule_field_1000": "Age group", "rule_type_1000": "prefer_same", "rule_points_1000": "200",
             "rule_groups_1000": "U7, U11 | U15",
@@ -339,6 +339,8 @@ def test_settings_page(make_tournament):
     assert (cfg.tournament.name, cfg.tournament.dates, cfg.tournament.klass, cfg.tournament.rounds) == \
         ("Renamed Cup", ["2026-04-18", "2026-04-19"], "B", 4)
     assert (cfg.output.language, cfg.rating.k_factor, cfg.rating.top_bar, cfg.handicap.reduction) == ("de", 2.5, 2200, 1)
+    assert cfg.handicap.floor == 600
+    assert 'name="floor" type="text" value="600"' in page(c.get("/settings"))
     assert [(x.field, x.type, x.points, x.groups) for x in cfg.pairing.rules] == \
         [("Club", "avoid_same", 100, []), ("Age group", "prefer_same", 200, [["U7", "U11"], ["U15"]])]
     assert cfg.registration.extra_fields == ["Fee paid", "Age group", "Email"]
@@ -544,3 +546,15 @@ def test_docs_page_and_navigation():
     assert "Pairing a round" in html
     c.get("/lang/de")
     assert "Eine Runde auslosen" in page(c.get("/docs"))
+
+
+def test_system_page_explains_the_floor(make_tournament):
+    from gotourney import settings as st
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(d)
+    html = page(c.get("/system"))
+    assert "Handicap floor" in html and "100 (20k)" in html and "FLOOR = 100.0" in html
+    _, version = st.read_settings(d)
+    st.save_settings(d, {"handicap": {"floor": "none"}}, version)
+    html = page(c.get("/system"))
+    assert "Handicap floor:" not in html and "FLOOR = null" in html

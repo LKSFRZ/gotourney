@@ -135,6 +135,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "st_sec_handicap": "Handicap and komi",
         "st_reduction": "Handicap reduction", "st_reduction_help": "0 = full handicap, 1 = one stone less, …, "
                                                                      "9 = no handicap",
+        "st_floor": "Handicap floor", "st_floor_help": "For the handicap, lower ratings count as this: a rank like "
+                                                         "20k, a GoR number, or empty for no floor.",
         "st_komi_even": "Komi in even games", "st_komi_handicap": "Komi in handicap games",
         "st_sec_pairing": "Pairing",
         "st_random_seed": "Random seed", "st_seed_help": "Same seed = same random decisions (colours, joker, "
@@ -450,6 +452,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "st_sec_handicap": "Vorgabe und Komi",
         "st_reduction": "Vorgabe-Reduzierung", "st_reduction_help": "0 = volle Vorgabe, 1 = ein Stein weniger, …, "
                                                                       "9 = keine Vorgabe",
+        "st_floor": "Vorgabe-Untergrenze", "st_floor_help": "Für die Vorgabe zählen niedrigere Wertungen als dieser Wert: ein Rang wie 20k, eine GoR-Zahl oder leer für keine Untergrenze.",
         "st_komi_even": "Komi ohne Vorgabe", "st_komi_handicap": "Komi in Vorgabepartien",
         "st_sec_pairing": "Auslosung",
         "st_random_seed": "Zufallsstartwert", "st_seed_help": "Gleicher Wert = gleiche Zufallsentscheidungen "

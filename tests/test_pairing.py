@@ -126,3 +126,39 @@ def test_manual_boards_are_kept(make_tournament):
     pairs = {frozenset(g.players()) for g in res.games}
     assert frozenset({1, 6}) in pairs and len(res.games) == 3
     assert res.games[0].finalized            # board 1: highest TGoR
+
+
+# ---------------------------------------------------------------- handicap floor
+
+def test_handicap_floor_setting():
+    from gotourney.config import ConfigError, parse_config
+    assert parse_config({}).handicap.floor == 100                     # default: 20k
+    assert parse_config({"handicap": {"floor": "15k"}}).handicap.floor == 600
+    assert parse_config({"handicap": {"floor": -250}}).handicap.floor == -250
+    assert parse_config({"handicap": {"floor": "none"}}).handicap.floor is None
+    with pytest.raises(ConfigError, match="handicap.floor"):
+        parse_config({"handicap": {"floor": "beginner"}})
+
+
+@pytest.mark.parametrize("floor, a, b, stones", [
+    ("20k", -400, 100, 0),       # 25k vs 20k: both count as 20k -> even
+    ("20k", -400, 600, 5),       # 25k vs 15k: like 20k vs 15k
+    ("20k", -400, -900, 0),      # both below the floor
+    ("20k", 2000, 1700, 3),      # above the floor: unchanged
+    ("none", -400, 100, 5),      # no floor
+    ("15k", 100, 900, 3),        # another floor: 20k counts as 15k
+])
+def test_handicap_for_uses_the_floor(floor, a, b, stones):
+    from gotourney.config import parse_config
+    from gotourney.pairing import handicap_for
+    cfg = parse_config({"handicap": {"floor": floor}})
+    assert handicap_for(cfg, a, b) == stones == handicap_for(cfg, b, a)
+
+
+@pytest.mark.parametrize("floor, stones", [('"20k"', 0), ('"none"', 5)])
+def test_pairing_applies_the_floor(make_tournament, floor, stones):
+    d = make_tournament([(-400,), (100,)], rounds=1, floor=floor)
+    games = pair_round(Tournament.load(d), 1).games
+    assert len(games) == 1 and games[0].handicap == stones
+    if stones:
+        assert games[0].white == 2                                 # the stronger player takes white

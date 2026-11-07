@@ -33,6 +33,7 @@ top_bar  = "3d"              # starting TGoR is capped here: a rank ("3d" = 2300
 
 [handicap]
 reduction     = 0            # "full minus N": written as HA[h<reduction>]; h0 = full, h9 = no handicap
+floor         = "20k"        # for the handicap, lower ratings count as this: a rank or a GoR number; "none" = no floor
 komi_even     = 6.5          # accepted standards: 6.5, 7, 7.5 (Chinese rules)
 komi_handicap = 0.5
 
@@ -136,6 +137,7 @@ class TournamentInfo:
 
 
 DEFAULT_TOP_BAR = 2300.0     # 3 dan
+DEFAULT_HANDICAP_FLOOR = 100.0   # 20 kyu
 
 
 @dataclass
@@ -147,6 +149,7 @@ class RatingSettings:
 @dataclass
 class HandicapSettings:
     reduction: int = 0
+    floor: float | None = DEFAULT_HANDICAP_FLOOR   # for the handicap, lower ratings count as this; None = no floor
     komi_even: float = 6.5
     komi_handicap: float = 0.5
 
@@ -267,13 +270,13 @@ def _get(section: dict, key: str, typ, default, where: str):
     raise ConfigError(f"{where}.{key}: expected {typ.__name__}, got {value!r}")
 
 
-def _top_bar(value) -> float | None:
-    """'3d' -> 2300, 2350 -> 2350, 'none' / '' / false -> None."""
+def _rating_value(value, where: str, example: str) -> float | None:
+    """A rating given as rank or number: '3d' -> 2300, 2350 -> 2350, 'none' / '' / false -> None."""
     from .rank import Rank, RankError
     if value is None or value is False or (isinstance(value, str) and value.strip().lower() in ("", "none", "no", "off")):
         return None
     if isinstance(value, bool):
-        raise ConfigError("rating.top_bar: expected a rank like \"3d\", a GoR number or \"none\"")
+        raise ConfigError(f"{where}: expected a rank like \"{example}\", a GoR number or \"none\"")
     if isinstance(value, (int, float)):
         return float(value)
     try:
@@ -282,7 +285,11 @@ def _top_bar(value) -> float | None:
         try:
             return float(str(value).strip())
         except ValueError:
-            raise ConfigError(f"rating.top_bar: {value!r} is not a rank (e.g. \"3d\"), a GoR number or \"none\"") from None
+            raise ConfigError(f"{where}: {value!r} is not a rank (e.g. \"{example}\"), a GoR number or \"none\"") from None
+
+
+def _top_bar(value) -> float | None:
+    return _rating_value(value, "rating.top_bar", "3d")
 
 
 def _rules(p: dict) -> list[PairingRule]:
@@ -450,6 +457,7 @@ def parse_config(data: dict) -> Config:
                               top_bar=_top_bar(r.get("top_bar", DEFAULT_TOP_BAR))),
         handicap=HandicapSettings(
             reduction=_get(h, "reduction", int, 0, "handicap"),
+            floor=_rating_value(h.get("floor", DEFAULT_HANDICAP_FLOOR), "handicap.floor", "20k"),
             komi_even=_get(h, "komi_even", float, 6.5, "handicap"),
             komi_handicap=_get(h, "komi_handicap", float, 0.5, "handicap"),
         ),

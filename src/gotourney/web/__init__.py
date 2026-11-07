@@ -799,9 +799,15 @@ def settings_from_form(f) -> dict:
             raise ValueError(f"{label or name}: {raw!r} is not a number") from None
 
     dates = [x for x in (f.get("date_first", "").strip(), f.get("date_last", "").strip()) if x]
-    top_bar = f.get("top_bar", "").strip() or "none"
-    if top_bar.replace(".", "", 1).isdigit():
-        top_bar = float(top_bar)
+    def rating_value(name: str):
+        """A rank ('3d', '20k') stays text, a number becomes a number, empty = 'none'."""
+        raw = f.get(name, "").strip().replace(",", ".") or "none"
+        try:
+            return float(raw)
+        except ValueError:
+            return raw
+
+    top_bar = rating_value("top_bar")
     changes = {
         "tournament": {"name": f.get("name", "").strip(), "place": f.get("place", "").strip(), "dates": dates,
                        "class": f.get("class", "A"), "time": num("time", int, "time"),
@@ -809,7 +815,8 @@ def settings_from_form(f) -> dict:
         "output": {"language": f.get("language", "en"),
                    "translation_file": f.get("translation_file", "").strip() or "translation.toml"},
         "rating": {"k_factor": num("k_factor", float, "k-factor"), "top_bar": top_bar},
-        "handicap": {"reduction": num("reduction", int, "reduction"), "komi_even": num("komi_even"),
+        "handicap": {"reduction": num("reduction", int, "reduction"), "floor": rating_value("floor"),
+                     "komi_even": num("komi_even"),
                      "komi_handicap": num("komi_handicap")},
         "pairing": {"random_seed": num("random_seed", int, "random seed"), "rules": []},
         "registration": {"gor_outdated_years": num("gor_outdated_years", int),

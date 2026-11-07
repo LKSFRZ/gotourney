@@ -99,6 +99,7 @@
       <label>{{ t("st_reduction") }}
         <select name="reduction">{% for h in range(10) %}<option {% if cfg.handicap.reduction == h %}selected{% endif %}>{{ h }}</option>{% endfor %}</select>
         <span class="help">{{ t("st_reduction_help") }}</span></label>
+      {{ field(t("st_floor"), "floor", ("%g"|format(cfg.handicap.floor)) if cfg.handicap.floor is not none else "", t("st_floor_help")) }}
       <label>{{ t("st_komi_even") }}
         <select name="komi_even">{% for k in [6.5, 7.0, 7.5] %}<option value="{{ k }}" {% if cfg.handicap.komi_even == k %}selected{% endif %}>{{ "%g"|format(k) }}</option>{% endfor %}</select></label>
       {{ field(t("st_komi_handicap"), "komi_handicap", "%g"|format(cfg.handicap.komi_handicap), attrs='inputmode="decimal" required') }}

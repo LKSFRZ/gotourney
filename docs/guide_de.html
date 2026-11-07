@@ -89,7 +89,8 @@
   möglichst klein sind. Zwei Spieler treffen bei der automatischen Auslosung nie zweimal aufeinander, und
   Paarungen aus demselben Verein werden nach Möglichkeit vermieden.</li>
   <li><b>Vorgabe:</b> Standardmäßig wird mit <b>voller Vorgabe</b> gespielt, ein Stein pro volle 100 TGoR-Punkte
-  Unterschied. Eine Reduzierung („voll minus N“) kann eingestellt werden. Die Spieler können für ihre Partie
+  Unterschied. Eine Reduzierung („voll minus N“) kann eingestellt werden. Für die Vorgabe zählen Wertungen
+  unter einer Untergrenze (Standard 20 Kyu) als diese Untergrenze. Die Spieler können für ihre Partie
   eine andere Vorgabe vereinbaren.</li>
   <li><b>Sieger:</b> Es gewinnt der Spieler mit der höchsten End-TGoR. Haben zwei Spieler dieselbe End-TGoR,
   liegt der mit dem <i>niedrigeren</i> Start-GoR vorne (der echte GoR, nicht durch die Obergrenze begrenzt).
@@ -260,6 +261,7 @@ anmelden:</p>
   <tr><td><code>top_bar</code></td><td>"3d"</td><td>Obergrenze für die Start-TGoR: ein Rang (<code>"3d"</code> = 2300) oder eine GoR-Zahl (<code>2350</code>). <code>"none"</code> schaltet die Obergrenze ab. Nur der Start ist begrenzt; im Turnier kann die TGoR über die Obergrenze steigen.</td></tr>
   <tr><td colspan="3"><b>[handicap]</b></td></tr>
   <tr><td><code>reduction</code></td><td>0</td><td>Vorgabe „voll minus N“. Steht in der .h9 als <code>HA[h&lt;N&gt;]</code>: h0 = volle Vorgabe, h2 = um 2 Steine reduziert, h9 = keine Vorgabe.</td></tr>
+  <tr><td><code>floor</code></td><td>"20k"</td><td>Vorgabe-Untergrenze: Für die Vorgabe zählen niedrigere Wertungen als dieser Wert, zwei Spieler darunter spielen also ohne Vorgabe. Ein Rang oder eine GoR-Zahl; <code>"none"</code> = keine Untergrenze. Wertungen und Auslosung sind nicht betroffen.</td></tr>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in Partien ohne Vorgabe: 6.5, 7 oder 7.5 (chinesische Regeln).</td></tr>
   <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in Vorgabepartien.</td></tr>
   <tr><td colspan="3"><b>[pairing]</b></td></tr>
@@ -595,6 +597,10 @@ points = 150
   <li>Mit einer Reduzierung N ist die Vorgabe <code>min(voll, 9) − N</code>, aber nie unter 0. In einem
   h2-Turnier ist die Standardvorgabe also höchstens 7. Bleibt nach der Reduzierung 1 übrig, ist das eine
   Partie mit Vorgabe 1, keine Partie ohne Vorgabe.</li>
+  <li><b>Vorgabe-Untergrenze</b> (<code>floor</code>, Standard 20k = 100): Bevor der Unterschied gebildet wird, werden
+  Wertungen unter der Untergrenze auf sie angehoben. Ein 25k (−400) spielt gegen einen 20k (100) ohne Vorgabe statt mit
+  5 Steinen; gegen einen 15k (600) bekommt er 5 Steine, wie ein 20k. Nur die Vorgabe ändert sich, nicht die Wertungen
+  oder die Auslosung.</li>
   <li><b>Farben in Partien ohne Vorgabe</b> werden über das Turnier ausgeglichen: Wer in solchen Partien öfter
   Weiß hatte, bekommt Schwarz. Bei Gleichstand wird die Farbe ausgelost. Vorgabepartien zählen dabei nicht.</li>
   <li><b>Brettreihenfolge:</b> Brett 1 ist die Paarung mit der höchsten TGoR. Finalisierte Bretter mit Brettnummer behalten sie; die übrigen Bretter bekommen in dieser Reihenfolge die freien Nummern.</li>

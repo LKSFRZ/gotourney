@@ -87,8 +87,8 @@
   blossom algorithm. Two players never meet twice through automatic pairing, and pairs from the same club
   are avoided where possible.</li>
   <li><b>Handicap:</b> games are played with <b>full handicap</b> by default, one stone per full 100 TGoR points of
-  difference. A reduction ("full minus N") can be set. Players may agree on a different handicap for their
-  game.</li>
+  difference. A reduction ("full minus N") can be set. For the handicap, ratings below a floor (default 20 kyu)
+  count as the floor. Players may agree on a different handicap for their game.</li>
   <li><b>Winner:</b> the player with the highest final TGoR wins. If two players have the same final TGoR,
   the one with the <i>lower</i> starting GoR ranks higher (the real GoR, not capped at the top bar). If that
   is also equal, a random draw decides.</li>
@@ -253,6 +253,7 @@ gotourney --help</pre>
   <tr><td><code>top_bar</code></td><td>"3d"</td><td>Cap for the starting TGoR: a rank (<code>"3d"</code> = 2300) or a GoR number (<code>2350</code>). <code>"none"</code> switches the bar off. Only the start is capped; during the tournament the TGoR can rise above the bar.</td></tr>
   <tr><td colspan="3"><b>[handicap]</b></td></tr>
   <tr><td><code>reduction</code></td><td>0</td><td>"Full minus N" handicap. Written to the .h9 as <code>HA[h&lt;N&gt;]</code>: h0 = full handicap, h2 = reduced by 2 stones, h9 = no handicap.</td></tr>
+  <tr><td><code>floor</code></td><td>"20k"</td><td>Handicap floor: for the handicap, lower ratings count as this value, so two players below it play even. A rank or a GoR number; <code>"none"</code> = no floor. Ratings and pairing are not affected.</td></tr>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in even games: 6.5, 7 or 7.5 (Chinese rules).</td></tr>
   <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in handicap games.</td></tr>
   <tr><td colspan="3"><b>[pairing]</b></td></tr>
@@ -569,6 +570,9 @@ points = 150
   <li>With a reduction N, the handicap is <code>min(full, 9) − N</code>, but never below 0. In an h2
   tournament the default handicap is therefore at most 7. A result of 1 after the reduction is a handicap-1
   game, not an even game.</li>
+  <li><b>Handicap floor</b> (<code>floor</code>, default 20k = 100): before the difference is taken, ratings below
+  the floor are raised to it. A 25k (−400) against a 20k (100) plays even instead of with 5 stones; a 25k against a
+  15k (600) gets 5 stones, like a 20k would. Only the handicap changes, not the ratings or the pairing.</li>
   <li><b>Colours in even games</b> are balanced over the tournament: the player who has had white more
   often in even games gets black. If both are equal, the colour is drawn at random. Handicap games do not
   count for the balance.</li>

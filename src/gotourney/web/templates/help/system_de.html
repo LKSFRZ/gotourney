@@ -26,6 +26,7 @@ höchste TGoR hat, gewinnt.</p>
   k-Faktor {{ "%g"|format(cfg.rating.k_factor) }},
   Obergrenze {% if cfg.rating.top_bar is not none %}{{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% else %}keine{% endif %},
   {% if cfg.handicap.reduction %}Vorgabe um {{ cfg.handicap.reduction }} verringert{% else %}volle Vorgabe{% endif %},
+  {% if cfg.handicap.floor is not none %}Vorgabe-Untergrenze {{ "%g"|format(cfg.handicap.floor) }} ({{ rank_of(cfg.handicap.floor) }}),{% endif %}
   {{ cfg.tournament.rounds }} Runden.
 </div>
 
@@ -147,6 +148,13 @@ neue Wertung         r'  = r + k · con · (S − SE)
   <p>Die Vorgabe beträgt <b>einen Stein pro vollen 100 Punkten</b> Wertungsunterschied (immer abgerundet, höchstens 9)
     {% if cfg.handicap.reduction %}, minus {{ cfg.handicap.reduction }}{% endif %}. Die Spieler dürfen vor der Partie eine
     andere Vorgabe vereinbaren; gewertet wird die Vorgabe, mit der tatsächlich gespielt wurde.</p>
+  {% if cfg.handicap.floor is not none %}
+  <p><b>Vorgabe-Untergrenze:</b> Für die Vorgabe zählen Wertungen unter {{ "%g"|format(cfg.handicap.floor) }}
+    ({{ rank_of(cfg.handicap.floor) }}) als {{ "%g"|format(cfg.handicap.floor) }}. Die Wertungen von Anfängern liegen oft weit
+    auseinander, obwohl sie ähnlich stark spielen; ohne Untergrenze bekäme ein 25k gegen einen 20k 5 Steine. Mit ihr spielen
+    beide ohne Vorgabe, und ein 25k bekommt höchstens die Vorgabe eines {{ rank_of(cfg.handicap.floor) }}. Nur die Vorgabe ist
+    betroffen – die Wertungen selbst und die Auslosung bleiben, wie sie sind.</p>
+  {% endif %}
   <table class="info">
     <thead><tr><th>Wertungsunterschied</th><th class="num">Vorgabe</th><th class="num">Komi</th></tr></thead>
     <tbody>
@@ -206,14 +214,16 @@ neue Wertung         r'  = r + k · con · (S − SE)
 {% block scripts %}
 <script>
 (function () {
-  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }};
+  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }}, FLOOR = {{ cfg.handicap.floor|tojson }};
   var w = document.getElementById("c-white"), b = document.getElementById("c-black"), h = document.getElementById("c-h");
   var out = document.getElementById("c-out"), touched = false;
   function fmt(x) { return (x > 0 ? "+" : "") + Math.round(x); }
   function cls(x) { return x > 0 ? "up" : (x < 0 ? "down" : ""); }
   function cell(x) { return '<span class="' + cls(x) + '">' + fmt(x) + "</span>"; }
   function defaultHandicap() {
-    var stones = Math.min(Math.floor(Math.abs(w.value - b.value) / 100), 9) - RED;
+    var rw = Number(w.value), rb = Number(b.value);
+    if (FLOOR !== null) { rw = Math.max(rw, FLOOR); rb = Math.max(rb, FLOOR); }
+    var stones = Math.min(Math.floor(Math.abs(rw - rb) / 100), 9) - RED;
     return Math.max(stones, 0);
   }
   function update() {
