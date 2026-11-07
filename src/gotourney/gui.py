@@ -156,7 +156,12 @@ class RegistrationApp:
             r, c = row + i // 3, (i % 3) * 2
             ttk.Label(frame, text=name).grid(row=r, column=c, sticky="e", padx=(8, 3), pady=2)
             var = tk.StringVar()
-            entry = ttk.Entry(frame, textvariable=var, width=18)
+            allowed = self.cfg.registration.values_for(name)
+            if allowed is not None:      # dropdown (empty entry = no value)
+                entry = ttk.Combobox(frame, textvariable=var, values=[""] + allowed,
+                                     state="readonly", width=16)
+            else:
+                entry = ttk.Entry(frame, textvariable=var, width=18)
             entry.grid(row=r, column=c + 1, sticky="w", pady=2)
             entry.bind("<Return>", lambda e: self.submit())
             self.extra_vars[name] = var

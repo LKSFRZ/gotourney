@@ -160,12 +160,13 @@ in every terminal without activating anything.</p>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in even games: 6.5, 7 or 7.5 (Chinese rules).</td></tr>
   <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in handicap games.</td></tr>
   <tr><td colspan="3"><b>[pairing]</b></td></tr>
-  <tr><td><code>club_penalty</code></td><td>150</td><td>Pairs from the same club are treated as if their TGoR difference were this many points larger, so the pairing avoids them where possible.</td></tr>
+  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Pairing rules (see 6.3). By default only the club rule is active: pairs from the same club are treated as if their TGoR difference were 150 points larger.</td></tr>
   <tr><td><code>random_seed</code></td><td>12345</td><td>Seed for random decisions (colours, choosing a joker, final tie-breaks). The same seed always gives the same result.</td></tr>
   <tr><td colspan="3"><b>[registration]</b></td></tr>
   <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warn if a player's last EGD tournament is older than this.</td></tr>
   <tr><td><code>rank_gor_tolerance</code></td><td>300</td><td>Warn if declared rank and GoR differ by more than this.</td></tr>
-  <tr><td><code>extra_fields</code></td><td>["Email", "Fee paid"]</td><td>Additional data you want to record for each player (see 5.6). Each name becomes a column in <code>players.ods</code> and <code>standings.ods</code> and a field in the registration window.</td></tr>
+  <tr><td><code>extra_fields</code></td><td>["Fee paid", "Age group"]</td><td>Additional data you want to record for each player (see 5.6). Each name becomes a column in <code>players.ods</code> and <code>standings.ods</code> and a field in the registration window.</td></tr>
+  <tr><td><code>[registration.field_values]</code></td><td>"Fee paid" = ["yes", "no"]</td><td>Fixed values for an additional field. Such a field gets a dropdown and only accepts these values (see 5.6).</td></tr>
 </table>
 <div class="note">Invalid settings are reported with the setting's name, for example
 <code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. You can change settings later, including
@@ -269,21 +270,34 @@ club, EGD GoR and last tournament. The declared rank is never changed. The GoR c
 corrections are never overwritten. Once round 1 has been paired, the starting GoRs are frozen.</p>
 
 <h3>5.6 Additional player data <span class="badge now">AVAILABLE</span></h3>
-<p>To record more about each player, for example e-mail, entry fee, age group or T-shirt size, list
-the fields in <code>tournament.toml</code>:</p>
+<p>To record more about each player, for example entry fee, age group, e-mail or T-shirt size, list
+the fields in <code>tournament.toml</code>. A new tournament starts with two fields, each with a fixed list
+of values:</p>
 <pre>[registration]
-extra_fields = ["Email", "Fee paid", "Age group"]</pre>
+extra_fields = ["Fee paid", "Age group"]
+
+[registration.field_values]
+"Fee paid"  = ["yes", "no"]
+"Age group" = ["U7", "U11", "U15", "U19", "Ü50"]</pre>
 <ul>
-  <li>The registration window shows an input field for each of them below <i>Notes</i>, and the table of
-  registered players shows them as columns.</li>
-  <li>On the command line: <code>-x "Fee paid=yes"</code>. Field names are not case-sensitive.</li>
+  <li><b>Dropdown or free text:</b> a field listed under <code>[registration.field_values]</code> gets a
+  dropdown in the registration window and only accepts these values (an empty value is always allowed).
+  A field that is not listed there is free text. To add an e-mail field, for example, add
+  <code>"Email"</code> to <code>extra_fields</code> and do not give it a value list.</li>
+  <li>The registration window shows the fields below <i>Notes</i>, and the table of registered players
+  shows them as columns.</li>
+  <li>On the command line: <code>-x "Fee paid=yes"</code>. Field names and dropdown values are not
+  case-sensitive (<code>-x "age group=u11"</code> is stored as <code>U11</code>); other values are
+  rejected.</li>
+  <li><code>players check</code> warns about values that are not in the list, e.g. typed by hand into
+  <code>players.ods</code>.</li>
   <li><code>players.ods</code> gets one column per field, before <i>Notes</i>.</li>
   <li><b>Columns you add to <code>players.ods</code> by hand</b> are treated the same way: they are kept when
   the tools rewrite the file, and they appear in the window (after a restart) and in the standings.</li>
   <li><code>standings.ods</code> lists all additional fields after the TGoR column, so you can, for example,
   sort or filter the standings by age group.</li>
-  <li>The values are plain text. The tools do not interpret them, so they do not affect pairing or
-  rating.</li>
+  <li>The values never affect the rating. They affect the pairing only if you write a pairing rule for
+  the field (see 6.3).</li>
 </ul>
 
 <h2>6. Pairing a round <span class="badge now">AVAILABLE</span></h2>
@@ -319,8 +333,9 @@ paired when all results of the previous rounds are entered, and not after a late
   played</b>, chosen at random if tied. If no joker is available, the tool stops and asks you to nominate
   one.</li>
   <li><b>Pair cost:</b> each possible pair gets the cost
-  <code>(|TGoR difference| + club_penalty if same club)²</code>. Pairs who already played each other in
-  this tournament, including forfeited games, are excluded.</li>
+  <code>(|TGoR difference| + points of the pairing rules that apply)²</code> (see 6.3; by default 150 points
+  for two players of the same club). Pairs who already played each other in this tournament, including
+  forfeited games, and pairs forbidden by a rule are excluded.</li>
   <li><b>Optimal pairing:</b> the blossom algorithm (maximum weight matching) chooses the pairing with the
   smallest total cost. Squaring the cost prefers several medium differences over a single very uneven
   pair.</li>
@@ -328,7 +343,48 @@ paired when all results of the previous rounds are entered, and not after a late
   players), the tool stops. Pair the problematic players by hand as manual boards and run it again.</li>
 </ul>
 
-<h3>6.3 Handicap, komi and colours</h3>
+<h3>6.3 Pairing rules</h3>
+<p>Pairing rules use the player columns to make some pairs more expensive or impossible. They are set in
+<code>tournament.toml</code>. A new tournament has one active rule, the club rule; the other examples in the
+file are commented out (off):</p>
+<pre>[[pairing.rules]]
+field  = "Club"
+type   = "avoid_same"
+points = 150
+
+# children preferably play children of their own age group (switched off)
+# [[pairing.rules]]
+# field  = "Age group"
+# type   = "prefer_same"
+# points = 200
+# values = ["U7", "U11", "U15"]</pre>
+<table>
+  <thead><tr><th style="width:20%">Key</th><th>Meaning</th></tr></thead>
+  <tr><td><code>field</code></td><td><code>Club</code>, <code>Country</code>, <code>Rank</code> or an additional field (5.6), e.g. <code>Age group</code>.</td></tr>
+  <tr><td><code>type = "avoid_same"</code></td><td>Players with the <b>same</b> value: the pair counts as <code>points</code> more TGoR difference.</td></tr>
+  <tr><td><code>type = "prefer_same"</code></td><td>Players with <b>different</b> values: the pair counts as <code>points</code> more TGoR difference.</td></tr>
+  <tr><td><code>type = "forbid_same"</code></td><td>Players with the same value are never paired automatically (e.g. a <i>Family</i> field).</td></tr>
+  <tr><td><code>type = "require_same"</code></td><td>Players with different values are never paired automatically.</td></tr>
+  <tr><td><code>values</code></td><td>Optional. The rule only applies when a player has one of these values. With the example above, a U11 child against an adult costs 200 points, but adults among themselves are not affected.</td></tr>
+</table>
+<ul>
+  <li><b>Empty cells:</b> for <code>avoid_same</code> and <code>forbid_same</code> an empty cell never counts
+  as "the same" (two players without a club are not in the same club). For <code>prefer_same</code> and
+  <code>require_same</code> two empty cells count as the same value (two adults without an age group).</li>
+  <li>Values are compared without regard to case or surrounding spaces.</li>
+  <li><b>How many points?</b> The points are added to the TGoR difference, so 200 points means "a child
+  against an adult is as bad as a 200-point difference". A higher value makes the rule stronger, but the
+  pairing will then accept larger rating differences to satisfy it. A simulated tournament
+  help to find a good value.</li>
+  <li>To switch a rule off, delete it or put <code>#</code> in front of its lines. With no rule at all, the
+  pairing uses only the TGoR difference.</li>
+  <li><code>gotourney pair</code> reports how many boards each rule applies to. Manual boards may break
+  rules; you get a warning for forbidden pairs.</li>
+  <li>Too many hard rules (<code>forbid_same</code>, <code>require_same</code>) can make a complete
+  pairing impossible; the tool then stops and asks for manual boards.</li>
+</ul>
+
+<h3>6.4 Handicap, komi and colours</h3>
 <table>
   <thead><tr><th style="width:30%">TGoR difference</th><th style="width:20%">Full handicap</th><th>Game</th></tr></thead>
   <tr><td>0 – 50</td><td>0</td><td>Even game, komi <code>komi_even</code>, colours balanced</td></tr>
@@ -349,7 +405,7 @@ paired when all results of the previous rounds are entered, and not after a late
   <li><b>Board order:</b> board 1 is the pair with the highest TGoR. Manual boards are sorted in as well.</li>
 </ul>
 
-<h3>6.4 The round file round_r.ods</h3>
+<h3>6.5 The round file round_r.ods</h3>
 <table>
   <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
   <tr><td>1</td><td>1</td><td>2543</td><td>○ 5d Maekawa Kaku</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Lewerenz Bernd</td><td>2297</td><td>3</td><td>2</td><td>0.5</td><td></td></tr>

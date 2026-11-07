@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import math
 import random
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 
 import networkx as nx
 
-from .config import Config
+from .config import RULE_BUILTIN_FIELDS, Config, PairingRule
 from .models import Game
+from .players import field_value
 from .tournament import Tournament, TournamentError
 
 MAX_HANDICAP = 9
@@ -28,13 +30,47 @@ def default_handicap(diff: float, reduction: int) -> int:
     return max(min(full_handicap(diff), MAX_HANDICAP) - reduction, 0)
 
 
-def pair_cost(r_a: float, r_b: float, same_club: bool, club_penalty: float) -> float:
-    return (abs(r_a - r_b) + (club_penalty if same_club else 0.0)) ** 2
+def pair_cost(r_a: float, r_b: float, extra_points: float = 0.0) -> float:
+    """Cost of a pair: (TGoR difference + points of the rules that apply) squared."""
+    return (abs(r_a - r_b) + extra_points) ** 2
 
 
-def same_club(t: Tournament, a: int, b: int) -> bool:
-    ca, cb = t.players[a].club.strip().lower(), t.players[b].club.strip().lower()
-    return bool(ca) and ca == cb
+def _norm(value: str) -> str:
+    return value.strip().casefold()
+
+
+def rule_applies(rule: PairingRule, value_a: str, value_b: str) -> bool:
+    """Does the rule apply to a pair whose players have these values in the rule's field?"""
+    a, b = _norm(value_a), _norm(value_b)
+    only = {_norm(v) for v in rule.values}
+    if rule.type in ("avoid_same", "forbid_same"):
+        # an empty cell is not a value: players without a club are not "in the same club"
+        return bool(a) and a == b and (not only or a in only)
+    # prefer_same / require_same: two empty cells count as the same value
+    return a != b and (not only or a in only or b in only)
+
+
+def check_rule_fields(t: Tournament) -> None:
+    known = {f.lower() for f in RULE_BUILTIN_FIELDS} | {f.lower() for f in t.extra_fields}
+    for rule in t.cfg.pairing.rules:
+        if rule.field.lower() not in known:
+            raise PairingError(
+                f"pairing rule '{rule.describe()}': there is no column {rule.field!r} in players.ods "
+                f"(rules can use {', '.join(RULE_BUILTIN_FIELDS)} or an additional field)")
+
+
+def pair_rules(t: Tournament, a: int, b: int) -> tuple[float, bool, list[PairingRule]]:
+    """(extra points, forbidden?, rules that apply) for a pair of players."""
+    points, forbidden, applied = 0.0, False, []
+    pa, pb = t.players[a], t.players[b]
+    for rule in t.cfg.pairing.rules:
+        if rule_applies(rule, field_value(pa, rule.field), field_value(pb, rule.field)):
+            applied.append(rule)
+            if rule.hard:
+                forbidden = True
+            else:
+                points += rule.points
+    return points, forbidden, applied
 
 
 def rng_for(cfg: Config, round_no: int, purpose: str) -> random.Random:
@@ -47,6 +83,7 @@ class PairingResult:
     games: list[Game]
     sitting_out: list[tuple[int, str]]        # (player ID, reason)
     total_cost: float
+    rule_hits: Counter = field(default_factory=Counter)   # rule description -> number of boards
 
 
 def setup_game(t: Tournament, round_no: int, a: int, b: int, ratings: dict[int, float],
@@ -86,6 +123,7 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
             raise PairingError(f"round {r} is not complete; enter all results first")
     manual_games = list(manual_games or [])
     rng = rng_for(cfg, round_no, "colours")
+    check_rule_fields(t)
 
     # manual boards: keep, fill in defaults where handicap was left empty (done by caller)
     on_manual = {pid for g in manual_games for pid in g.players()}
@@ -115,7 +153,10 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
         for b in participants[i + 1:]:
             if frozenset((a, b)) in played:
                 continue
-            costs[(a, b)] = pair_cost(ratings[a], ratings[b], same_club(t, a, b), cfg.pairing.club_penalty)
+            points, forbidden, _ = pair_rules(t, a, b)
+            if forbidden:
+                continue
+            costs[(a, b)] = pair_cost(ratings[a], ratings[b], points)
     big = max(costs.values(), default=0.0) + 1.0
     for (a, b), c in costs.items():
         graph.add_edge(a, b, weight=big - c)
@@ -123,17 +164,23 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
     if 2 * len(matching) != len(participants):
         matched = {p for pair in matching for p in pair}
         unmatched = [t.name(p) for p in participants if p not in matched]
+        hard = [r.describe() for r in cfg.pairing.rules if r.hard]
         raise PairingError(
-            "no complete pairing without rematches is possible. Unpaired: " + ", ".join(unmatched)
+            "no complete pairing without rematches" + (f" or forbidden pairs ({'; '.join(hard)})" if hard else "")
+            + " is possible. Unpaired: " + ", ".join(unmatched)
             + ". Pair some players by hand as manual boards (pair --template) and run pair again.")
 
     games = list(manual_games)
     total = 0.0
+    hits: Counter = Counter()
     for a, b in sorted((tuple(sorted(pair)) for pair in matching)):
         games.append(setup_game(t, round_no, a, b, ratings, rng))
         total += costs[(a, b)] if (a, b) in costs else costs[(b, a)]
+    for g in games:
+        for rule in pair_rules(t, g.white, g.black)[2]:
+            hits[rule.describe() + (" (manual board)" if g.manual else "")] += 1
     games.sort(key=lambda g: (-max(ratings[g.white], ratings[g.black]),
                               -min(ratings[g.white], ratings[g.black]), g.white))
     for i, g in enumerate(games, start=1):
         g.board = i
-    return PairingResult(games, sitting_out, total)
+    return PairingResult(games, sitting_out, total, hits)

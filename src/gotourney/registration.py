@@ -140,6 +140,11 @@ def check_players(players: list[Player], cfg: Config, today: dt.date | None = No
         if name and len(ps) > 1:
             warn(f"same name for IDs {', '.join(str(p.id) for p in ps)} ({ps[0].name})")
 
+    for p in players:
+        for name, value in p.extra.items():
+            allowed = cfg.registration.values_for(name)
+            if allowed is not None and value and value.casefold() not in {v.casefold() for v in allowed}:
+                warn(f"ID {p.id} ({p.name}): {name} {value!r} is not one of {', '.join(allowed)}")
     bar = cfg.rating.top_bar
     if bar is not None:
         above = [p for p in players if p.gor is not None and p.gor > bar]

@@ -22,8 +22,8 @@ def test_default_handicap_reduction_and_cap():
 
 
 def test_pair_cost():
-    assert pair_cost(2000, 1900, False, 150) == 100 ** 2
-    assert pair_cost(2000, 1900, True, 150) == 250 ** 2
+    assert pair_cost(2000, 1900) == 100 ** 2
+    assert pair_cost(2000, 1900, 150) == 250 ** 2
 
 
 def write_results(t, r, games, results):
@@ -48,7 +48,7 @@ def test_club_penalty_avoids_same_club(make_tournament):
     pairs = {frozenset(g.players()) for g in pair_round(Tournament.load(d), 1).games}
     assert frozenset({1, 2}) not in pairs
     d2 = make_tournament([(2000, "HH"), (1990, "HH"), (1950, "B"), (1940, "SN")],
-                         club_penalty=0)
+                         points=0)
     pairs2 = {frozenset(g.players()) for g in pair_round(Tournament.load(d2), 1).games}
     assert frozenset({1, 2}) in pairs2
 

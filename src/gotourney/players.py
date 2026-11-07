@@ -204,6 +204,18 @@ def extra_value(player: Player, name: str) -> str:
     return next((v for k, v in player.extra.items() if k.strip().lower() == key), "")
 
 
+def field_value(player: Player, name: str) -> str:
+    """Value of a column usable in pairing rules: Club, Country, Rank or an additional field."""
+    key = name.strip().lower()
+    if key == "club":
+        return player.club
+    if key == "country":
+        return player.country
+    if key == "rank":
+        return str(player.rank or "")
+    return extra_value(player, name)
+
+
 def starting_rating(player: Player) -> float:
     """Starting TGoR: the GoR column, or the value of the declared rank."""
     if player.gor is not None:

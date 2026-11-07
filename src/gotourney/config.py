@@ -33,14 +33,48 @@ komi_even     = 6.5          # accepted standards: 6.5, 7, 7.5 (Chinese rules)
 komi_handicap = 0.5
 
 [pairing]
-club_penalty = 150           # added to the TGoR difference of same-club pairs
 random_seed  = 12345         # colour choice and random tie-breaks
+
+# Pairing rules: each rule makes some pairs more expensive (or impossible) for the pairing.
+#   field  = a player column: "Club", "Country", "Rank" or an additional field (e.g. "Age group")
+#   type   = "avoid_same"    same value: pair counts as `points` more TGoR difference
+#            "prefer_same"   different values: pair counts as `points` more TGoR difference
+#            "forbid_same"   same value: never paired automatically
+#            "require_same"  different values: never paired automatically
+#   values = optional: the rule only applies when a player has one of these values
+# An empty cell never counts as "same" for avoid_same / forbid_same (e.g. players without club);
+# for prefer_same / require_same, two empty cells count as the same value.
+# Delete or comment out a rule to switch it off.
+
+[[pairing.rules]]
+field  = "Club"
+type   = "avoid_same"
+points = 150
+
+# Example (off): children preferably play children of their own age group
+# [[pairing.rules]]
+# field  = "Age group"
+# type   = "prefer_same"
+# points = 200
+# values = ["U7", "U11", "U15"]
 
 [registration]
 gor_outdated_years = 5       # warn if a player's last EGD tournament is older than this
 rank_gor_tolerance = 300     # warn if declared rank and GoR differ by more than this
-extra_fields = []            # additional player data, e.g. ["Email", "Fee paid", "Age group"]
+extra_fields = ["Fee paid", "Age group"]    # additional player data (columns in players.ods)
+
+# Fields with a list of values get a dropdown in the registration window and only accept
+# these values; additional fields not listed here are free text.
+[registration.field_values]
+"Fee paid"  = ["yes", "no"]
+"Age group" = ["U7", "U11", "U15", "U19", "Ü50"]
 """
+
+DEFAULT_EXTRA_FIELDS = ["Fee paid", "Age group"]
+DEFAULT_FIELD_VALUES = {"Fee paid": ["yes", "no"], "Age group": ["U7", "U11", "U15", "U19", "Ü50"]}
+RULE_TYPES = ("avoid_same", "prefer_same", "forbid_same", "require_same")
+RULE_BUILTIN_FIELDS = ("Club", "Country", "Rank")
+DEFAULT_CLUB_PENALTY = 150.0
 
 
 class ConfigError(Exception):
@@ -76,16 +110,47 @@ class HandicapSettings:
 
 
 @dataclass
+class PairingRule:
+    field: str
+    type: str                  # one of RULE_TYPES
+    points: float = 0.0        # for avoid_same / prefer_same
+    values: list[str] = field(default_factory=list)
+
+    @property
+    def hard(self) -> bool:
+        return self.type in ("forbid_same", "require_same")
+
+    def describe(self) -> str:
+        text = f"{self.field}: {self.type.replace('_', ' ')}"
+        if not self.hard:
+            text += f" ({self.points:g} points)"
+        if self.values:
+            text += f" for {', '.join(self.values)}"
+        return text
+
+
+def default_rules() -> list[PairingRule]:
+    return [PairingRule("Club", "avoid_same", DEFAULT_CLUB_PENALTY)]
+
+
+@dataclass
 class PairingSettings:
-    club_penalty: float = 150.0
     random_seed: int = 12345
+    rules: list[PairingRule] = field(default_factory=default_rules)
 
 
 @dataclass
 class RegistrationSettings:
     gor_outdated_years: int = 5
     rank_gor_tolerance: int = 300
-    extra_fields: list[str] = field(default_factory=list)
+    extra_fields: list[str] = field(default_factory=lambda: list(DEFAULT_EXTRA_FIELDS))
+    field_values: dict[str, list[str]] = field(
+        default_factory=lambda: {k: list(v) for k, v in DEFAULT_FIELD_VALUES.items()})
+
+    def values_for(self, name: str) -> list[str] | None:
+        """Allowed values (dropdown) of an additional field, or None for free text."""
+        key = name.strip().lower()
+        return next((v for k, v in self.field_values.items() if k.strip().lower() == key), None)
 
 
 @dataclass
@@ -133,6 +198,58 @@ def _top_bar(value) -> float | None:
             raise ConfigError(f"rating.top_bar: {value!r} is not a rank (e.g. \"3d\"), a GoR number or \"none\"") from None
 
 
+def _rules(p: dict) -> list[PairingRule]:
+    raw = p.get("rules")
+    if raw is None:
+        # no rules configured: the club rule (older files: with their club_penalty)
+        return [PairingRule("Club", "avoid_same", _get(p, "club_penalty", float, DEFAULT_CLUB_PENALTY, "pairing"))]
+    if "club_penalty" in p:
+        raise ConfigError("pairing.club_penalty cannot be combined with [[pairing.rules]]; "
+                          "set the points of the Club rule instead")
+    if not isinstance(raw, list):
+        raise ConfigError("pairing.rules: write each rule as a [[pairing.rules]] table")
+    rules = []
+    for i, r in enumerate(raw, start=1):
+        where = f"pairing.rules (rule {i})"
+        if not isinstance(r, dict):
+            raise ConfigError(f"{where}: expected a table")
+        unknown = set(r) - {"field", "type", "points", "values"}
+        if unknown:
+            raise ConfigError(f"{where}: unknown key(s) {', '.join(sorted(unknown))}")
+        name = _get(r, "field", str, "", where).strip()
+        if not name:
+            raise ConfigError(f"{where}: 'field' is missing")
+        typ = _get(r, "type", str, "", where).strip().lower()
+        if typ not in RULE_TYPES:
+            raise ConfigError(f"{where}: type must be one of {', '.join(RULE_TYPES)}")
+        points = _get(r, "points", float, None, where)
+        if typ in ("avoid_same", "prefer_same"):
+            if points is None:
+                raise ConfigError(f"{where}: {typ} needs 'points'")
+            if points < 0:
+                raise ConfigError(f"{where}: points must not be negative")
+        values = [v.strip() for v in _get(r, "values", list, [], where) if v.strip()]
+        rules.append(PairingRule(name, typ, points or 0.0, values))
+    return rules
+
+
+def _field_values(g: dict) -> dict[str, list[str]]:
+    if "extra_fields" not in g and "field_values" not in g:
+        return {k: list(v) for k, v in DEFAULT_FIELD_VALUES.items()}
+    raw = g.get("field_values", {})
+    if not isinstance(raw, dict):
+        raise ConfigError("registration.field_values: expected a table like \"Fee paid\" = [\"yes\", \"no\"]")
+    result = {}
+    for name, values in raw.items():
+        vals = [v.strip() for v in _get(raw, name, list, [], "registration.field_values")]
+        if not vals or any(not v for v in vals):
+            raise ConfigError(f"registration.field_values.{name}: give a list of non-empty values")
+        if len({v.lower() for v in vals}) != len(vals):
+            raise ConfigError(f"registration.field_values.{name}: a value is listed twice")
+        result[name.strip()] = vals
+    return result
+
+
 def parse_config(data: dict) -> Config:
     t = data.get("tournament", {})
     r = data.get("rating", {})
@@ -158,13 +275,15 @@ def parse_config(data: dict) -> Config:
             komi_handicap=_get(h, "komi_handicap", float, 0.5, "handicap"),
         ),
         pairing=PairingSettings(
-            club_penalty=_get(p, "club_penalty", float, 150.0, "pairing"),
             random_seed=_get(p, "random_seed", int, 12345, "pairing"),
+            rules=_rules(p),
         ),
         registration=RegistrationSettings(
             gor_outdated_years=_get(g, "gor_outdated_years", int, 5, "registration"),
             rank_gor_tolerance=_get(g, "rank_gor_tolerance", int, 300, "registration"),
-            extra_fields=[f.strip() for f in _get(g, "extra_fields", list, [], "registration")],
+            extra_fields=[f.strip() for f in _get(g, "extra_fields", list, DEFAULT_EXTRA_FIELDS,
+                                                  "registration")],
+            field_values=_field_values(g),
         ),
     )
     _validate(cfg)
@@ -182,9 +301,14 @@ def _validate(cfg: Config) -> None:
         )
     if cfg.rating.k_factor <= 0:
         raise ConfigError("rating.k_factor must be positive")
-    if cfg.pairing.club_penalty < 0:
-        raise ConfigError("pairing.club_penalty must not be negative")
     from .players import is_builtin_column
+    for rule in cfg.pairing.rules:
+        builtin = next((b for b in RULE_BUILTIN_FIELDS if b.lower() == rule.field.lower()), None)
+        if builtin:
+            rule.field = builtin
+        elif is_builtin_column(rule.field):
+            raise ConfigError(f"pairing.rules: field {rule.field!r} cannot be used in a rule "
+                              f"(use {', '.join(RULE_BUILTIN_FIELDS)} or an additional field)")
     seen = set()
     for name in cfg.registration.extra_fields:
         if not name:
@@ -194,6 +318,9 @@ def _validate(cfg: Config) -> None:
         if name.lower() in seen:
             raise ConfigError(f"registration.extra_fields: {name!r} is listed twice")
         seen.add(name.lower())
+    for name in cfg.registration.field_values:
+        if name.lower() not in seen:
+            raise ConfigError(f"registration.field_values: {name!r} is not in registration.extra_fields")
 
 
 def load_config(directory: Path) -> Config:

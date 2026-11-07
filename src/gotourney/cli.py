@@ -84,8 +84,9 @@ def lookup_pin(pin: str) -> "egd.EGDPlayer | None":
         return None
 
 
-def parse_extra(items: list[str], fields: list[str]) -> dict[str, str]:
-    """'-x Field=value' options -> {field: value}; the field must be a known additional field."""
+def parse_extra(items: list[str], fields: list[str], cfg: Config) -> dict[str, str]:
+    """'-x Field=value' options -> {field: value}; the field must be a known additional field
+    and, for a field with a list of values (dropdown), the value must be one of them."""
     by_key = {f.lower(): f for f in fields}
     data = {}
     for item in items:
@@ -97,7 +98,14 @@ def parse_extra(items: list[str], fields: list[str]) -> dict[str, str]:
             known = ", ".join(fields) if fields else "none defined"
             fail(f"unknown field {name.strip()!r} (additional fields: {known}). "
                  f"Add it to extra_fields in {CONFIG_FILE}.")
-        data[field] = value.strip()
+        value = value.strip()
+        allowed = cfg.registration.values_for(field)
+        if allowed is not None and value:
+            match = next((v for v in allowed if v.casefold() == value.casefold()), None)
+            if match is None:
+                fail(f"{field}: {value!r} is not allowed (choose one of: {', '.join(allowed)})")
+            value = match
+        data[field] = value
     return data
 
 
@@ -160,7 +168,7 @@ def players_add(
     cfg, pl = load(directory)
     path = directory / PLAYERS_FILE
     ensure_not_open(path)
-    extra_data = parse_extra(extra or [], pl.extra_fields)
+    extra_data = parse_extra(extra or [], pl.extra_fields, cfg)
     egd_player = None
     if pin:
         egd_player = lookup_pin(pin.strip())
@@ -339,7 +347,7 @@ def pair(
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
     """Pair a round. Boards marked 'x' in the Manual column of an existing round file are kept."""
-    from .pairing import PairingError, pair_round, rng_for, setup_game
+    from .pairing import PairingError, check_rule_fields, pair_round, pair_rules, rng_for, setup_game
 
     t = load_tournament(directory)
     show_warnings(t, skip=(f"round {round_no}:",))
@@ -388,6 +396,13 @@ def pair(
             manual.append(g)
             if frozenset(g.players()) in t.played_pairs(before_round=round_no):
                 warn(f"manual board: {names[g.white]} and {names[g.black]} already played each other")
+            try:
+                check_rule_fields(t)
+                hard = [r.describe() for r in pair_rules(t, g.white, g.black)[2] if r.hard]
+            except PairingError:
+                hard = []
+            if hard:
+                warn(f"manual board: {names[g.white]} - {names[g.black]} breaks rule {'; '.join(hard)}")
         dropped = len(existing.games) - len(manual)
         if dropped:
             typer.echo(f"{dropped} board(s) without 'x' in the Manual column are paired again.")
@@ -398,6 +413,8 @@ def pair(
     save_round(path, result.games, labels, ratings, not_playing=[
         (pid, labels[pid], reason) for pid, reason in result.sitting_out])
     _print_round(t, result.games, ratings, result.sitting_out)
+    for rule, n in sorted(result.rule_hits.items()):
+        typer.echo(f"Rule {rule}: applies to {n} board{'s' if n != 1 else ''}")
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
     _write_pairing_pdf(directory, round_no)
 

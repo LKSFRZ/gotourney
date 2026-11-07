@@ -13,8 +13,13 @@ runner = CliRunner()
 
 
 def set_fields(d, fields):
+    """Set extra_fields and drop the dropdown lists of the template."""
+    import re
     toml = d / "tournament.toml"
-    toml.write_text(toml.read_text().replace("extra_fields = []", f"extra_fields = {fields!r}".replace("'", '"')))
+    text = re.sub(r"^extra_fields\s*=.*$", f"extra_fields = {fields!r}".replace("'", '"'), toml.read_text(),
+                  flags=re.M)
+    text = text[:text.index("[registration.field_values]")]
+    toml.write_text(text)
 
 
 @pytest.mark.parametrize("fields, msg", [(["Club"], "standard column"), (["R2"], "standard column"),
@@ -35,7 +40,7 @@ def test_cli_add_with_extra_fields_and_standings(tmp_path):
     r = runner.invoke(app, ["players", "add", "X", "Y", "-r", "2k", "-x", "Shirt=L", "-d", d])
     assert r.exit_code == 1 and "unknown field" in r.output
     pl = load_players(tmp_path, 1, ["Email", "Fee paid"])
-    assert pl.extra_fields == ["Email", "Fee paid"]
+    assert pl.extra_fields == ["Email", "Fee paid", "Age group"]   # column from init is kept
     assert pl.players[0].extra == {"Email": "john@example.org", "Fee paid": "yes"}
     header = read_sheet(tmp_path / "players.ods").header
     assert header.index("Email") < header.index("Notes")
