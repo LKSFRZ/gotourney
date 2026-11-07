@@ -9,6 +9,7 @@ from pathlib import Path
 from .config import Config
 from .ods import Column, read_sheet, require_columns, write_sheets
 from .pairing import rng_for
+from .players import extra_value
 from .rank import Rank
 from .tournament import Tournament
 
@@ -48,6 +49,7 @@ def standings_rows(t: Tournament, after_round: int) -> tuple[list[Column], list[
             Column("Club", 1.6), Column("GoR", 1.6), Column("Start TGoR", 2.2)]
     cols += [Column(f"after R{r}", 2.0) for r in range(1, after_round + 1)]
     cols += [Column("Games", 1.6), Column("Wins", 1.4), Column("TGoR", 1.8)]
+    cols += [Column(f, max(2.5, min(6.0, 0.25 * len(f) + 1.0))) for f in t.extra_fields]
     rows = []
     for place, pid in enumerate(order, start=1):
         p = t.players[pid]
@@ -57,7 +59,8 @@ def standings_rows(t: Tournament, after_round: int) -> tuple[list[Column], list[
         rows.append([place, pid, p.name, str(p.rank or ""), p.club, round(t.start_gor[pid]),
                      round(t.start[pid])]
                     + [round(t.ratings[r][pid]) for r in range(1, after_round + 1)]
-                    + [games, wins, round(t.ratings[after_round][pid])])
+                    + [games, wins, round(t.ratings[after_round][pid])]
+                    + [extra_value(p, f) for f in t.extra_fields])
     return cols, rows
 
 

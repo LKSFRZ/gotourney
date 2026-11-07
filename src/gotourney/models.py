@@ -66,6 +66,7 @@ class Player:
     joker: bool = False
     rounds: set[int] = field(default_factory=set)
     notes: str = ""
+    extra: dict[str, str] = field(default_factory=dict)   # additional registration data, by field name
 
     @property
     def name(self) -> str:

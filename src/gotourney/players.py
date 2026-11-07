@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from .models import Player
@@ -21,7 +22,30 @@ def round_column(n: int) -> str:
     return f"R{n}"
 
 
-def columns(rounds: int) -> list[Column]:
+BUILTIN_COLUMNS = ["ID", "Surname", "First name", "Rank", "GoR", "EGD PIN", "Country", "Club",
+                   "Joker", "EGD GoR", "Last EGD tournament", "Notes"]
+_BUILTIN_KEYS = {c.lower() for c in BUILTIN_COLUMNS}
+
+
+def is_builtin_column(name: str) -> bool:
+    """Columns the tools manage themselves (including round columns R1, R2, ...)."""
+    n = name.strip().lower()
+    return n in _BUILTIN_KEYS or bool(re.fullmatch(r"r\d+", n))
+
+
+def merge_fields(*groups) -> list[str]:
+    """Field names in order of first appearance, without (case-insensitive) duplicates."""
+    result, seen = [], set()
+    for group in groups:
+        for name in group:
+            key = name.strip().lower()
+            if key and key not in seen:
+                seen.add(key)
+                result.append(name.strip())
+    return result
+
+
+def columns(rounds: int, extra_fields=()) -> list[Column]:
     return (
         [
             Column("ID", 1.2),
@@ -38,8 +62,9 @@ def columns(rounds: int) -> list[Column]:
         + [
             Column("EGD GoR", 1.9),
             Column("Last EGD tournament", 3.8),
-            Column("Notes", 6.0),
         ]
+        + [Column(f, max(2.5, min(6.0, 0.25 * len(f) + 1.0))) for f in extra_fields]
+        + [Column("Notes", 6.0)]
     )
 
 
@@ -47,6 +72,7 @@ def columns(rounds: int) -> list[Column]:
 class PlayerList:
     players: list[Player]
     warnings: list[str]
+    extra_fields: list[str] = field(default_factory=list)   # configured + additional columns in the file
 
     def by_id(self) -> dict[int, Player]:
         return {p.id: p for p in self.players}
@@ -65,8 +91,12 @@ def _number(text: str, what: str, where: str) -> float | None:
         raise OdsError(f"{where}: {what} {text!r} is not a number") from None
 
 
-def load_players(directory: Path, rounds: int) -> PlayerList:
-    """Read players.ods. Raises OdsError on problems that make the file unusable."""
+def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
+    """Read players.ods. Raises OdsError on problems that make the file unusable.
+
+    ``extra_fields`` are the additional fields from the settings. Any other column in the file
+    that the tools do not know is kept as an additional field as well.
+    """
     path = Path(directory) / PLAYERS_FILE
     sheet = read_sheet(path)
     require_columns(sheet, path, REQUIRED)
@@ -83,6 +113,7 @@ def load_players(directory: Path, rounds: int) -> PlayerList:
         warnings.append(
             f"{path.name}: column(s) {', '.join(extra)} ignored, the tournament has {rounds} rounds"
         )
+    fields = merge_fields(extra_fields, (h for h in sheet.header if h.strip() and not is_builtin_column(h)))
     # Rounds added later (no column in the file yet) count as played by everyone.
     new_rounds = {i for i in range(1, rounds + 1) if round_column(i) not in headers}
     for row in sheet.rows:
@@ -128,17 +159,20 @@ def load_players(directory: Path, rounds: int) -> PlayerList:
                     joker=_flag(row.text("Joker")),
                     rounds=player_rounds,
                     notes=row.text("Notes"),
+                    extra={f: row.text(f) for f in fields if row.text(f)},
                 )
             )
         except OdsError as e:
             errors.append(str(e))
     if errors:
         raise OdsError("\n".join(errors))
-    return PlayerList(players, warnings)
+    return PlayerList(players, warnings, fields)
 
 
-def save_players(directory: Path, players: list[Player], rounds: int) -> Path:
+def save_players(directory: Path, players: list[Player], rounds: int, extra_fields=()) -> Path:
+    """Write players.ods. Additional fields: those given, then any others the players have."""
     path = Path(directory) / PLAYERS_FILE
+    fields = merge_fields(extra_fields, (k for p in players for k in p.extra))
     rows = []
     for p in sorted(players, key=lambda p: p.id):
         rows.append(
@@ -154,10 +188,20 @@ def save_players(directory: Path, players: list[Player], rounds: int) -> Path:
                 "x" if p.joker else "",
             ]
             + ["x" if p.plays(i) else "" for i in range(1, rounds + 1)]
-            + [p.egd_gor, p.egd_last_tournament, p.notes]
+            + [p.egd_gor, p.egd_last_tournament]
+            + [extra_value(p, f) for f in fields]
+            + [p.notes]
         )
-    write_sheet(path, SHEET_NAME, columns(rounds), rows)
+    write_sheet(path, SHEET_NAME, columns(rounds, fields), rows)
     return path
+
+
+def extra_value(player: Player, name: str) -> str:
+    """Value of an additional field (field names match case-insensitively)."""
+    if name in player.extra:
+        return player.extra[name]
+    key = name.strip().lower()
+    return next((v for k, v in player.extra.items() if k.strip().lower() == key), "")
 
 
 def starting_rating(player: Player) -> float:

@@ -17,7 +17,7 @@ from . import egd
 from .config import Config
 from .models import Player
 from .ods import OdsError
-from .players import PLAYERS_FILE, load_players, save_players
+from .players import PLAYERS_FILE, extra_value, load_players, merge_fields, save_players
 from .rank import Rank, RankError
 from .registration import RegistrationError, check_players, new_player, tournament_date
 
@@ -47,6 +47,13 @@ class RegistrationApp:
         self.events: queue.Queue = queue.Queue()
         self._search_job = None
         self._file_mtime = None
+        # additional fields: from the settings plus any extra columns already in players.ods
+        self.extra_fields = list(cfg.registration.extra_fields)
+        self.file_fields: list[str] = []
+        try:
+            self.extra_fields = load_players(self.dir, self.rounds, self.extra_fields).extra_fields
+        except OdsError:
+            pass
 
         root.title(f"Registration - {cfg.tournament.name or self.dir.resolve().name}")
         root.minsize(900, 640)
@@ -142,11 +149,24 @@ class RegistrationApp:
         ttk.Entry(frame, textvariable=self.vars["notes"], width=70) \
             .grid(row=4, column=1, columnspan=7, sticky="we", pady=2)
 
+        # additional data fields, three per row
+        self.extra_vars: dict[str, tk.StringVar] = {}
+        row = 5
+        for i, name in enumerate(self.extra_fields):
+            r, c = row + i // 3, (i % 3) * 2
+            ttk.Label(frame, text=name).grid(row=r, column=c, sticky="e", padx=(8, 3), pady=2)
+            var = tk.StringVar()
+            entry = ttk.Entry(frame, textvariable=var, width=18)
+            entry.grid(row=r, column=c + 1, sticky="w", pady=2)
+            entry.bind("<Return>", lambda e: self.submit())
+            self.extra_vars[name] = var
+        row += (len(self.extra_fields) + 2) // 3
+
         self.hint = ttk.Label(frame, text="", style="Warn.TLabel", wraplength=850, justify="left")
-        self.hint.grid(row=5, column=0, columnspan=8, sticky="w", pady=(4, 2))
+        self.hint.grid(row=row, column=0, columnspan=8, sticky="w", pady=(4, 2))
 
         buttons = ttk.Frame(frame)
-        buttons.grid(row=6, column=0, columnspan=8, sticky="w", pady=(4, 0))
+        buttons.grid(row=row + 1, column=0, columnspan=8, sticky="w", pady=(4, 0))
         self.submit_button = ttk.Button(buttons, text="Add player", command=self.submit)
         self.submit_button.pack(side="left")
         ttk.Button(buttons, text="New / clear", command=self.clear_form).pack(side="left", padx=6)
@@ -156,24 +176,32 @@ class RegistrationApp:
     def _build_table(self):
         frame = ttk.LabelFrame(self.root, text="Registered players", padding=6)
         frame.pack(fill="both", expand=True, padx=8, pady=(4, 8))
-        cols = ("id", "name", "rank", "gor", "country", "club", "rounds", "joker")
-        self.table = ttk.Treeview(frame, columns=cols, show="headings", selectmode="browse")
+        extra_cols = [(f"x{i}", name, 100, "w") for i, name in enumerate(self.extra_fields)]
+        cols = ("id", "name", "rank", "gor", "country", "club", "rounds", "joker") + \
+            tuple(c[0] for c in extra_cols)
+        side = ttk.Frame(frame)
+        side.pack(side="right", fill="y", padx=(8, 0))      # packed first so it always keeps its space
+        holder = ttk.Frame(frame)
+        holder.pack(side="left", fill="both", expand=True)
+        holder.rowconfigure(0, weight=1)
+        holder.columnconfigure(0, weight=1)
+        self.table = ttk.Treeview(holder, columns=cols, show="headings", selectmode="browse")
         for col, title, width, anchor in [
             ("id", "ID", 40, "e"), ("name", "Name", 260, "w"), ("rank", "Rank", 50, "center"),
             ("gor", "GoR", 60, "e"), ("country", "Country", 75, "center"),
             ("club", "Club", 70, "center"), ("rounds", "Rounds", 120, "w"),
             ("joker", "Joker", 50, "center"),
-        ]:
+        ] + extra_cols:
             self.table.heading(col, text=title)
             self.table.column(col, width=width, anchor=anchor, stretch=(col == "name"))
-        scroll = ttk.Scrollbar(frame, orient="vertical", command=self.table.yview)
-        self.table.configure(yscrollcommand=scroll.set)
-        self.table.pack(side="left", fill="both", expand=True)
-        scroll.pack(side="left", fill="y")
+        scroll = ttk.Scrollbar(holder, orient="vertical", command=self.table.yview)
+        xscroll = ttk.Scrollbar(holder, orient="horizontal", command=self.table.xview)
+        self.table.configure(yscrollcommand=scroll.set, xscrollcommand=xscroll.set)
+        self.table.grid(row=0, column=0, sticky="nsew")
+        scroll.grid(row=0, column=1, sticky="ns")
+        xscroll.grid(row=1, column=0, sticky="ew")
         self.table.bind("<<TreeviewSelect>>", lambda e: self._edit_selected())
 
-        side = ttk.Frame(frame)
-        side.pack(side="left", fill="y", padx=(8, 0))
         self.count_label = ttk.Label(side, text="")
         self.count_label.pack(anchor="w")
         ttk.Button(side, text="Check registration", command=self.show_check).pack(fill="x", pady=(8, 0))
@@ -303,7 +331,7 @@ class RegistrationApp:
     def clear_form(self, keep_search: bool = False):
         self.editing_id = None
         self._extra_hint = ""
-        for v in self.vars.values():
+        for v in list(self.vars.values()) + list(self.extra_vars.values()):
             v.set("")
         self.joker_var.set(False)
         self._set_rounds(True)
@@ -339,6 +367,14 @@ class RegistrationApp:
         )
         player.egd_gor = self.egd_extra["egd_gor"]
         player.egd_last_tournament = self.egd_extra["egd_last_tournament"]
+        # keep data of columns that are not in the form (e.g. added to players.ods meanwhile)
+        old = next((p for p in self.players if p.id == self.editing_id), None)
+        extra = dict(old.extra) if old else {}
+        for name, var in self.extra_vars.items():
+            extra = {k: v for k, v in extra.items() if k.lower() != name.lower()}
+            if var.get().strip():
+                extra[name] = var.get().strip()
+        player.extra = extra
         return player
 
     def _update_hints(self):
@@ -373,11 +409,12 @@ class RegistrationApp:
 
     def reload_players(self):
         try:
-            pl = load_players(self.dir, self.rounds)
+            pl = load_players(self.dir, self.rounds, self.cfg.registration.extra_fields)
         except OdsError as e:
             messagebox.showerror("players.ods", str(e))
             return False
         self.players = pl.players
+        self.file_fields = pl.extra_fields
         self._file_mtime = self.path.stat().st_mtime if self.path.exists() else None
         self._fill_table()
         return True
@@ -399,7 +436,7 @@ class RegistrationApp:
             gor = "" if p.gor is None else f"{p.gor:.0f}"
             self.table.insert("", "end", iid=str(p.id), values=(
                 p.id, p.name, str(p.rank or ""), gor, p.country, p.club, rounds,
-                "x" if p.joker else ""))
+                "x" if p.joker else "", *(extra_value(p, f) for f in self.extra_fields)))
         jokers = sum(p.joker for p in self.players)
         n = len(self.players)
         self.count_label.config(text=f"{n} player{'s' if n != 1 else ''}\n{jokers} joker{'s' if jokers != 1 else ''}")
@@ -412,7 +449,7 @@ class RegistrationApp:
             messagebox.showerror("players.ods", "players.ods is open in LibreOffice.\n"
                                  "Save and close it there first, then try again.")
             return False
-        save_players(self.dir, players, self.rounds)
+        save_players(self.dir, players, self.rounds, merge_fields(self.extra_fields, self.file_fields))
         self.players = players
         self._file_mtime = self.path.stat().st_mtime
         self._fill_table()
@@ -480,6 +517,8 @@ class RegistrationApp:
         self.joker_var.set(p.joker)
         for i, v in enumerate(self.round_vars):
             v.set(p.plays(i + 1))
+        for name, var in self.extra_vars.items():
+            var.set(extra_value(p, name))
         self.egd_extra = {"egd_gor": p.egd_gor, "egd_last_tournament": p.egd_last_tournament}
         self.form_title.config(text=f"Edit ID {p.id}")
         self.submit_button.config(text="Save changes")

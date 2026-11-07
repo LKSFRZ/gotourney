@@ -165,6 +165,7 @@ in every terminal without activating anything.</p>
   <tr><td colspan="3"><b>[registration]</b></td></tr>
   <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warn if a player's last EGD tournament is older than this.</td></tr>
   <tr><td><code>rank_gor_tolerance</code></td><td>300</td><td>Warn if declared rank and GoR differ by more than this.</td></tr>
+  <tr><td><code>extra_fields</code></td><td>["Email", "Fee paid"]</td><td>Additional data you want to record for each player (see 5.6). Each name becomes a column in <code>players.ods</code> and <code>standings.ods</code> and a field in the registration window.</td></tr>
 </table>
 <div class="note">Invalid settings are reported with the setting's name, for example
 <code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. You can change settings later, including
@@ -215,12 +216,14 @@ than a day old. If there is no internet at the venue, the last downloaded list i
 <h3>5.2 Registering on the command line <span class="badge now">AVAILABLE</span></h3>
 <pre>gotourney players add --pin 10774412                       # everything else from the EGD
 gotourney players add --pin 20633162 --gor 2500 --rounds 1-3
+gotourney players add --pin 10774412 -x "Fee paid=yes" -x "Email=hans@example.org"
 gotourney players add Doe John --rank 5k --club HH --country DE --joker
 gotourney players list
 gotourney egd search "luethke h"                           # find a PIN</pre>
 <p>Options of <code>players add</code>: <code>--rank</code>, <code>--gor</code>, <code>--pin</code>,
 <code>--country</code>, <code>--club</code>, <code>--rounds</code> (<code>all</code>, <code>none</code>,
-<code>1,2,4</code>, <code>1-3</code>), <code>--joker</code>, <code>--notes</code>. Values you give explicitly
+<code>1,2,4</code>, <code>1-3</code>), <code>--joker</code>, <code>--notes</code>, and
+<code>-x FIELD=VALUE</code> (repeatable) for additional data. Values you give explicitly
 win over the EGD data.</p>
 
 <h3>5.3 The file players.ods <span class="badge now">AVAILABLE</span></h3>
@@ -234,6 +237,7 @@ win over the EGD data.</p>
   <tr><td>Joker</td><td><code>x</code> = may sit out rounds with an odd number of players.</td></tr>
   <tr><td>R1 … Rn</td><td><code>x</code> = plays this round. Empty = does not play.</td></tr>
   <tr><td>EGD GoR, Last EGD tournament</td><td>Information only: the GoR and last tournament in the EGD on registration day.</td></tr>
+  <tr><td><i>Additional fields</i></td><td>One column per entry of <code>extra_fields</code> (see 5.6).</td></tr>
   <tr><td>Notes</td><td>Free text.</td></tr>
 </table>
 <p>Players who arrive late, leave early or skip a round: change their round columns. A player who does
@@ -263,6 +267,24 @@ gotourney players sync --offline    # only the downloaded player list</pre>
 <p>Fetches the current EGD data for all registered players and reports what changed: name, country,
 club, EGD GoR and last tournament. The declared rank is never changed. The GoR column (starting TGoR) is only filled when it is empty, so your
 corrections are never overwritten. Once round 1 has been paired, the starting GoRs are frozen.</p>
+
+<h3>5.6 Additional player data <span class="badge now">AVAILABLE</span></h3>
+<p>To record more about each player, for example e-mail, entry fee, age group or T-shirt size, list
+the fields in <code>tournament.toml</code>:</p>
+<pre>[registration]
+extra_fields = ["Email", "Fee paid", "Age group"]</pre>
+<ul>
+  <li>The registration window shows an input field for each of them below <i>Notes</i>, and the table of
+  registered players shows them as columns.</li>
+  <li>On the command line: <code>-x "Fee paid=yes"</code>. Field names are not case-sensitive.</li>
+  <li><code>players.ods</code> gets one column per field, before <i>Notes</i>.</li>
+  <li><b>Columns you add to <code>players.ods</code> by hand</b> are treated the same way: they are kept when
+  the tools rewrite the file, and they appear in the window (after a restart) and in the standings.</li>
+  <li><code>standings.ods</code> lists all additional fields after the TGoR column, so you can, for example,
+  sort or filter the standings by age group.</li>
+  <li>The values are plain text. The tools do not interpret them, so they do not affect pairing or
+  rating.</li>
+</ul>
 
 <h2>6. Pairing a round <span class="badge now">AVAILABLE</span></h2>
 
@@ -368,7 +390,8 @@ round, and (as a warning) rematches.</p>
 <pre>gotourney standings            # all rounds played so far
 gotourney standings --round 2  # after round 2</pre>
 <p>Calculates the TGoR of every player after each round and writes <code>standings.ods</code>, for checking
-and for announcing the standings between rounds. TGoRs are calculated with full precision and shown
+and for announcing the standings between rounds. Additional player data (5.6) is included as extra
+columns. TGoRs are calculated with full precision and shown
 rounded to whole numbers.</p>
 
 <h2>8. The wall list and the EGD upload <span class="badge now">AVAILABLE</span></h2>

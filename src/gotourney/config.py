@@ -39,6 +39,7 @@ random_seed  = 12345         # colour choice and random tie-breaks
 [registration]
 gor_outdated_years = 5       # warn if a player's last EGD tournament is older than this
 rank_gor_tolerance = 300     # warn if declared rank and GoR differ by more than this
+extra_fields = []            # additional player data, e.g. ["Email", "Fee paid", "Age group"]
 """
 
 
@@ -84,6 +85,7 @@ class PairingSettings:
 class RegistrationSettings:
     gor_outdated_years: int = 5
     rank_gor_tolerance: int = 300
+    extra_fields: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -162,6 +164,7 @@ def parse_config(data: dict) -> Config:
         registration=RegistrationSettings(
             gor_outdated_years=_get(g, "gor_outdated_years", int, 5, "registration"),
             rank_gor_tolerance=_get(g, "rank_gor_tolerance", int, 300, "registration"),
+            extra_fields=[f.strip() for f in _get(g, "extra_fields", list, [], "registration")],
         ),
     )
     _validate(cfg)
@@ -181,6 +184,16 @@ def _validate(cfg: Config) -> None:
         raise ConfigError("rating.k_factor must be positive")
     if cfg.pairing.club_penalty < 0:
         raise ConfigError("pairing.club_penalty must not be negative")
+    from .players import is_builtin_column
+    seen = set()
+    for name in cfg.registration.extra_fields:
+        if not name:
+            raise ConfigError("registration.extra_fields: field names must not be empty")
+        if is_builtin_column(name):
+            raise ConfigError(f"registration.extra_fields: {name!r} is already a standard column")
+        if name.lower() in seen:
+            raise ConfigError(f"registration.extra_fields: {name!r} is listed twice")
+        seen.add(name.lower())
 
 
 def load_config(directory: Path) -> Config:

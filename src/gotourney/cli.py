@@ -63,7 +63,7 @@ def show_warnings(t: Tournament, skip: tuple[str, ...] = ()) -> None:
 def load(directory: Path) -> tuple[Config, PlayerList]:
     try:
         cfg = load_config(directory)
-        players = load_players(directory, cfg.tournament.rounds)
+        players = load_players(directory, cfg.tournament.rounds, cfg.registration.extra_fields)
     except (ConfigError, OdsError) as e:
         fail(str(e))
     for w in players.warnings:
@@ -82,6 +82,23 @@ def lookup_pin(pin: str) -> "egd.EGDPlayer | None":
     except egd.EGDError as e:
         warn(str(e))
         return None
+
+
+def parse_extra(items: list[str], fields: list[str]) -> dict[str, str]:
+    """'-x Field=value' options -> {field: value}; the field must be a known additional field."""
+    by_key = {f.lower(): f for f in fields}
+    data = {}
+    for item in items:
+        name, sep, value = item.partition("=")
+        if not sep:
+            fail(f"--extra {item!r}: use FIELD=VALUE")
+        field = by_key.get(name.strip().lower())
+        if field is None:
+            known = ", ".join(fields) if fields else "none defined"
+            fail(f"unknown field {name.strip()!r} (additional fields: {known}). "
+                 f"Add it to extra_fields in {CONFIG_FILE}.")
+        data[field] = value.strip()
+    return data
 
 
 @app.callback()
@@ -109,7 +126,7 @@ def init(
     write_template(directory, name or directory.resolve().name, rounds)
     try:
         cfg = load_config(directory)
-        save_players(directory, [], cfg.tournament.rounds)
+        save_players(directory, [], cfg.tournament.rounds, cfg.registration.extra_fields)
     except (ConfigError, OdsError) as e:
         fail(str(e))
     typer.echo(f"Created {directory / CONFIG_FILE} and {directory / PLAYERS_FILE} "
@@ -131,15 +148,19 @@ def players_add(
     rounds: str = typer.Option("all", "--rounds", help="Rounds to play: all, none, 1,2,4 or 1-3."),
     joker: bool = typer.Option(False, "--joker", help="Player may sit out odd rounds."),
     notes: str = typer.Option("", "--notes", help="Free text."),
+    extra: list[str] = typer.Option(None, "--extra", "-x", metavar="FIELD=VALUE",
+                                    help="Additional data, e.g. -x 'Fee paid=yes' (repeatable)."),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
     """Register a player in players.ods.
 
     With --pin, missing data (name, rank, GoR, country, club) is taken from the EGD.
+    Additional fields are defined in tournament.toml (registration.extra_fields).
     """
     cfg, pl = load(directory)
     path = directory / PLAYERS_FILE
     ensure_not_open(path)
+    extra_data = parse_extra(extra or [], pl.extra_fields)
     egd_player = None
     if pin:
         egd_player = lookup_pin(pin.strip())
@@ -165,7 +186,8 @@ def players_add(
     if egd_player is not None:
         player.egd_gor = float(egd_player.gor)
         player.egd_last_tournament = egd_player.last_appearance
-    save_players(directory, pl.players + [player], cfg.tournament.rounds)
+    player.extra = extra_data
+    save_players(directory, pl.players + [player], cfg.tournament.rounds, pl.extra_fields)
     rounds_text = ",".join(map(str, sorted(player.rounds))) or "none"
     typer.echo(f"Added ID {player.id}: {player.name}, {player.rank}, GoR {player.gor:.0f}, "
                f"rounds {rounds_text}{', joker' if player.joker else ''}.")
@@ -285,7 +307,7 @@ def players_sync(
             changed += 1
             typer.echo(f"ID {p.id} {p.name}: " + "; ".join(changes))
     if changed:
-        save_players(directory, pl.players, cfg.tournament.rounds)
+        save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields)
     typer.echo(f"{changed} player(s) updated.")
     if frozen:
         typer.echo("Round 1 is already paired: starting GoRs were not changed.")
@@ -459,9 +481,10 @@ def standings(
     cols, rows = standings_rows(t, r)
     typer.echo(f"Standings after round {r}:" if r else "Starting ratings:")
     typer.echo(f"{'Pl':>3}  {'Name':<28} {'Rank':>4} {'Start':>5}  {'Games':>5} {'Wins':>4}  {'TGoR':>5}")
+    idx = {c.title: i for i, c in enumerate(cols)}
     for row in rows:
-        place, pid, name, rank, club, gor, start = row[:7]
-        games, wins, tgor = row[-3:]
+        place, name, rank, start = (row[idx[k]] for k in ("Place", "Name", "Rank", "Start TGoR"))
+        games, wins, tgor = (row[idx[k]] for k in ("Games", "Wins", "TGoR"))
         typer.echo(f"{place:>3}  {name[:28]:<28} {rank:>4} {start:>5}  {games:>5} {wins:>4g}  {tgor:>5}")
     path = write_standings(t, r)
     typer.echo(f"Wrote {path}.")

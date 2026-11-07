@@ -45,6 +45,7 @@ class Tournament:
     start: dict[int, float]                         # starting TGoR (GoR capped at the top bar)
     ratings: list[dict[int, float]]                 # ratings[r] = TGoR after round r (ratings[0] = start)
     start_gor: dict[int, float] = field(default_factory=dict)   # real starting GoR (not capped)
+    extra_fields: list[str] = field(default_factory=list)       # additional player data fields
     history: dict[int, list[PlayedGame]] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
 
@@ -54,7 +55,7 @@ class Tournament:
     def load(cls, directory: Path, cfg: Config | None = None) -> "Tournament":
         directory = Path(directory)
         cfg = cfg or load_config(directory)
-        pl = load_players(directory, cfg.tournament.rounds)
+        pl = load_players(directory, cfg.tournament.rounds, cfg.registration.extra_fields)
         players = {p.id: p for p in pl.players}
         warnings = list(pl.warnings)
         errors = []
@@ -86,7 +87,7 @@ class Tournament:
             missing = sorted(set(range(1, existing[-1] + 1)) - set(existing))
             raise TournamentError(f"round file(s) missing for round(s) {', '.join(map(str, missing))}")
         t = cls(directory, cfg, players, rounds, start, [dict(start)], start_gor=start_gor,
-                warnings=warnings)
+                extra_fields=pl.extra_fields, warnings=warnings)
         t._compute()
         return t
 
