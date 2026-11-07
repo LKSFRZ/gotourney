@@ -20,6 +20,7 @@
 <p class="lead">Instead of McMahon points, every player has a <b>tournament rating (TGoR)</b>. It starts at the player's
 EGD rating and changes after every round with the EGD formula – only faster. Whoever has the highest TGoR at the end
 wins.</p>
+{% if own %}<p><a class="button" href="{{ url_for('download', name=summary_file) }}" target="_blank" rel="noopener">&#128424;&#xFE0E; {{ t("sys_print") }}</a></p>{% endif %}
 <div class="box">
   {% if own %}The numbers on this page are the settings of <b>{{ cfg.tournament.name }}</b>: {% else %}No tournament is
   open, so this page shows the <b>default settings</b>: {% endif %}

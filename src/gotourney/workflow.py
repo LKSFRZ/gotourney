@@ -498,6 +498,27 @@ def make_awards(directory: Path, output: Path | None = None) -> AwardsOutcome:
     return AwardsOutcome(t, path, winners, slides, notes, warnings + tw)
 
 
+def make_summary(directory: Path, output: Path | None = None) -> tuple[Path, list[str]]:
+    """The one-page summary of the tournament system (tournament_system.pdf). Needs only the settings."""
+    from .config import load_config
+    from .printing import PrintError
+    from .summary import SUMMARY_FILE, system_summary_pdf
+
+    try:
+        cfg = load_config(directory)
+        tr, warnings = get_translator(cfg, directory)
+    except ConfigError as e:
+        raise Problem("load", str(e)) from None
+    except TranslationError as e:
+        raise Problem("translation", str(e)) from None
+    path = Path(output) if output else Path(directory) / SUMMARY_FILE
+    try:
+        system_summary_pdf(cfg, path, tr)
+    except (PrintError, OSError) as e:
+        raise Problem("pdf", f"PDF not written: {e}") from None
+    return path, warnings
+
+
 # ---------------------------------------------------------------- creating a tournament
 
 def create_tournament(directory: Path, name: str, rounds: int = 5, language: str = "en"):

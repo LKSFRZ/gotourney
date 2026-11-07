@@ -22,6 +22,7 @@ from flask import (Flask, abort, flash, jsonify, redirect, render_template, requ
 
 from .. import __version__, egd, workflow
 from ..config import CONFIG_FILE
+from ..summary import SUMMARY_FILE
 from .texts import LANGUAGES, text
 
 DOWNLOADABLE = {".pdf", ".ods", ".h9", ".toml", ".csv"}
@@ -253,6 +254,7 @@ def create_app(directory: Path | None = None) -> Flask:
         """How the TGoR tournament system works, with the values of the open tournament."""
         cfg, own = current_config()
         return render_template(f"help/system_{lang()}.html", cfg=cfg, own=own, rank_of=rank_of_gor,
+                               summary_file=SUMMARY_FILE,
                                examples=rating_examples(cfg.rating.k_factor),
                                handicaps=handicap_table(cfg.handicap.reduction, cfg.handicap.komi_even,
                                                         cfg.handicap.komi_handicap))
@@ -909,6 +911,8 @@ def refresh_generated(d: Path, name: str) -> None:
             raise workflow.Problem("pdf", f"PDF not written: {out.pdf_error}")
     elif name == "awards.pdf":
         workflow.make_awards(d)
+    elif name == SUMMARY_FILE:
+        workflow.make_summary(d)
     elif name.endswith(".h9") and name == h9_filename(load_config(d)):
         workflow.make_h9(d)
 
@@ -948,6 +952,7 @@ def document_cards(t, complete: bool) -> list[dict]:
 
     h9 = h9_filename(t.cfg)
     return [
+        card("summary", "summary", [SUMMARY_FILE], generated=True),
         card("standings", "standings", ["standings.pdf", "standings.ods"], None if t.rounds else "doc_needs_round",
              generated=True),
         card("wall", "wall", ["wall_list.ods"], None if complete else "doc_needs_results"),

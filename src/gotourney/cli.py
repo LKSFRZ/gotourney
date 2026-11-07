@@ -699,6 +699,25 @@ def awards(
     hints.show(steps)
 
 
+@app.command()
+def summary(
+    output: Path = typer.Option(None, "--output", "-o", help="Output file (default: tournament_system.pdf)."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Write a one-page summary of the tournament system with this tournament's settings, to hang up."""
+    from . import workflow
+
+    try:
+        path, warnings = workflow.make_summary(directory, output)
+    except workflow.Problem as e:
+        explain(e, directory)
+    for w in warnings:
+        warn(w)
+    typer.echo(f"Wrote {path}.")
+    hints.show([f"Print {path} and hang it up next to the pairing. Run this command again after changing the "
+                f"settings in {CONFIG_FILE}."])
+
+
 @app.command("translation-file")
 def translation_file(
     language: str = typer.Option("de", "--language", "-l", help="Texts to start from: de, en or fr."),

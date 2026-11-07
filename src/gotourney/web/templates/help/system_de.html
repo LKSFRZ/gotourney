@@ -20,6 +20,7 @@
 <p class="lead">Statt McMahon-Punkten hat jeder Spieler eine <b>Turnierwertung (TGoR)</b>. Sie beginnt bei der
 EGD-Wertung des Spielers und ändert sich nach jeder Runde nach der EGD-Formel – nur schneller. Wer am Ende die
 höchste TGoR hat, gewinnt.</p>
+{% if own %}<p><a class="button" href="{{ url_for('download', name=summary_file) }}" target="_blank" rel="noopener">&#128424;&#xFE0E; {{ t("sys_print") }}</a></p>{% endif %}
 <div class="box">
   {% if own %}Die Zahlen auf dieser Seite sind die Einstellungen von <b>{{ cfg.tournament.name }}</b>: {% else %}Es ist
   kein Turnier geöffnet, deshalb zeigt diese Seite die <b>Standardeinstellungen</b>: {% endif %}

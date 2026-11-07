@@ -98,6 +98,8 @@ TEXTS: dict[str, dict[str, str]] = {
                                                   "spelling of names) before creating the EGD file.",
         "doc_h9": "EGD result file", "doc_h9_text": "The .h9 file for the EGD, made from the wall list. Send it to your "
                                                     "national rating officer.",
+        "doc_summary": "Tournament system (1 page)", "doc_summary_text": "The rules of this tournament in brief, with its settings – print it and hang it up next to the pairing.",
+        "sys_print": "Print summary (PDF, 1 page)",
         "doc_awards": "Award ceremony", "doc_awards_text": "Slides for the award ceremony (PDF, 16:9), always with the "
                                                            "latest results. Show them full-screen. Prizes are set in "
                                                            "the settings.",
@@ -415,6 +417,8 @@ TEXTS: dict[str, dict[str, str]] = {
                                                     "EGD-Datei von Hand korrigieren (z. B. Schreibweise von Namen).",
         "doc_h9": "EGD-Ergebnisdatei", "doc_h9_text": "Die .h9-Datei für die EGD, aus der Wandtabelle erstellt. Senden "
                                                       "Sie sie an Ihren nationalen Wertungsbeauftragten.",
+        "doc_summary": "Turniersystem (1 Seite)", "doc_summary_text": "Die Regeln dieses Turniers in Kürze, mit seinen Einstellungen – ausdrucken und neben die Auslosung hängen.",
+        "sys_print": "Kurzfassung drucken (PDF, 1 Seite)",
         "doc_awards": "Siegerehrung", "doc_awards_text": "Folien für die Siegerehrung (PDF, 16:9), immer mit den "
                                                          "neuesten Ergebnissen. Im Vollbild zeigen. Die Preise stellen "
                                                          "Sie in den Einstellungen ein.",
