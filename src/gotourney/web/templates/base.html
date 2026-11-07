@@ -16,6 +16,7 @@
       {% set here = request.path %}
       <a href="{{ url_for('dashboard') }}" class="{{ 'current' if here == '/dashboard' }}">{{ t("dashboard") }}</a>
       <a href="{{ url_for('players_page') }}" class="{{ 'current' if here == '/players' }}">{{ t("players_title") }}</a>
+      <a href="{{ url_for('documents_page') }}" class="{{ 'current' if here == '/documents' }}">{{ t("documents_nav") }}</a>
       <a href="{{ url_for('settings_page') }}" class="{{ 'current' if here == '/settings' }}">{{ t("settings_title") }}</a>
     {% endif %}
     <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>

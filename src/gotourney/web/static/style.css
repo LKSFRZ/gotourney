@@ -264,3 +264,19 @@ nav a.current { font-weight: 700; text-decoration: none; }
 table.list input, table.list select { font-size: 14px; padding: 6px 8px; }
 table.list input[type=checkbox] { width: auto; min-width: 0; }
 table.list label.check { font-size: 13px; white-space: nowrap; }
+
+/* ---------------- standings and documents */
+.docs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.doc h2 { font-size: 17px; }
+.doc .files li { border: none; padding: 2px 0; }
+.warn-text { color: var(--warn); }
+pre.h9 { font-size: 12px; overflow-x: auto; background: var(--bg); padding: 10px; border-radius: 6px; }
+.summary-title { cursor: pointer; font-weight: 600; color: var(--accent); }
+ol.winners li { margin: 4px 0; }
+table.standings { width: 100%; border-collapse: collapse; font-size: 15px; }
+table.standings th { text-align: left; font-size: 13px; color: var(--muted); padding: 6px; border-bottom: 1px solid var(--line); }
+table.standings td { padding: 6px; border-bottom: 1px solid var(--line); }
+table.standings .num { text-align: right; white-space: nowrap; }
+.up { color: var(--ok); font-size: 13px; }
+.down { color: var(--err); font-size: 13px; }
+ul.backups li { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

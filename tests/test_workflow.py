@@ -125,3 +125,20 @@ def test_pair_by_hand(make_tournament):
     out = workflow.pair_by_hand(d, 1, 2, 3, handicap=0)
     g = next(g for g in out.games if set(g.players()) == {2, 3})
     assert g.handicap == 0 and g.komi == 6.5 and (g.white, g.black) == (2, 3)
+
+
+def test_backups(make_tournament):
+    import zipfile
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=2)
+    workflow.pair(d, 1)
+    workflow.start(d, 1)
+    names = [b["name"] for b in workflow.list_backups(d)]
+    assert len(names) == 2 and "before_start_round_1" in names[0] and "before_pairing_round_1" in names[1]
+    with zipfile.ZipFile(d / "backups" / names[0]) as z:
+        assert {"players.ods", "tournament.toml", "round_1.ods"} <= set(z.namelist())
+    for i in range(35):
+        workflow.backup(d, f"test{i}")
+    assert len(workflow.list_backups(d)) == workflow.BACKUP_KEEP
+    (d / ".~lock.players.ods#").write_text("x")
+    with zipfile.ZipFile(workflow.backup(d, "lock")) as z:
+        assert not any(n.startswith(".~lock") for n in z.namelist())

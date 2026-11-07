@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (in progress: W0–W4 done)
+## 11. Web interface (in progress: W0–W5 done; W6 packaging open)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -330,7 +330,7 @@ Each phase is usable on its own; the command line keeps working throughout.
   (`gotourney gui` then opens the browser page).
 - ✅ **W4 – Settings form.** All settings of `tournament.toml` with explanations and live checks,
   including pairing rules, extra fields and prizes.
-- **W5 – End of the tournament.** Standings, wall list, `.h9`, award slides as pages with downloads;
+- ✅ **W5 – End of the tournament.** Standings, wall list, `.h9`, award slides as pages with downloads;
   automatic backup of the tournament folder before each round.
 - **W6 – Packaging.** One program per operating system (Windows, macOS, Linux) that needs no Python
   installation; a short quick-start guide for directors.

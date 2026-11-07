@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ t("documents_title") }} – {{ tour.cfg.tournament.name }}{% endblock %}
+
+{% macro action_button(action, label, primary=False) -%}
+  <form method="post" action="{{ url_for('do', action=action) }}" class="inline">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input type="hidden" name="next" value="{{ url_for('documents_page') }}">
+    <button type="submit" class="{{ 'primary' if primary else '' }}">{{ label }}</button>
+  </form>
+{%- endmacro %}
+
+{% block content %}
+<div class="title">
+  <h1>{{ t("documents_title") }}</h1>
+  <p class="muted">{{ t("doc_intro") }}</p>
+</div>
+
+<div class="docs">
+  {% for doc in docs %}
+    <section class="card doc">
+      <h2>{{ t("doc_" ~ doc.key) }}</h2>
+      <p class="muted small">{{ t("doc_" ~ doc.key ~ "_text") }}</p>
+      <ul class="files">
+        {% for f in doc.files if f.exists %}
+          <li>
+            {% if f.name.endswith(".ods") or f.name.endswith(".h9") %}
+              <form method="post" action="{{ url_for('do', action='open_file') }}" class="inline">
+                <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="name" value="{{ f.name }}">
+                <input type="hidden" name="next" value="{{ url_for('documents_page') }}">
+                <button type="submit" class="link">{{ f.name }}</button>
+              </form>
+              · <a href="{{ url_for('download', name=f.name, dl=1) }}">{{ t("download") }}</a>
+            {% else %}
+              <a href="{{ url_for('download', name=f.name) }}" target="_blank" rel="noopener">{{ f.name }}</a>
+            {% endif %}
+            {% if f.locked %}<span class="lock" title="{{ t('locked_note', name=f.name) }}">&#128274;</span>{% endif %}
+          </li>
+        {% endfor %}
+      </ul>
+      {% if doc.made %}
+        <p class="small {{ 'warn-text' if doc.outdated else 'muted' }}">
+          {{ t("doc_made", time=doc.made) }}{% if doc.outdated %} – {{ t("doc_outdated") }}{% endif %}
+        </p>
+      {% endif %}
+      {% if doc.needs %}
+        <p class="small muted">{{ t(doc.needs) }}</p>
+      {% else %}
+        {{ action_button(doc.action, t("doc_update") if doc.made else t("doc_create"), primary=(not doc.made or doc.outdated)) }}
+      {% endif %}
+    </section>
+  {% endfor %}
+</div>
+
+{% if h9 %}
+<section class="card">
+  <details>
+    <summary class="summary-title">{{ t("doc_h9_preview") }}</summary>
+    <pre class="h9">{{ h9 }}</pre>
+  </details>
+</section>
+{% endif %}
+
+{% if winners %}
+<section class="card">
+  <h2>{{ t("doc_winners") }}</h2>
+  <ol class="winners">
+    {% for a in winners %}<li><strong>{{ a.title }}</strong> – {{ tour.players[a.player].name }}</li>{% endfor %}
+  </ol>
+  {% for n in award_notes %}<p class="small muted">{{ n }}</p>{% endfor %}
+</section>
+{% endif %}
+
+<section class="card">
+  {% if standings %}
+    <h2>{{ t("doc_standings_title", r=tour.last_round) if tour.last_round else t("doc_start_list") }}</h2>
+    <div class="table-scroll">
+    <table class="standings">
+      <thead><tr><th>{{ t("doc_col_place") }}</th><th>{{ t("doc_col_name") }}</th><th>{{ t("doc_col_rank") }}</th>
+                 <th>{{ t("doc_col_club") }}</th><th class="num">{{ t("doc_col_tgor") }}</th><th class="num">{{ t("doc_col_wins") }}</th></tr></thead>
+      <tbody>
+      {% for s in standings %}
+        <tr><td>{{ s.place }}</td><td>{{ s.name }}</td><td>{{ s.rank }}</td><td>{{ s.club }}</td>
+            <td class="num">{{ s.tgor }} <span class="{{ 'up' if s.change > 0 else 'down' if s.change < 0 else 'muted' }}">({{ "%+d"|format(s.change) }})</span></td>
+            <td class="num">{{ "%g"|format(s.wins) }} / {{ s.games }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  {% else %}
+    <p class="muted">{{ t("doc_no_rounds") }}</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>{{ t("doc_backups") }}</h2>
+  <p class="muted small">{{ t("doc_backups_text") }}</p>
+  {{ action_button("backup", t("doc_backup_now")) }}
+  {% if backups %}
+    <ul class="files backups">
+      {% for b in backups[:10] %}
+        <li><a href="{{ url_for('download_backup', name=b.name) }}">{{ b.name }}</a>
+            <span class="muted small">{{ b.time }} · {{ (b.size / 1024)|round(1) }} KB</span></li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted small">{{ t("doc_no_backups") }}</p>
+  {% endif %}
+</section>
+{% endblock %}

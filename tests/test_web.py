@@ -368,3 +368,29 @@ def test_settings_cannot_reduce_rounds_below_paired(make_tournament):
         shutil.copy(d / "round_1.ods", d / "round_2.ods")
         cfg, v = read_settings(d)
         save_settings(d, {"tournament": {"rounds": 1}}, v)
+
+
+def test_documents_page(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=1)
+    app, c = client_for(d)
+    r = c.get("/documents")
+    assert r.status_code == 200 and "Starting list" in page(r) and "Needs at least one paired round" in page(r)
+    post(c, app, "/do/pair", round="1")
+    r = c.get("/documents")
+    assert "Standings after round 1" in page(r) and "Needs all results" in page(r)
+    assert "before_pairing_round_1" in page(r)                        # automatic backup
+    finish(d, 1)
+    r = c.get("/dashboard")
+    assert "Standings &amp; documents" in page(r)
+    for action, expect in [("standings", "standings.pdf"), ("wall", "wall_list.ods"), ("h9", ".h9"),
+                           ("awards", "awards.pdf")]:
+        r = post(c, app, f"/do/{action}", next="/documents")
+        assert r.request.path == "/documents" and expect in page(r)
+    r = c.get("/documents")
+    assert "Content of the EGD file" in page(r) and "; TC[]" in page(r)
+    assert "Prize winners" in page(r) and "1st place" in page(r)
+    r = post(c, app, "/do/backup", next="/documents")
+    assert "by_hand" in page(r)
+    name = re.search(r'href="/backup/([^"]+by_hand[^"]*)"', page(r)).group(1)
+    assert c.get(f"/backup/{name}").status_code == 200
+    assert c.get("/backup/../players.ods").status_code == 404

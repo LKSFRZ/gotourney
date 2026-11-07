@@ -140,16 +140,17 @@ Die vorgeschlagenen Befehle lassen sich direkt kopieren (mit <code>-d</code>, we
 Turnierordners arbeiten). Die Hinweise sind englisch. Erfahrene Nutzer schalten sie mit der Umgebungsvariablen
 <code>GOTOURNEY_NO_HINTS=1</code> ab.</div>
 
-<div class="note"><b>Weboberfläche (Vorschau).</b> <code>gotourney web</code> öffnet eine Seite im Browser
-(nur vom eigenen Rechner aus erreichbar), die den Stand des Turniers zeigt und einen Knopf für den nächsten
-Schritt anbietet: Turnier anlegen oder öffnen, Runden auslosen und starten, Tabelle, Wandtabelle, EGD-Datei
-und Folien für die Siegerehrung erstellen. <b>Ergebnisse</b> tragen Sie auf der Seite der Runde per Klick
-ein: <i>Weiß gewinnt</i>, <i>Jigo</i> oder <i>Schwarz gewinnt</i> (kampflose Partien unter <i>Mehr</i>);
-jeder Klick wird sofort in <code>round_r.ods</code> gespeichert. LibreOffice können Sie für dieselben
-Dateien weiterhin verwenden; die Seiten aktualisieren sich beim Speichern selbst. Die Seite gibt es auf
-Englisch und Deutsch. <b>Spieler</b> melden Sie auf der Spielerseite an (EGD-Suche beim Tippen, Formular
-ausfüllen, Spieler in der Liste bearbeiten oder entfernen); <code>gotourney gui</code> öffnet sie direkt.
-Ein Einstellungsformular folgt.</div>
+<div class="note"><b>Weboberfläche.</b> <code>gotourney web</code> öffnet eine Seite im Browser (nur vom
+eigenen Rechner aus erreichbar), die durch das ganze Turnier führt, auf Englisch oder Deutsch: eine
+<i>Übersicht</i> mit dem nächsten Schritt; <i>Spieler</i> (EGD-Suche beim Tippen, Anmeldeformular, Spielerliste;
+<code>gotourney gui</code> öffnet sie direkt); eine Seite pro <i>Runde</i> zum Auslosen, Ändern der Auslosung vor
+dem Start (Bretter festhalten, Farben tauschen, Vorgabe setzen, zwei Spieler von Hand paaren, mit Namen
+eingetragene Spieler bestätigen), Starten der Runde, Auslosen von Nachzüglern und <b>Eintragen der Ergebnisse per
+Klick</b>; <i>Tabelle &amp; Unterlagen</i> (Tabelle, Wandtabelle, EGD-Datei, Folien für die Siegerehrung,
+Sicherungen); und <i>Einstellungen</i> als Formular statt <code>tournament.toml</code> von Hand zu bearbeiten.
+LibreOffice können Sie für dieselben Dateien weiterhin verwenden; die Seiten aktualisieren sich selbst. Vor jeder
+Auslosung und jedem Rundenstart werden alle Turnierdateien als zip-Datei im Ordner <code>backups</code>
+gesichert.</div>
 
 <h2>3. Installation</h2>
 <p><b>Voraussetzungen auf jedem System:</b> Python 3.11 oder neuer (mit Tkinter für das Anmeldefenster),

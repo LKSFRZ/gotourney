@@ -73,6 +73,38 @@ TEXTS: dict[str, dict[str, str]] = {
         "ph_finished_text": "Create the final wall list, the result file for the EGD and the slides for the "
                             "award ceremony.",
         # actions
+        "documents_title": "Standings & documents",
+        "documents_nav": "Standings",
+        "doc_intro": "The current standings and everything you need at the end of the tournament. Each document is "
+                     "created from the tournament files; create it again after changes.",
+        "doc_standings_title": "Standings after round {r}",
+        "doc_no_rounds": "No round has been paired yet.",
+        "doc_start_list": "Starting list (by starting TGoR)",
+        "doc_col_place": "Place", "doc_col_name": "Name", "doc_col_rank": "Rank", "doc_col_club": "Club",
+        "doc_col_tgor": "TGoR", "doc_col_wins": "Wins",
+        "doc_create": "Create", "doc_update": "Create again",
+        "doc_made": "created {time}",
+        "doc_outdated": "older than the latest results – create it again",
+        "doc_needs_round": "Needs at least one paired round.",
+        "doc_needs_results": "Needs all results of all rounds.",
+        "doc_needs_wall": "Needs the wall list.",
+        "doc_standings": "Standings", "doc_standings_text": "Printable standings (PDF) and standings.ods; also useful "
+                                                             "between rounds.",
+        "doc_wall": "Wall list", "doc_wall_text": "Final places in wall_list.ods. You may correct it by hand (e.g. "
+                                                  "spelling of names) before creating the EGD file.",
+        "doc_h9": "EGD result file", "doc_h9_text": "The .h9 file for the EGD, made from the wall list. Send it to your "
+                                                    "national rating officer.",
+        "doc_awards": "Award ceremony", "doc_awards_text": "Slides for the award ceremony (PDF, 16:9). Show them "
+                                                           "full-screen. Prizes are set in the settings.",
+        "doc_h9_preview": "Content of the EGD file",
+        "doc_winners": "Prize winners",
+        "doc_backups": "Backups",
+        "doc_backups_text": "Before every pairing and every round start, all tournament files are saved as a zip "
+                            "file in the folder 'backups'. To go back, unpack a backup into the tournament folder.",
+        "doc_backup_now": "Create backup now",
+        "doc_backup_done": "Backup {name} created.",
+        "doc_backup_failed": "The backup could not be created.",
+        "doc_no_backups": "No backups yet.",
         "settings_title": "Settings",
         "st_intro": "The settings are stored in tournament.toml in the tournament folder. Changes are checked "
                     "before they are saved; explanations and comments in the file are kept.",
@@ -346,6 +378,39 @@ TEXTS: dict[str, dict[str, str]] = {
         "ph_finished_title": "Das Turnier ist beendet",
         "ph_finished_text": "Erstellen Sie die Wandtabelle, die Ergebnisdatei für die EGD und die Folien für die "
                             "Siegerehrung.",
+        "documents_title": "Tabelle & Unterlagen",
+        "documents_nav": "Tabelle",
+        "doc_intro": "Die aktuelle Tabelle und alles, was Sie am Ende des Turniers brauchen. Jede Unterlage wird aus "
+                     "den Turnierdateien erstellt; erstellen Sie sie nach Änderungen neu.",
+        "doc_standings_title": "Tabelle nach Runde {r}",
+        "doc_no_rounds": "Es wurde noch keine Runde ausgelost.",
+        "doc_start_list": "Startliste (nach Start-TGoR)",
+        "doc_col_place": "Platz", "doc_col_name": "Name", "doc_col_rank": "Rang", "doc_col_club": "Verein",
+        "doc_col_tgor": "TGoR", "doc_col_wins": "Siege",
+        "doc_create": "Erstellen", "doc_update": "Neu erstellen",
+        "doc_made": "erstellt {time}",
+        "doc_outdated": "älter als die neuesten Ergebnisse – bitte neu erstellen",
+        "doc_needs_round": "Braucht mindestens eine ausgeloste Runde.",
+        "doc_needs_results": "Braucht alle Ergebnisse aller Runden.",
+        "doc_needs_wall": "Braucht die Wandtabelle.",
+        "doc_standings": "Tabelle", "doc_standings_text": "Druckbare Tabelle (PDF) und standings.ods; auch zwischen den "
+                                                          "Runden nützlich.",
+        "doc_wall": "Wandtabelle", "doc_wall_text": "Endplätze in wall_list.ods. Sie können sie vor dem Erstellen der "
+                                                    "EGD-Datei von Hand korrigieren (z. B. Schreibweise von Namen).",
+        "doc_h9": "EGD-Ergebnisdatei", "doc_h9_text": "Die .h9-Datei für die EGD, aus der Wandtabelle erstellt. Senden "
+                                                      "Sie sie an Ihren nationalen Wertungsbeauftragten.",
+        "doc_awards": "Siegerehrung", "doc_awards_text": "Folien für die Siegerehrung (PDF, 16:9). Im Vollbild zeigen. "
+                                                         "Die Preise stellen Sie in den Einstellungen ein.",
+        "doc_h9_preview": "Inhalt der EGD-Datei",
+        "doc_winners": "Preisträger",
+        "doc_backups": "Sicherungen",
+        "doc_backups_text": "Vor jeder Auslosung und jedem Rundenstart werden alle Turnierdateien als zip-Datei im "
+                            "Ordner 'backups' gesichert. Zum Zurückgehen entpacken Sie eine Sicherung in den "
+                            "Turnierordner.",
+        "doc_backup_now": "Jetzt sichern",
+        "doc_backup_done": "Sicherung {name} erstellt.",
+        "doc_backup_failed": "Die Sicherung konnte nicht erstellt werden.",
+        "doc_no_backups": "Noch keine Sicherungen.",
         "settings_title": "Einstellungen",
         "st_intro": "Die Einstellungen stehen in tournament.toml im Turnierordner. Änderungen werden vor dem "
                     "Speichern geprüft; Erklärungen und Kommentare in der Datei bleiben erhalten.",

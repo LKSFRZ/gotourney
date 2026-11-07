@@ -136,20 +136,27 @@ Every command accepts `--help`, and `-d <folder>` selects the tournament folder.
 tool prints **Next steps**, so you always know what to do next (switch off with
 `GOTOURNEY_NO_HINTS=1`).
 
-## Web interface (preview)
+## Web interface
 
 ```sh
 gotourney web                  # opens the browser; or: gotourney web -d my_tournament
 ```
 
-A local web page (only reachable from your own computer) with an overview of the tournament and a
-button for the next step: create or open a tournament, pair and start rounds, **enter results by
-clicking** (saved immediately in the round file), create standings, wall list, EGD file and award
-slides. **Players are registered** on the players page: EGD search with autocomplete, form with rounds,
-joker and extra fields, player list with editing (`gotourney gui` opens this page directly; the old
-window is still available with `gotourney gui --classic`). LibreOffice can still be used for the same
-files at any time; the pages update themselves. A settings form will follow. The interface is
-available in English and German.
+A local web page (only reachable from your own computer) that guides you through the whole
+tournament, in English or German:
+
+- **Overview** with the current phase and a button for the next step.
+- **Players**: EGD search with autocomplete, registration form with rounds, joker and extra fields,
+  player list with editing (`gotourney gui` opens this page directly).
+- **Rounds**: pair, change the pairing before the start (fix boards, swap colours, set handicap,
+  pair two players by hand, confirm players typed by name), start the round, pair latecomers, and
+  **enter results by clicking**.
+- **Standings & documents**: standings, wall list, EGD file and award slides; list of backups.
+- **Settings**: all settings of `tournament.toml` as a form (comments in the file are kept).
+
+All data stays in the tournament folder, so LibreOffice can be used for the same files at any time;
+the pages update themselves. Before every pairing and round start, the tournament files are saved
+as a zip file in `backups/`.
 
 ## Development
 

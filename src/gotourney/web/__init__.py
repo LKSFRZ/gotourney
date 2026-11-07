@@ -517,6 +517,39 @@ def create_app(directory: Path | None = None) -> Flask:
         return jsonify(ok=True, gor=p.gor, rank=rank_text(p), club=p.club, country=p.country,
                        last=p.last_appearance, surname=p.surname, first_name=p.first_name)
 
+    # ------------------------------------------------------------ standings and documents
+
+    @app.get("/documents")
+    def documents_page():
+        d = tdir()
+        if d is None:
+            return redirect(url_for("home", choose=1))
+        try:
+            t = workflow.load_for_display(d)
+        except workflow.Problem as e:
+            flash(str(e), "error")
+            return redirect(url_for("dashboard"))
+        complete = bool(t.rounds) and all(rg.complete for rg in t.rounds.values())
+        winners, notes = [], []
+        if complete:
+            from ..awards import AwardError, compute_awards
+            try:
+                tr, _ = workflow.translator(t)
+                winners, notes = compute_awards(t, tr)
+            except (AwardError, workflow.Problem) as e:
+                notes = [str(e)]
+        return render_template("documents.html", tour=t, standings=standings_preview(t), docs=document_cards(t, complete),
+                               complete=complete, winners=winners, award_notes=notes, h9=h9_preview(t),
+                               backups=workflow.list_backups(d), folder_version=folder_version(d))
+
+    @app.get("/backup/<name>")
+    def download_backup(name: str):
+        d = tdir()
+        folder = d / workflow.BACKUP_DIR if d else None
+        if folder is None or Path(name).name != name or not name.endswith(".zip") or not (folder / name).is_file():
+            abort(404)
+        return send_from_directory(folder, name, as_attachment=True)
+
     # ------------------------------------------------------------ settings
 
     @app.route("/settings", methods=["GET", "POST"])
@@ -623,6 +656,10 @@ def create_app(directory: Path | None = None) -> Flask:
                 abort(404)
             app.config["OPENER"](d / name)
             say("info", "msg_file_opened", name=name)
+        elif action == "backup":
+            path = workflow.backup(d, "by_hand")
+            say("success" if path else "warning", "doc_backup_done" if path else "doc_backup_failed",
+                name=path.name if path else "")
         elif action == "registration":
             app.config["REGISTRATION"](d)
             say("info", "msg_window_opened")
@@ -725,6 +762,54 @@ def _folder_name(name: str) -> str:
 
 # ---------------------------------------------------------------- dashboard content
 
+def standings_preview(t) -> list[dict]:
+    from ..wall import ranking
+    r = t.last_round
+    order = ranking(t, r)
+    ratings = t.ratings[r]
+    rows = []
+    for place, pid in enumerate(order, start=1):
+        p = t.players[pid]
+        games = sum(1 for h in t.history[pid] if h.counts_as_played)
+        rows.append({"place": place, "name": p.name, "rank": str(p.rank or ""), "club": p.club,
+                     "tgor": round(ratings[pid]), "change": round(ratings[pid] - t.start[pid]),
+                     "wins": t.wins(pid), "games": games})
+    return rows
+
+
+def document_cards(t, complete: bool) -> list[dict]:
+    """What can be created at the end (or now), with state and files."""
+    from ..wall import h9_filename
+    d = t.directory
+    newest_input = max([p.stat().st_mtime for p in d.glob("round_*.ods")] + [(d / "players.ods").stat().st_mtime])
+
+    def card(key, action, names, needs=None):
+        files = [{"name": n, "exists": (d / n).exists(), "locked": workflow.is_open_in_libreoffice(d / n)}
+                 for n in names]
+        main = d / names[0]
+        made = main.stat().st_mtime if main.exists() else None
+        return {"key": key, "action": action, "files": files, "needs": needs,
+                "made": dt.datetime.fromtimestamp(made).strftime("%Y-%m-%d %H:%M") if made else "",
+                "outdated": bool(made and made < newest_input)}
+
+    h9 = h9_filename(t.cfg)
+    return [
+        card("standings", "standings", ["standings.pdf", "standings.ods"], None if t.rounds else "doc_needs_round"),
+        card("wall", "wall", ["wall_list.ods"], None if complete else "doc_needs_results"),
+        card("h9", "h9", [h9], None if (d / "wall_list.ods").exists() else "doc_needs_wall"),
+        card("awards", "awards", ["awards.pdf"], None if complete else "doc_needs_results"),
+    ]
+
+
+def h9_preview(t) -> str:
+    from ..wall import h9_filename
+    p = t.directory / h9_filename(t.cfg)
+    if not p.exists():
+        return ""
+    lines = p.read_text(encoding="utf-8", errors="replace").splitlines()
+    return "\n".join(lines[:40] + (["…"] if len(lines) > 40 else []))
+
+
 def round_rows(t) -> list[dict]:
     rows = []
     for r in range(1, t.cfg.tournament.rounds + 1):
@@ -825,13 +910,14 @@ def phase_card(t, lang: str) -> dict:
             card["actions"].insert(1, act(tx("act_pair_late"), "pair", round=r))
     elif s.phase == "round_complete":
         card.update(title=tx("ph_complete_title", r=r), text=tx("ph_complete_text", next=r + 1),
+                    link={"label": tx("documents_title"), "href": "/documents"},
                     actions=[act(tx("act_standings"), "standings"),
                              act(tx("act_pair", r=r + 1), "pair", primary=True, round=r + 1)],
                     files=files((tx("act_standings"), "standings.pdf")))
     else:
         card.update(title=tx("ph_finished_title"), text=tx("ph_finished_text"),
-                    actions=[act(tx("act_standings"), "standings"), act(tx("act_wall"), "wall", primary=True),
-                             act(tx("act_h9"), "h9"), act(tx("act_awards"), "awards")],
+                    link={"label": tx("documents_title"), "href": "/documents"}, link_primary=True,
+                    actions=[],
                     files=files((tx("act_standings"), "standings.pdf"), (tx("act_awards"), "awards.pdf")))
     return card
 

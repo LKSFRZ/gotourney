@@ -280,6 +280,7 @@ def pair(directory: Path, round_no: int, *, force: bool = False,
     except TournamentError as e:
         raise Problem("load", str(e)) from None
     existing = t.rounds.get(round_no)
+    backup(directory, f"before_pairing_round_{round_no}")
     warnings: list[str] = [w for w in t.warnings if not w.startswith(f"round {round_no}:")]
     resolved: list[str] = []
     kept: list[Game] = []
@@ -356,6 +357,7 @@ def start(directory: Path, round_no: int) -> StartOutcome:
         raise Problem("not_paired", f"{path.name} {'has no boards' if rg else 'not found'}. Pair the round first.",
                       {"round": round_no})
     check_writable(path)
+    backup(directory, f"before_start_round_{round_no}")
     ratings = t.rating_before(round_no)
     newly = sum(1 for g in rg.games if not g.finalized)
     for g in rg.games:
@@ -741,6 +743,7 @@ def dissolve_board(directory: Path, round_no: int, board: int) -> Game:
     g = _board(rg, board)
     if g.result is not None:
         raise Problem("has_result", f"board {board} already has a result", {"board": board})
+    backup(directory, f"before_dissolving_board_{board}_round_{round_no}")
     rg.games.remove(g)
     _save_round(t, rg, path, round_no)
     return g
@@ -751,6 +754,7 @@ def pair_by_hand(directory: Path, round_no: int, white: int, black: int, handica
     from .pairing import number_boards, setup_game, rng_for
 
     t, rg, path = _load_round_for_change(directory, round_no)
+    backup(directory, f"before_pairing_by_hand_round_{round_no}")
     for pid in (white, black):
         if pid not in t.players:
             raise Problem("no_player", f"there is no player with ID {pid}", {"id": pid})
@@ -792,4 +796,59 @@ def name_candidates(directory: Path, round_no: int) -> list[dict]:
             cands = [p for p in cands if p.plays(round_no)] + [p for p in cands if not p.plays(round_no)]
             out.append({"where": f"row {u.line}, {side}", "text": text,
                         "candidates": [(p.id, describe_candidate(p, round_no)) for p in cands[:12]]})
+    return out
+
+
+# ---------------------------------------------------------------- backups
+
+BACKUP_DIR = "backups"
+BACKUP_KEEP = 30
+BACKUP_SUFFIXES = {".ods", ".toml", ".csv", ".h9", ".pdf"}
+
+
+def backup(directory: Path, reason: str) -> Path | None:
+    """Zip all tournament files into backups/<date>_<time>_<reason>.zip; keep the newest 30.
+
+    Returns None if there was nothing to back up. Never raises: a failed backup must not stop
+    the tournament."""
+    import datetime as dt
+    import zipfile
+
+    directory = Path(directory)
+    try:
+        files = [p for p in directory.iterdir()
+                 if p.is_file() and p.suffix.lower() in BACKUP_SUFFIXES and not p.name.startswith(".~lock")]
+        if not files:
+            return None
+        folder = directory / BACKUP_DIR
+        folder.mkdir(exist_ok=True)
+        stamp = dt.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in reason)
+        target = folder / f"{stamp}_{safe}.zip"
+        n = 1
+        while target.exists():
+            n += 1
+            target = folder / f"{stamp}_{safe}_{n}.zip"
+        with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as z:
+            for p in files:
+                z.write(p, p.name)
+        for old in sorted(folder.glob("*.zip"), key=lambda p: (p.stat().st_mtime_ns, p.name))[:-BACKUP_KEEP]:
+            if old != target:
+                old.unlink()
+        return target
+    except OSError:
+        return None
+
+
+def list_backups(directory: Path) -> list[dict]:
+    import datetime as dt
+
+    folder = Path(directory) / BACKUP_DIR
+    if not folder.is_dir():
+        return []
+    out = []
+    for p in sorted(folder.glob("*.zip"), key=lambda p: (p.stat().st_mtime_ns, p.name), reverse=True):
+        st = p.stat()
+        out.append({"name": p.name, "size": st.st_size,
+                    "time": dt.datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")})
     return out
