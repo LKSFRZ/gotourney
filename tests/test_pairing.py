@@ -121,8 +121,8 @@ def test_previous_round_must_be_complete(make_tournament):
 def test_manual_boards_are_kept(make_tournament):
     d = make_tournament([(2000,), (1990,), (1980,), (1970,), (1500,), (1490,)])
     t = Tournament.load(d)
-    manual = [Game(0, 1, 6, 0, 6.5, manual=True)]
+    manual = [Game(0, 1, 6, 0, 6.5, finalized=True)]
     res = pair_round(t, 1, manual)
     pairs = {frozenset(g.players()) for g in res.games}
     assert frozenset({1, 6}) in pairs and len(res.games) == 3
-    assert res.games[0].manual            # board 1: highest TGoR
+    assert res.games[0].finalized            # board 1: highest TGoR

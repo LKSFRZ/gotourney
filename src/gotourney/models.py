@@ -84,7 +84,7 @@ class Game:
     handicap: int = 0              # stones received by Black
     komi: float = 6.5
     result: Result | None = None
-    manual: bool = False
+    finalized: bool = False        # never changed by pair (manual boards, started rounds)
 
     def players(self) -> tuple[int, int]:
         return self.white, self.black

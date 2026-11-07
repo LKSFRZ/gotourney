@@ -235,7 +235,7 @@ gotourney --help</pre>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in even games: 6.5, 7 or 7.5 (Chinese rules).</td></tr>
   <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in handicap games.</td></tr>
   <tr><td colspan="3"><b>[pairing]</b></td></tr>
-  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Pairing rules (see 6.3). By default only the club rule is active: pairs from the same club are treated as if their TGoR difference were 150 points larger.</td></tr>
+  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Pairing rules (see 6.4). By default only the club rule is active: pairs from the same club are treated as if their TGoR difference were 150 points larger.</td></tr>
   <tr><td><code>random_seed</code></td><td>12345</td><td>Seed for random decisions (colours, choosing a joker, final tie-breaks). The same seed always gives the same result.</td></tr>
   <tr><td colspan="3"><b>[registration]</b></td></tr>
   <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warn if a player's last EGD tournament is older than this.</td></tr>
@@ -393,20 +393,20 @@ extra_fields = ["Fee paid", "Age group"]
   <li><code>standings.ods</code> lists all additional fields after the TGoR column, so you can, for example,
   sort or filter the standings by age group.</li>
   <li>The values never affect the rating. They affect the pairing only if you write a pairing rule for
-  the field (see 6.3).</li>
+  the field (see 6.4).</li>
 </ul>
 
 <h2>6. Pairing a round <span class="badge now">AVAILABLE</span></h2>
 
 <h3>6.1 Workflow</h3>
 <ol>
-  <li><b>Optional – manual pairings first.</b> If you want to fix certain games yourself (for example a
-  rematch, or players who must play early), run <code>gotourney pair 3 --template</code>. It creates an
-  empty <code>round_3.ods</code>. Enter those boards with the two player IDs and mark them <code>x</code> in
-  the <i>Manual</i> column. The sheet <i>Participants</i> lists the players of the round with their TGoR to
+  <li><b>Optional – pair some boards yourself first.</b> If you want to fix certain games yourself (for
+  example a rematch, or players who must play early), run <code>gotourney pair 3 --template</code>. It creates
+  an empty <code>round_3.ods</code>. Enter those boards with the two player IDs and mark them <code>x</code>
+  in the <i>Finalized</i> column; a board number is optional. The sheet <i>Participants</i> lists the players of the round with their TGoR to
   help you. If you leave <b>Handicap</b> empty, the default handicap, komi and colours are filled in (White
   and Black may be swapped so that the weaker player gets black). If you enter a handicap, your colours and
-  handicap are kept as they are. Manual pairings may be rematches; you get a warning.
+  handicap are kept as they are. Such boards may be rematches; you get a warning.
   <br><b>Names instead of IDs:</b> you may leave an ID empty and type the player's name, or part of it, into
   the <i>White</i> or <i>Black</i> column instead, e.g. <code>Becker</code>, <code>becker a</code>,
   <code>Müller</code> (also finds <i>Mueller</i>) or just the first name. <code>pair</code> then looks the
@@ -417,12 +417,13 @@ row 3, White: 'Becker' matches several players:
   2) Becker Bernd (3d, ID 2, Mus)
 Which player? (1-2, 0 = cancel) [1]: 2</pre>
   Players registered for the round and not yet on another board are preferred. Rows with names count as
-  manual boards even without the <code>x</code>. <code>gotourney pair 3 --yes</code> accepts unambiguous
+  finalized even without the <code>x</code>. <code>gotourney pair 3 --yes</code> accepts unambiguous
   matches without asking; ambiguous names then stop with a list. The IDs are written into the round
   file.</li>
   <li><b>Automatic pairing:</b> <code>gotourney pair 3</code> keeps all boards marked <code>x</code> in
-  the <i>Manual</i> column and pairs all remaining players of round 3. Boards without the mark are
-  paired again, so running <code>pair</code> twice gives a fresh pairing.</li>
+  the <i>Finalized</i> column and pairs all remaining players of round 3. Boards without the mark are
+  paired again, so running <code>pair</code> twice gives a fresh pairing. Finalized boards keep their board
+  number; the other boards are sorted by TGoR and get the free numbers.</li>
   <li><b>Check and print.</b> <code>pair</code> also writes <code>round_3.pdf</code>, a printable pairing
   with only the board numbers, the players (colour stone, rank, name), the result columns and the handicap, ready to
   post or to collect results on paper. It also writes <code>round_3_alphabetical.pdf</code>: all players of
@@ -431,30 +432,54 @@ board quickly; players who sit out (e.g. the joker) are listed as "does not play
   Handicap/Komi cells of that board in <code>round_3.ods</code>. The tools always use what is written in
   the file. After editing the pairing by hand, run <code>gotourney pairing-pdf 3</code> to update both
   PDFs.</li>
+  <li><b>Start the round:</b> <code>gotourney start 3</code> finalizes all boards (see 6.2).</li>
 </ol>
-<div class="warn"><code>gotourney pair</code> refuses to overwrite a round file that already contains
-results. Use <code>--force</code> only if you really want to pair the round again. A round can only be
-paired when all results of the previous rounds are entered, and not after a later round exists.</div>
+<div class="warn"><code>gotourney pair</code> never changes a <b>finalized</b> board, not even with
+<code>--force</code>. If a board that is <i>not</i> finalized already has a result, <code>pair</code> stops;
+run <code>gotourney start</code> first, or use <code>--force</code> to pair such boards again (their results
+are lost). A round can only be paired when all results of the previous rounds are entered, and not after a
+later round exists.</div>
 
-<h3>6.2 How the automatic pairing works</h3>
+<h3>6.2 Starting a round and latecomers</h3>
+<pre>gotourney start 3</pre>
+<p>When the round begins, <code>start</code> marks every board of <code>round_3.ods</code> as finalized
+(<code>x</code> in the <i>Finalized</i> column). From then on the pairing of these boards is fixed: board
+numbers, colours, handicap and results entered so far never change again.</p>
+<p><b>Players who arrive late</b> can still play the round:</p>
+<ol>
+  <li>Register them for round 3: tick round 3 in the registration window, or put an <code>x</code> in their
+  <code>R3</code> column of <code>players.ods</code>. <code>gotourney results check 3</code> lists registered
+  players who are not paired yet.</li>
+  <li>Run <code>gotourney pair 3</code>. It keeps all finalized boards and pairs only the latecomers among
+  each other, with the usual rules (no rematches, pairing rules, handicap). The new boards get the next board
+  numbers; the command names them, and both pairing PDFs are written again.</li>
+  <li>When the new games have started, run <code>gotourney start 3</code> again to finalize them as
+  well.</li>
+</ol>
+<p>With an odd number of latecomers one of them cannot play: the joker rule applies (a latecomer marked as
+joker sits out). If none of them is a joker, the tool stops; mark one as joker, or pair a latecomer by hand
+against a player who has not started yet.</p>
+
+
+<h3>6.3 How the automatic pairing works</h3>
 <ul>
   <li><b>Participants:</b> the players with an <code>x</code> in this round's column who are not on a
-  manual board.</li>
+  finalized board.</li>
   <li><b>Odd number of players:</b> one joker sits out, namely the joker with the <b>most games already
   played</b>, chosen at random if tied. If no joker is available, the tool stops and asks you to nominate
   one.</li>
   <li><b>Pair cost:</b> each possible pair gets the cost
-  <code>(|TGoR difference| + points of the pairing rules that apply)²</code> (see 6.3; by default 150 points
+  <code>(|TGoR difference| + points of the pairing rules that apply)²</code> (see 6.4; by default 150 points
   for two players of the same club). Pairs who already played each other in this tournament, including
   forfeited games, and pairs forbidden by a rule are excluded.</li>
   <li><b>Optimal pairing:</b> the blossom algorithm (maximum weight matching) chooses the pairing with the
   smallest total cost. Squaring the cost prefers several medium differences over a single very uneven
   pair.</li>
   <li><b>No pairing possible:</b> if rematches make a complete pairing impossible (possible with very few
-  players), the tool stops. Pair the problematic players by hand as manual boards and run it again.</li>
+  players), the tool stops. Pair the problematic players by hand as finalized boards and run it again.</li>
 </ul>
 
-<h3>6.3 Pairing rules</h3>
+<h3>6.4 Pairing rules</h3>
 <p>Pairing rules use the player columns to make some pairs more expensive or impossible. They are set in
 <code>tournament.toml</code>. A new tournament has one active rule, the club rule; the other examples in the
 file are commented out (off):</p>
@@ -493,13 +518,13 @@ points = 150
   helps to find a good value.</li>
   <li>To switch a rule off, delete it or put <code>#</code> in front of its lines. With no rule at all, the
   pairing uses only the TGoR difference.</li>
-  <li><code>gotourney pair</code> reports how many boards each rule applies to. Manual boards may break
+  <li><code>gotourney pair</code> reports how many boards each rule applies to. Finalized boards may break
   rules; you get a warning for forbidden pairs.</li>
   <li>Too many hard rules (<code>forbid_same</code>, <code>require_same</code>) can make a complete
-  pairing impossible; the tool then stops and asks for manual boards.</li>
+  pairing impossible; the tool then stops and asks for boards paired by hand.</li>
 </ul>
 
-<h3>6.4 Handicap, komi and colours</h3>
+<h3>6.5 Handicap, komi and colours</h3>
 <table>
   <thead><tr><th style="width:30%">TGoR difference</th><th style="width:20%">Full handicap</th><th>Game</th></tr></thead>
   <tr><td>0 – 50</td><td>0</td><td>Even game, komi <code>komi_even</code>, colours balanced</td></tr>
@@ -517,12 +542,13 @@ points = 150
   <li><b>Colours in even games</b> are balanced over the tournament: the player who has had white more
   often in even games gets black. If both are equal, the colour is drawn at random. Handicap games do not
   count for the balance.</li>
-  <li><b>Board order:</b> board 1 is the pair with the highest TGoR. Manual boards are sorted in as well.</li>
+  <li><b>Board order:</b> board 1 is the pair with the highest TGoR. Finalized boards with a board number keep it; the other
+  boards get the free numbers in this order.</li>
 </ul>
 
-<h3>6.5 The round file round_r.ods</h3>
+<h3>6.6 The round file round_r.ods</h3>
 <table>
-  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
+  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Finalized</th></tr></thead>
   <tr><td>1</td><td>1</td><td>2300</td><td>○ 5d Becker Anna</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Fischer Ben</td><td>2290</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
   <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Klein Carla</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Wagner David</td><td>2158</td><td>6</td><td>0</td><td>6.5</td><td></td></tr>
 </table>
@@ -530,6 +556,9 @@ points = 150
   <li>The player columns show the colour (○ white, ● black), the registered rank and the name. They are
   for reading only. The tools identify the players by <b>White ID</b> and <b>Black ID</b>.</li>
   <li>Black always receives the handicap stones. The TGoR shown is the TGoR before the round.</li>
+  <li><i>Finalized</i>: <code>x</code> = this board is fixed and never changed by <code>pair</code> (set by
+  you or by <code>gotourney start</code>). Round files from older versions have a <i>Manual</i> column
+  instead; it works the same way.</li>
   <li>The second sheet, <i>Not playing</i>, lists the players who sit out the round (joker, not
   registered).</li>
   <li>The file prints in landscape, scaled to the page width, so a pairing can be printed and posted
@@ -709,7 +738,7 @@ system.</p>
   <thead><tr><th style="width:38%">Message / problem</th><th>What to do</th></tr></thead>
   <tr><td><code>… is open in LibreOffice</code></td><td>Save and close the file in LibreOffice, then run the command again. If LibreOffice crashed, delete the leftover lock file <code>.~lock.players.ods#</code> in the tournament folder.</td></tr>
   <tr><td><code>tournament.toml not found</code></td><td>You are not in the tournament folder. Use <code>-d &lt;folder&gt;</code> or <code>cd</code> into it.</td></tr>
-  <tr><td><code>players given by name, not ID</code></td><td>A round file contains manual boards with names that have not been looked up yet. Run <code>gotourney pair r</code> for that round.</td></tr>
+  <tr><td><code>players given by name, not ID</code></td><td>A round file contains boards with names that have not been looked up yet. Run <code>gotourney pair r</code> for that round.</td></tr>
   <tr><td><code>round r: … players (odd) and no joker</code></td><td>Mark a player of that round as joker, or change who plays that round.</td></tr>
   <tr><td>EGD list not available</td><td>No internet and no downloaded list yet. Register players by typing their data, and run <code>gotourney egd update</code> when online.</td></tr>
   <tr><td><code>externally-managed-environment</code> when installing</td><td>Install into the project's virtual environment (<code>.venv/bin/pip</code>, Windows: <code>.venv\Scripts\pip</code>), see section 3. Do not use <code>--break-system-packages</code>.</td></tr>
@@ -733,7 +762,8 @@ system.</p>
   <tr><td><code>gotourney players sync [--offline]</code></td><td>Refresh EGD data of registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd update</code></td><td>Download the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney egd search &lt;query&gt;</code></td><td>Search the EGD player list</td><td><span class="badge now">AVAILABLE</span></td></tr>
-  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Pair round r (keeps manual boards; names on manual boards are looked up)</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Pair round r (finalized boards stay unchanged; names are looked up)</td></tr>
+  <tr><td><code>gotourney start &lt;r&gt;</code></td><td>Start round r: finalize all boards; afterwards <code>pair</code> only pairs latecomers</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Printable pairing → round_r.pdf (by board) and round_r_alphabetical.pdf (by surname); also written by <code>pair</code></td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods and standings.pdf</td><td><span class="badge now">AVAILABLE</span></td></tr>

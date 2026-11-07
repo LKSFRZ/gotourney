@@ -85,7 +85,7 @@ def test_cli_full_flow(make_tournament):
     play(d, 1, games)
     assert runner.invoke(app, ["results", "check", "1", "-d", s]).exit_code == 0
     r = runner.invoke(app, ["pair", "1", "-d", s])
-    assert r.exit_code == 1 and "already contains results" in r.output
+    assert r.exit_code == 1 and "not finalized" in r.output
     assert runner.invoke(app, ["pair", "2", "-d", s]).exit_code == 0
     r = runner.invoke(app, ["standings", "-d", s])
     assert r.exit_code == 0 and (d / "standings.ods").exists()
@@ -103,7 +103,7 @@ def test_cli_template_and_manual_board(make_tournament):
     assert r.exit_code == 0, r.output
     t = Tournament.load(d)
     games = t.rounds[1].games
-    manual = next(g for g in games if g.manual)
+    manual = next(g for g in games if g.finalized)
     assert (manual.white, manual.black, manual.handicap, manual.komi) == (1, 4, 3, 0.5)
     assert {frozenset(g.players()) for g in games} == {frozenset({1, 4}), frozenset({2, 3})}
 

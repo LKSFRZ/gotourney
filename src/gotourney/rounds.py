@@ -7,6 +7,8 @@ both lose. Only the IDs are read back; the player columns
 play this round (joker, not registered) - for information only, it is not read back.
 A third sheet "Participants" (written by ``pair --template``) lists the players of the round
 to help with manual pairings; it is not read back either.
+
+Boards with an "x" in the Finalized column are never changed by ``gotourney pair``.
 """
 
 from __future__ import annotations
@@ -28,7 +30,7 @@ COLUMNS = [
     Column("White", 5.8), Column("White win", 2.0, "center"), Column("Draw", 1.6, "center"),
     Column("Black win", 2.0, "center"),
     Column("Black", 5.8), Column("Black TGoR", 2.1), Column("Black ID", 1.8),
-    Column("Handicap", 1.9, "center"), Column("Komi", 1.4, "center"), Column("Manual", 1.6, "center"),
+    Column("Handicap", 1.9, "center"), Column("Komi", 1.4, "center"), Column("Finalized", 2.0, "center"),
 ]
 
 # result -> (white win, draw, black win) marks
@@ -97,6 +99,7 @@ class RoundGames:
     path: Path
     missing_handicap: set[int] = field(default_factory=set)   # boards (index) with empty handicap
     missing_komi: set[int] = field(default_factory=set)
+    missing_board: set[int] = field(default_factory=set)       # boards (index) without a board number
     unresolved: list[UnresolvedBoard] = field(default_factory=list)
 
     @property
@@ -127,6 +130,7 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
     games: list[Game] = []
     missing_h: set[int] = set()
     missing_k: set[int] = set()
+    missing_b: set[int] = set()
     unresolved: list[UnresolvedBoard] = []
     errors: list[str] = []
     for row in sheet.rows:
@@ -163,13 +167,15 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
                 missing_h.add(idx)
             if komi is None:
                 missing_k.add(idx)
+            if board is None:
+                missing_b.add(idx)
             games.append(Game(
                 board=board if board is not None else idx + 1,
                 white=white, black=black,
                 handicap=handicap or 0,
                 komi=komi if komi is not None else default_komi,
                 result=result,
-                manual=row.text("Manual").strip().lower() not in ("", "0", "-", "no"),
+                finalized=_flag(row.text("Finalized") or row.text("Manual")),   # "Manual": older files
             ))
         except OdsError as e:
             errors.append(str(e))
@@ -181,7 +187,26 @@ def load_round(directory: Path, r: int, default_komi: float = 6.5) -> RoundGames
             seen[pid] = g.board
     if errors:
         raise OdsError("\n".join(errors))
-    return RoundGames(r, games, path, missing_h, missing_k, unresolved)
+    return RoundGames(r, games, path, missing_h, missing_k, missing_b, unresolved)
+
+
+def read_not_playing(path: Path) -> list[tuple[int, str, str]]:
+    """The 'Not playing' sheet of a round file (for rewriting the file unchanged)."""
+    try:
+        sheet = read_sheet(path, "Not playing")
+    except OdsError:
+        return []
+    rows = []
+    for row in sheet.rows:
+        try:
+            rows.append((int(float(row.text("ID"))), row.text("Name"), row.text("Reason")))
+        except ValueError:
+            continue
+    return rows
+
+
+def _flag(text: str) -> bool:
+    return text.strip().lower() not in ("", "0", "-", "no", "n")
 
 
 def name_text(text: str) -> str:
@@ -202,7 +227,7 @@ def save_round(path: Path, games: list[Game], labels: dict[int, str], tgor: dict
             f"{WHITE_STONE} {labels.get(g.white, '?')}", w_mark, d_mark,
             b_mark, f"{BLACK_STONE} {labels.get(g.black, '?')}",
             round(tgor[g.black]) if g.black in tgor else None, g.black,
-            g.handicap, g.komi, "x" if g.manual else "",
+            g.handicap, g.komi, "x" if g.finalized else "",
         ])
     sheets = [(PAIRING_SHEET, COLUMNS, rows)]
     sheets.append(("Not playing", [Column("ID", 1.4), Column("Name", 5.5), Column("Reason", 5.0)],

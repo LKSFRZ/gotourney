@@ -107,7 +107,7 @@ class PairingResult:
 
 
 def setup_game(t: Tournament, round_no: int, a: int, b: int, ratings: dict[int, float],
-               rng: random.Random, manual: bool = False) -> Game:
+               rng: random.Random, finalized: bool = False) -> Game:
     """Default handicap, komi and colours for a pair."""
     cfg = t.cfg
     h = default_handicap(ratings[a] - ratings[b], cfg.handicap.reduction)
@@ -120,7 +120,7 @@ def setup_game(t: Tournament, round_no: int, a: int, b: int, ratings: dict[int, 
         else:
             white, black = (a, b) if rng.random() < 0.5 else (b, a)
     komi = cfg.handicap.komi_handicap if h > 0 else cfg.handicap.komi_even
-    return Game(board=0, white=white, black=black, handicap=h, komi=komi, manual=manual)
+    return Game(board=0, white=white, black=black, handicap=h, komi=komi, finalized=finalized)
 
 
 def choose_joker(t: Tournament, round_no: int, candidates: list[int]) -> int:
@@ -130,7 +130,12 @@ def choose_joker(t: Tournament, round_no: int, candidates: list[int]) -> int:
     return rng_for(t.cfg, round_no, "joker").choice(best)
 
 
-def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = None) -> PairingResult:
+def pair_round(t: Tournament, round_no: int, finalized_games: list[Game] | None = None) -> PairingResult:
+    """Pair all players of the round who are not on one of the finalized boards.
+
+    Finalized boards are returned unchanged. A finalized board with a board number keeps it; all
+    other boards are sorted by TGoR and get the free board numbers (after a started round: the
+    numbers after the existing boards)."""
     cfg = t.cfg
     if round_no < 1 or round_no > cfg.tournament.rounds:
         raise PairingError(f"the tournament has rounds 1 to {cfg.tournament.rounds}")
@@ -141,19 +146,19 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
     for r in range(1, round_no):
         if r in t.rounds and not t.rounds[r].complete:
             raise PairingError(f"round {r} is not complete; enter all results first")
-    manual_games = list(manual_games or [])
+    finalized_games = list(finalized_games or [])
     rng = rng_for(cfg, round_no, "colours")
     check_rule_fields(t)
 
-    # manual boards: keep, fill in defaults where handicap was left empty (done by caller)
-    on_manual = {pid for g in manual_games for pid in g.players()}
+    # finalized boards: kept as they are (defaults for an empty handicap are filled in by the caller)
+    on_finalized = {pid for g in finalized_games for pid in g.players()}
     registered = sorted(pid for pid, p in t.players.items() if p.plays(round_no))
-    for pid in on_manual:
+    for pid in on_finalized:
         if pid not in t.players:
-            raise PairingError(f"manual board: unknown player ID {pid}")
-    participants = [pid for pid in registered if pid not in on_manual]
+            raise PairingError(f"finalized board: unknown player ID {pid}")
+    participants = [pid for pid in registered if pid not in on_finalized]
     sitting_out = [(pid, "not registered for this round")
-                   for pid in sorted(t.players) if not t.players[pid].plays(round_no) and pid not in on_manual]
+                   for pid in sorted(t.players) if not t.players[pid].plays(round_no) and pid not in on_finalized]
 
     if len(participants) % 2 == 1:
         jokers = [pid for pid in participants if t.players[pid].joker]
@@ -188,9 +193,9 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
         raise PairingError(
             "no complete pairing without rematches" + (f" or forbidden pairs ({'; '.join(hard)})" if hard else "")
             + " is possible. Unpaired: " + ", ".join(unmatched)
-            + ". Pair some players by hand as manual boards (pair --template) and run pair again.")
+            + ". Pair some players by hand (finalized boards) and run pair again.")
 
-    games = list(manual_games)
+    games = list(finalized_games)
     total = 0.0
     hits: Counter = Counter()
     for a, b in sorted((tuple(sorted(pair)) for pair in matching)):
@@ -198,9 +203,26 @@ def pair_round(t: Tournament, round_no: int, manual_games: list[Game] | None = N
         total += costs[(a, b)] if (a, b) in costs else costs[(b, a)]
     for g in games:
         for rule in pair_rules(t, g.white, g.black)[2]:
-            hits[rule.describe() + (" (manual board)" if g.manual else "")] += 1
-    games.sort(key=lambda g: (-max(ratings[g.white], ratings[g.black]),
-                              -min(ratings[g.white], ratings[g.black]), g.white))
-    for i, g in enumerate(games, start=1):
-        g.board = i
+            hits[rule.describe() + (" (finalized board)" if g.finalized else "")] += 1
+    number_boards(games, ratings)
     return PairingResult(games, sitting_out, total, hits)
+
+
+def number_boards(games: list[Game], ratings: dict[int, float]) -> None:
+    """Finalized boards with a number keep it; the others get the free numbers in TGoR order."""
+    used: set[int] = set()
+    rest = []
+    for g in games:
+        if g.finalized and g.board > 0 and g.board not in used:
+            used.add(g.board)
+        else:
+            rest.append(g)
+    rest.sort(key=lambda g: (-max(ratings[g.white], ratings[g.black]),
+                             -min(ratings[g.white], ratings[g.black]), g.white))
+    n = 1
+    for g in rest:
+        while n in used:
+            n += 1
+        g.board = n
+        used.add(n)
+    games.sort(key=lambda g: g.board)

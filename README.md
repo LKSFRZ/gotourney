@@ -11,7 +11,7 @@ by hand. Features:
 
 - **Registration** with a window that autocompletes from the EGD player list (works offline). You can
   record extra data per player, as free text or with dropdowns.
-- **Pairing**, with manual boards, jokers for odd rounds and configurable pairing rules (avoid
+- **Pairing**, with boards you fix yourself ("finalized"), latecomers paired after the round has started, jokers for odd rounds and configurable pairing rules (avoid
   same club, children preferably against children, …). Each round also gets two printable pairing
   PDFs: one by board, one with all players sorted by surname.
 - **Results** are entered as `x` marks in the round file. Standings are written as `.ods` and as a
@@ -121,6 +121,7 @@ gotourney gui                  # register players (EGD autocomplete)
 gotourney players check
 
 gotourney pair 1               # round_1.ods + printable round_1.pdf / round_1_alphabetical.pdf
+gotourney start 1              # round begins: all boards finalized; 'pair 1' now only pairs latecomers
 # enter the results in round_1.ods: x under "White win", "Draw" or "Black win"
 gotourney results check 1
 gotourney standings            # standings.ods and standings.pdf

@@ -63,8 +63,8 @@ def test_pair_with_names_and_confirmation(folder):
     assert "1) Becker Anna" in r.output and "2) Becker Bernd" in r.output
     games = Tournament.load(folder).rounds[1].games
     pairs = {frozenset(g.players()): g for g in games}
-    assert frozenset({3, 4}) in pairs and pairs[frozenset({3, 4})].manual
-    assert frozenset({2, 5}) in pairs and pairs[frozenset({2, 5})].manual
+    assert frozenset({3, 4}) in pairs and pairs[frozenset({3, 4})].finalized
+    assert frozenset({2, 5}) in pairs and pairs[frozenset({2, 5})].finalized
     assert pairs[frozenset({2, 5})].handicap == 0                       # given handicap kept
     assert frozenset({1, 6}) in pairs                                   # the rest paired automatically
 

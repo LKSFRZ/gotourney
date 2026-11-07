@@ -29,7 +29,7 @@ def test_player_label():
 
 
 def test_round_file_roundtrip_and_layout(tmp_path):
-    games = [Game(1, 1, 2, 2, 0.5, Result.WHITE_WINS), Game(2, 3, 4, 0, 6.5, Result.JIGO, manual=True),
+    games = [Game(1, 1, 2, 2, 0.5, Result.WHITE_WINS), Game(2, 3, 4, 0, 6.5, Result.JIGO, finalized=True),
              Game(3, 5, 6, 0, 6.5, None), Game(4, 7, 8, 1, 0.5, Result.BLACK_WINS_FORFEIT)]
     labels = {i: f"1k P{i}" for i in range(1, 9)}
     save_round(tmp_path / "round_1.ods", games, labels, {i: 2000.0 for i in range(1, 9)})
@@ -40,7 +40,7 @@ def test_round_file_roundtrip_and_layout(tmp_path):
     assert sheet.rows[1].text("Draw") == "x"
     rg = load_round(tmp_path, 1)
     assert [g.result for g in rg.games] == [g.result for g in games]
-    assert rg.games[1].manual and not rg.complete
+    assert rg.games[1].finalized and not rg.complete
 
 
 def test_invalid_marks_name_the_row(tmp_path):

@@ -241,7 +241,7 @@ anmelden:</p>
   <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in Partien ohne Vorgabe: 6.5, 7 oder 7.5 (chinesische Regeln).</td></tr>
   <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in Vorgabepartien.</td></tr>
   <tr><td colspan="3"><b>[pairing]</b></td></tr>
-  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Auslosungsregeln (siehe 6.3). Standardmäßig ist nur die Vereinsregel aktiv: Paarungen aus demselben Verein zählen, als wäre ihr TGoR-Unterschied 150 Punkte größer.</td></tr>
+  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Auslosungsregeln (siehe 6.4). Standardmäßig ist nur die Vereinsregel aktiv: Paarungen aus demselben Verein zählen, als wäre ihr TGoR-Unterschied 150 Punkte größer.</td></tr>
   <tr><td><code>random_seed</code></td><td>12345</td><td>Startwert für Zufallsentscheidungen (Farben, Wahl des Jokers, Losentscheid am Ende). Derselbe Startwert ergibt immer dasselbe Ergebnis.</td></tr>
   <tr><td colspan="3"><b>[registration]</b></td></tr>
   <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warnen, wenn das letzte EGD-Turnier eines Spielers länger her ist.</td></tr>
@@ -412,21 +412,21 @@ extra_fields = ["Fee paid", "Age group"]
   <li><code>standings.ods</code> enthält alle zusätzlichen Felder nach der TGoR-Spalte, sodass Sie die Tabelle
   zum Beispiel nach Altersklasse sortieren oder filtern können.</li>
   <li>Die Werte beeinflussen nie die Wertung. Die Auslosung beeinflussen sie nur, wenn Sie für das Feld eine
-  Auslosungsregel schreiben (siehe 6.3).</li>
+  Auslosungsregel schreiben (siehe 6.4).</li>
 </ul>
 
 <h2>6. Eine Runde auslosen</h2>
 
 <h3>6.1 Ablauf</h3>
 <ol>
-  <li><b>Optional – zuerst Paarungen von Hand.</b> Wenn Sie bestimmte Partien selbst festlegen möchten (zum
+  <li><b>Optional – zuerst einige Bretter selbst paaren.</b> Wenn Sie bestimmte Partien selbst festlegen möchten (zum
   Beispiel eine Wiederholungspaarung oder Spieler, die früh spielen müssen), führen Sie
   <code>gotourney pair 3 --template</code> aus. Das legt eine leere <code>round_3.ods</code> an. Tragen Sie
   diese Bretter mit den beiden Spieler-IDs ein und markieren Sie sie mit <code>x</code> in der Spalte
-  <i>Manual</i>. Das Blatt <i>Participants</i> listet die Spieler der Runde mit ihrer TGoR als Hilfe auf.
+  <i>Finalized</i>; eine Brettnummer ist optional. Das Blatt <i>Participants</i> listet die Spieler der Runde mit ihrer TGoR als Hilfe auf.
   Lassen Sie <b>Handicap</b> leer, werden Standard-Vorgabe, Komi und Farben eingetragen (Weiß und Schwarz
   werden dabei ggf. getauscht, damit der Schwächere Schwarz hat). Tragen Sie eine Vorgabe ein, bleiben Ihre
-  Farben und Ihre Vorgabe unverändert. Handpaarungen dürfen Wiederholungen sein; Sie erhalten eine
+  Farben und Ihre Vorgabe unverändert. Solche Bretter dürfen Wiederholungen sein; Sie erhalten eine
   Warnung.
   <br><b>Namen statt IDs:</b> Sie dürfen eine ID leer lassen und stattdessen den Namen des Spielers oder einen
   Teil davon in die Spalte <i>White</i> bzw. <i>Black</i> schreiben, z. B. <code>Becker</code>,
@@ -438,12 +438,13 @@ row 3, White: 'Becker' matches several players:
   2) Becker Bernd (3d, ID 2, Mus)
 Which player? (1-2, 0 = cancel) [1]: 2</pre>
   Bevorzugt werden Spieler, die für die Runde angemeldet sind und noch an keinem anderen Brett sitzen. Zeilen
-  mit Namen gelten auch ohne <code>x</code> als Handbretter. <code>gotourney pair 3 --yes</code> übernimmt
+  mit Namen gelten auch ohne <code>x</code> als finalisiert. <code>gotourney pair 3 --yes</code> übernimmt
   eindeutige Treffer ohne Rückfrage; bei mehrdeutigen Namen bricht es mit einer Liste ab. Die IDs werden in die
   Rundendatei eingetragen.</li>
   <li><b>Automatische Auslosung:</b> <code>gotourney pair 3</code> behält alle Bretter mit <code>x</code> in
-  der Spalte <i>Manual</i> und lost alle übrigen Spieler der Runde 3 aus. Bretter ohne Markierung werden neu
-  ausgelost; zweimal <code>pair</code> ergibt also eine neue Auslosung.</li>
+  der Spalte <i>Finalized</i> und lost alle übrigen Spieler der Runde 3 aus. Bretter ohne Markierung werden neu
+  ausgelost; zweimal <code>pair</code> ergibt also eine neue Auslosung. Finalisierte Bretter behalten ihre
+  Brettnummer; die übrigen werden nach TGoR sortiert und bekommen die freien Nummern.</li>
   <li><b>Prüfen und drucken.</b> <code>pair</code> schreibt auch <code>round_3.pdf</code>, eine druckbare
   Auslosung nur mit Brettnummern, Spielern (Farbstein, Rang, Name), Ergebnisspalten und Vorgabe – fertig zum
   Aushängen oder zum Sammeln der Ergebnisse auf Papier. Außerdem entsteht
@@ -453,32 +454,56 @@ Which player? (1-2, 0 = cancel) [1]: 2</pre>
   ändern Sie dann einfach die Zellen Handicap/Komi dieses Bretts in <code>round_3.ods</code>. Die Werkzeuge
   verwenden immer, was in der Datei steht. Nach Änderungen von Hand aktualisiert
   <code>gotourney pairing-pdf 3</code> beide PDFs.</li>
+  <li><b>Runde starten:</b> <code>gotourney start 3</code> finalisiert alle Bretter (siehe 6.2).</li>
 </ol>
-<div class="warn"><code>gotourney pair</code> überschreibt keine Rundendatei, die schon Ergebnisse enthält.
-Verwenden Sie <code>--force</code> nur, wenn Sie die Runde wirklich neu auslosen wollen. Eine Runde kann nur
-ausgelost werden, wenn alle Ergebnisse der vorherigen Runden eingetragen sind, und nicht mehr, wenn schon
-eine spätere Runde existiert.</div>
+<div class="warn"><code>gotourney pair</code> ändert nie ein <b>finalisiertes</b> Brett, auch nicht mit
+<code>--force</code>. Hat ein <i>nicht</i> finalisiertes Brett schon ein Ergebnis, bricht <code>pair</code> ab;
+führen Sie zuerst <code>gotourney start</code> aus oder verwenden Sie <code>--force</code>, um solche Bretter
+neu auszulosen (ihre Ergebnisse gehen verloren). Eine Runde kann nur ausgelost werden, wenn alle Ergebnisse der
+vorherigen Runden eingetragen sind, und nicht mehr, wenn schon eine spätere Runde existiert.</div>
 
-<h3>6.2 So funktioniert die automatische Auslosung</h3>
+<h3>6.2 Runde starten und Nachzügler</h3>
+<pre>gotourney start 3</pre>
+<p>Wenn die Runde beginnt, markiert <code>start</code> alle Bretter in <code>round_3.ods</code> als finalisiert
+(<code>x</code> in der Spalte <i>Finalized</i>). Ab dann steht die Auslosung dieser Bretter fest:
+Brettnummern, Farben, Vorgabe und bereits eingetragene Ergebnisse ändern sich nicht mehr.</p>
+<p><b>Spieler, die zu spät kommen,</b> können die Runde trotzdem spielen:</p>
+<ol>
+  <li>Melden Sie sie für Runde 3 an: Runde 3 im Anmeldefenster ankreuzen oder ein <code>x</code> in ihre
+  Spalte <code>R3</code> in <code>players.ods</code> setzen. <code>gotourney results check 3</code> listet
+  angemeldete Spieler auf, die noch nicht gepaart sind.</li>
+  <li>Führen Sie <code>gotourney pair 3</code> aus. Das behält alle finalisierten Bretter und lost nur die
+  Nachzügler untereinander aus, mit den üblichen Regeln (keine Wiederholungen, Auslosungsregeln, Vorgabe). Die
+  neuen Bretter bekommen die nächsten Brettnummern; der Befehl nennt sie, und beide Auslosungs-PDFs werden neu
+  geschrieben.</li>
+  <li>Wenn die neuen Partien begonnen haben, führen Sie <code>gotourney start 3</code> noch einmal aus, um auch
+  sie zu finalisieren.</li>
+</ol>
+<p>Bei einer ungeraden Zahl von Nachzüglern kann einer nicht spielen: Es gilt die Jokerregel (ein als Joker
+markierter Nachzügler setzt aus). Ist keiner von ihnen Joker, bricht das Werkzeug ab; markieren Sie einen als
+Joker oder paaren Sie einen Nachzügler von Hand gegen einen Spieler, der noch nicht angefangen hat.</p>
+
+
+<h3>6.3 So funktioniert die automatische Auslosung</h3>
 <ul>
   <li><b>Teilnehmer:</b> die Spieler mit <code>x</code> in der Spalte dieser Runde, die nicht an einem
-  Handbrett sitzen.</li>
+  finalisierten Brett sitzen.</li>
   <li><b>Ungerade Spielerzahl:</b> Ein Joker setzt aus, und zwar der Joker mit den <b>meisten bereits
   gespielten Partien</b>, bei Gleichstand ausgelost. Ist kein Joker vorhanden, bricht das Werkzeug ab und
   bittet Sie, einen zu bestimmen.</li>
   <li><b>Kosten einer Paarung:</b> Jede mögliche Paarung bekommt die Kosten
-  <code>(|TGoR-Unterschied| + Punkte der zutreffenden Auslosungsregeln)²</code> (siehe 6.3; standardmäßig
+  <code>(|TGoR-Unterschied| + Punkte der zutreffenden Auslosungsregeln)²</code> (siehe 6.4; standardmäßig
   150 Punkte für zwei Spieler desselben Vereins). Paarungen, die in diesem Turnier schon gespielt haben (auch
   kampflos), und durch eine Regel verbotene Paarungen sind ausgeschlossen.</li>
   <li><b>Optimale Auslosung:</b> Der Blossom-Algorithmus (Maximum Weight Matching) wählt die Auslosung mit
   den kleinsten Gesamtkosten. Durch das Quadrieren werden mehrere mittlere Unterschiede einer einzelnen sehr
   ungleichen Paarung vorgezogen.</li>
   <li><b>Keine Auslosung möglich:</b> Machen Wiederholungen eine vollständige Auslosung unmöglich (möglich bei
-  sehr wenigen Spielern), bricht das Werkzeug ab. Paaren Sie die betroffenen Spieler von Hand als Handbretter
+  sehr wenigen Spielern), bricht das Werkzeug ab. Paaren Sie die betroffenen Spieler von Hand als finalisierte Bretter
   und starten Sie die Auslosung erneut.</li>
 </ul>
 
-<h3>6.3 Auslosungsregeln</h3>
+<h3>6.4 Auslosungsregeln</h3>
 <p>Auslosungsregeln verwenden die Spielerspalten, um bestimmte Paarungen teurer oder unmöglich zu machen.
 Sie stehen in <code>tournament.toml</code>. Ein neues Turnier hat eine aktive Regel, die Vereinsregel; die
 übrigen Beispiele in der Datei sind auskommentiert (aus):</p>
@@ -517,13 +542,13 @@ points = 150
   simuliertes Turnier hilft, einen guten Wert zu finden.</li>
   <li>Um eine Regel abzuschalten, löschen Sie sie oder setzen Sie <code>#</code> vor ihre Zeilen. Ganz ohne
   Regeln richtet sich die Auslosung nur nach dem TGoR-Unterschied.</li>
-  <li><code>gotourney pair</code> meldet, auf wie viele Bretter jede Regel zutrifft. Handbretter dürfen Regeln
+  <li><code>gotourney pair</code> meldet, auf wie viele Bretter jede Regel zutrifft. Finalisierte Bretter dürfen Regeln
   verletzen; bei verbotenen Paarungen erhalten Sie eine Warnung.</li>
   <li>Zu viele harte Regeln (<code>forbid_same</code>, <code>require_same</code>) können eine vollständige
-  Auslosung unmöglich machen; das Werkzeug bricht dann ab und bittet um Handbretter.</li>
+  Auslosung unmöglich machen; das Werkzeug bricht dann ab und bittet um von Hand gepaarte Bretter.</li>
 </ul>
 
-<h3>6.4 Vorgabe, Komi und Farben</h3>
+<h3>6.5 Vorgabe, Komi und Farben</h3>
 <table>
   <thead><tr><th style="width:30%">TGoR-Unterschied</th><th style="width:20%">Volle Vorgabe</th><th>Partie</th></tr></thead>
   <tr><td>0 – 50</td><td>0</td><td>Ohne Vorgabe, Komi <code>komi_even</code>, Farben ausgeglichen</td></tr>
@@ -540,13 +565,12 @@ points = 150
   Partie mit Vorgabe 1, keine Partie ohne Vorgabe.</li>
   <li><b>Farben in Partien ohne Vorgabe</b> werden über das Turnier ausgeglichen: Wer in solchen Partien öfter
   Weiß hatte, bekommt Schwarz. Bei Gleichstand wird die Farbe ausgelost. Vorgabepartien zählen dabei nicht.</li>
-  <li><b>Brettreihenfolge:</b> Brett 1 ist die Paarung mit der höchsten TGoR. Handbretter werden ebenfalls
-  einsortiert.</li>
+  <li><b>Brettreihenfolge:</b> Brett 1 ist die Paarung mit der höchsten TGoR. Finalisierte Bretter mit Brettnummer behalten sie; die übrigen Bretter bekommen in dieser Reihenfolge die freien Nummern.</li>
 </ul>
 
-<h3>6.5 Die Rundendatei round_r.ods</h3>
+<h3>6.6 Die Rundendatei round_r.ods</h3>
 <table>
-  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
+  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Finalized</th></tr></thead>
   <tr><td>1</td><td>1</td><td>2300</td><td>○ 5d Becker Anna</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Fischer Ben</td><td>2290</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
   <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Klein Carla</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Wagner David</td><td>2158</td><td>6</td><td>0</td><td>6.5</td><td></td></tr>
 </table>
@@ -556,6 +580,9 @@ points = 150
   <li>Die Spielerspalten zeigen die Farbe (○ Weiß, ● Schwarz), den angemeldeten Rang und den Namen. Sie dienen
   nur zum Lesen. Die Werkzeuge erkennen die Spieler an <b>White ID</b> und <b>Black ID</b>.</li>
   <li>Schwarz bekommt immer die Vorgabesteine. Angezeigt wird die TGoR vor der Runde.</li>
+  <li><i>Finalized</i>: <code>x</code> = dieses Brett steht fest und wird von <code>pair</code> nie geändert
+  (von Ihnen gesetzt oder von <code>gotourney start</code>). Rundendateien älterer Versionen haben stattdessen
+  eine Spalte <i>Manual</i>; sie funktioniert genauso.</li>
   <li>Das zweite Blatt, <i>Not playing</i>, listet die Spieler auf, die in der Runde aussetzen (Joker, nicht
   angemeldet).</li>
   <li>Die Datei wird im Querformat auf Seitenbreite gedruckt, sodass eine Auslosung direkt gedruckt und
@@ -743,7 +770,7 @@ Referenzwerten einer unabhängigen Umsetzung des EGF-Systems geprüft.</p>
   <thead><tr><th style="width:38%">Meldung / Problem</th><th>Was tun</th></tr></thead>
   <tr><td><code>… is open in LibreOffice</code></td><td>Datei in LibreOffice speichern und schließen, dann den Befehl erneut ausführen. Ist LibreOffice abgestürzt, löschen Sie die übrig gebliebene Sperrdatei <code>.~lock.players.ods#</code> im Turnierordner.</td></tr>
   <tr><td><code>tournament.toml not found</code></td><td>Sie sind nicht im Turnierordner. Verwenden Sie <code>-d &lt;Ordner&gt;</code> oder wechseln Sie mit <code>cd</code> hinein.</td></tr>
-  <tr><td><code>players given by name, not ID</code></td><td>Eine Rundendatei enthält Handbretter mit Namen, die noch nicht nachgeschlagen wurden. Führen Sie <code>gotourney pair r</code> für diese Runde aus.</td></tr>
+  <tr><td><code>players given by name, not ID</code></td><td>Eine Rundendatei enthält Bretter mit Namen, die noch nicht nachgeschlagen wurden. Führen Sie <code>gotourney pair r</code> für diese Runde aus.</td></tr>
   <tr><td><code>round r: … players (odd) and no joker</code></td><td>Markieren Sie einen Spieler dieser Runde als Joker oder ändern Sie, wer diese Runde spielt.</td></tr>
   <tr><td>EGD list not available</td><td>Kein Internet und noch keine heruntergeladene Liste. Melden Sie Spieler durch Eintippen ihrer Daten an und führen Sie <code>gotourney egd update</code> aus, sobald Sie online sind.</td></tr>
   <tr><td><code>externally-managed-environment</code> bei der Installation</td><td>In die virtuelle Umgebung des Projekts installieren (<code>.venv/bin/pip</code>, Windows: <code>.venv\Scripts\pip</code>), siehe Abschnitt 3. Nicht <code>--break-system-packages</code> verwenden.</td></tr>
@@ -768,7 +795,8 @@ Befehle, Optionen, Einstellungsnamen und Meldungen der Werkzeuge sind englisch.<
   <tr><td><code>gotourney players sync [--offline]</code></td><td>EGD-Daten der angemeldeten Spieler aktualisieren</td></tr>
   <tr><td><code>gotourney egd update</code></td><td>EGD-Spielerliste herunterladen</td></tr>
   <tr><td><code>gotourney egd search &lt;Suche&gt;</code></td><td>In der EGD-Spielerliste suchen</td></tr>
-  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Runde r auslosen (Handbretter bleiben erhalten; Namen auf Handbrettern werden nachgeschlagen)</td></tr>
+  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force] [--yes]</code></td><td>Runde r auslosen (finalisierte Bretter bleiben unverändert; Namen werden nachgeschlagen)</td></tr>
+  <tr><td><code>gotourney start &lt;r&gt;</code></td><td>Runde r starten: alle Bretter finalisieren; danach lost <code>pair</code> nur noch Nachzügler aus</td></tr>
   <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Druckbare Auslosung → round_r.pdf (nach Brett) und round_r_alphabetical.pdf (nach Nachname); schreibt auch <code>pair</code></td></tr>
   <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Ergebnisse der Runde r prüfen</td></tr>
   <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR nach jeder Runde → standings.ods und standings.pdf</td></tr>

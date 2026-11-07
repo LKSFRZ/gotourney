@@ -340,7 +340,7 @@ def _print_round(t: Tournament, games, ratings, sitting_out) -> None:
         w, b = player_label(t.players[g.white]), player_label(t.players[g.black])
         typer.echo(f"{g.board:>3}  {WHITE_STONE} {w[:28]:<28} {ratings[g.white]:5.0f}  -  "
                    f"{BLACK_STONE} {b[:28]:<28} {ratings[g.black]:5.0f}   {hk:<14}"
-                   f"{'manual' if g.manual else ''}")
+                   f"{'finalized' if g.finalized else ''}")
     for pid, reason in sitting_out:
         if "joker" in reason:
             typer.echo(f"     Not playing: {t.players[pid].name} ({reason})")
@@ -349,16 +349,17 @@ def _print_round(t: Tournament, games, ratings, sitting_out) -> None:
 @app.command()
 def pair(
     round_no: int = typer.Argument(..., metavar="ROUND", help="Round number."),
-    template: bool = typer.Option(False, "--template", help="Only write an empty round file for manual pairings."),
+    template: bool = typer.Option(False, "--template", help="Only write an empty round file for boards you pair yourself."),
     force: bool = typer.Option(False, "--force", help="Overwrite a round file that already has results."),
     yes: bool = typer.Option(False, "--yes", "-y",
-                             help="Accept unambiguous name matches on manual boards without asking."),
+                             help="Accept unambiguous name matches on finalized boards without asking."),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Pair a round. Boards marked 'x' in the Manual column of an existing round file are kept.
+    """Pair a round. Boards marked 'x' in the Finalized column are never changed.
 
-    On manual boards, players can be given by (part of) their name instead of the ID; the tool
-    looks them up and asks for confirmation.
+    All other players registered for the round are paired; after 'gotourney start' this pairs only
+    latecomers, on new boards. On boards you enter yourself, players can be given by (part of) their
+    name instead of the ID; the tool looks them up and asks for confirmation.
     """
     from .pairing import PairingError, check_rule_fields, pair_round, pair_rules, rng_for, setup_game
 
@@ -374,8 +375,12 @@ def pair(
     if later:
         fail(f"round {later[0]} already exists; re-pairing round {round_no} is not possible")
     existing = t.rounds.get(round_no)
-    if existing and existing.has_results and not force:
-        fail(f"{path.name} already contains results. Use --force to pair the round again.")
+    if existing:
+        open_results = [g.board for g in existing.games if g.result is not None and not g.finalized]
+        if open_results and not force:
+            fail(f"{path.name}: board(s) {', '.join(map(str, open_results))} have results but are not "
+                 f"finalized. Run 'gotourney start {round_no}' (or put an x in the Finalized column) to keep "
+                 f"them, or use --force to pair them again (their results are lost).")
     try:
         ratings = t.rating_before(round_no)
     except TournamentError as e:
@@ -390,41 +395,27 @@ def pair(
                  if p.plays(round_no)]
         save_round(path, [], labels, ratings, participants=parts)
         typer.echo(f"Wrote {path}. Enter manual boards (White ID and Black ID, or names in the White / "
-                   f"Black columns, and 'x' in Manual), save, close, then run 'gotourney pair {round_no}'. "
+                   f"Black columns, and 'x' in Finalized), save, close, then run 'gotourney pair {round_no}'. "
                    f"Players of the round are listed on the 'Participants' sheet.")
         return
 
-    manual = []
+    finalized = []
     if existing and existing.unresolved:
         _resolve_names(t, existing, round_no, yes)
     if existing:
-        rng = rng_for(t.cfg, round_no, "manual")
-        for i, g in enumerate(existing.games):
-            if not g.manual:
-                continue
-            if i in existing.missing_handicap:
-                d = setup_game(t, round_no, g.white, g.black, ratings, rng, manual=True)
-                g.white, g.black, g.handicap, g.komi = d.white, d.black, d.handicap, d.komi
-            elif i in existing.missing_komi:
-                g.komi = t.cfg.handicap.komi_handicap if g.handicap > 0 else t.cfg.handicap.komi_even
-            g.result = None if force else g.result
-            manual.append(g)
-            if frozenset(g.players()) in t.played_pairs(before_round=round_no):
-                warn(f"manual board: {names[g.white]} and {names[g.black]} already played each other")
-            try:
-                check_rule_fields(t)
-                hard = [r.describe() for r in pair_rules(t, g.white, g.black)[2] if r.hard]
-            except PairingError:
-                hard = []
-            if hard:
-                warn(f"manual board: {names[g.white]} - {names[g.black]} breaks rule {'; '.join(hard)}")
-        dropped = len(existing.games) - len(manual)
+        finalized = _finalized_boards(t, existing, round_no, ratings, warn_checks=True)
+        dropped = len(existing.games) - len(finalized)
         if dropped:
-            typer.echo(f"{dropped} board(s) without 'x' in the Manual column are paired again.")
+            typer.echo(f"{dropped} board(s) without 'x' in the Finalized column are paired again.")
     try:
-        result = pair_round(t, round_no, manual)
+        result = pair_round(t, round_no, finalized)
     except PairingError as e:
         fail(str(e))
+    new_boards = [g.board for g in result.games if not g.finalized]
+    if finalized and not new_boards:
+        typer.echo(f"All players of round {round_no} are on finalized boards; nothing new to pair.")
+    elif finalized:
+        typer.echo(f"Kept {len(finalized)} finalized board(s). New board(s): {', '.join(map(str, new_boards))}.")
     save_round(path, result.games, labels, ratings, not_playing=[
         (pid, labels[pid], reason) for pid, reason in result.sitting_out])
     _print_round(t, result.games, ratings, result.sitting_out)
@@ -432,6 +423,39 @@ def pair(
         typer.echo(f"Rule {rule}: applies to {n} board{'s' if n != 1 else ''}")
     typer.echo(f"Wrote {path} ({len(result.games)} boards).")
     _write_pairing_pdf(directory, round_no)
+
+
+def _finalized_boards(t: Tournament, rg, round_no: int, ratings, warn_checks: bool = False) -> list:
+    """The finalized boards of a round file, with default handicap/komi/colours filled in where the
+    handicap was left empty. Boards without a board number get one later (number_boards)."""
+    from .pairing import PairingError, check_rule_fields, pair_rules, rng_for, setup_game
+
+    rng = rng_for(t.cfg, round_no, "manual")
+    kept = []
+    for i, g in enumerate(rg.games):
+        if not g.finalized:
+            continue
+        if i in rg.missing_handicap:
+            d = setup_game(t, round_no, g.white, g.black, ratings, rng, finalized=True)
+            g.white, g.black, g.handicap, g.komi = d.white, d.black, d.handicap, d.komi
+        elif i in rg.missing_komi:
+            g.komi = t.cfg.handicap.komi_handicap if g.handicap > 0 else t.cfg.handicap.komi_even
+        if i in rg.missing_board:
+            g.board = 0
+        kept.append(g)
+        if not warn_checks:
+            continue
+        a, b = t.players[g.white].name, t.players[g.black].name
+        if frozenset(g.players()) in t.played_pairs(before_round=round_no):
+            warn(f"finalized board: {a} and {b} already played each other")
+        try:
+            check_rule_fields(t)
+            hard = [r.describe() for r in pair_rules(t, g.white, g.black)[2] if r.hard]
+        except PairingError:
+            hard = []
+        if hard:
+            warn(f"finalized board: {a} - {b} breaks rule {'; '.join(hard)}")
+    return kept
 
 
 def _resolve_names(t: Tournament, rg, round_no: int, yes: bool) -> None:
@@ -453,9 +477,10 @@ def _resolve_names(t: Tournament, rg, round_no: int, yes: bool) -> None:
             rg.missing_handicap.add(idx)
         if u.komi is None:
             rg.missing_komi.add(idx)
-        rg.games.append(Game(board=idx + 1, white=u.white, black=u.black, handicap=u.handicap or 0,
-                             komi=u.komi if u.komi is not None else t.cfg.handicap.komi_even, manual=True))
-        typer.echo(f"Manual board (row {u.line}): {t.players[u.white].name} - {t.players[u.black].name}")
+        rg.missing_board.add(idx)
+        rg.games.append(Game(board=0, white=u.white, black=u.black, handicap=u.handicap or 0,
+                             komi=u.komi if u.komi is not None else t.cfg.handicap.komi_even, finalized=True))
+        typer.echo(f"Board (row {u.line}): {t.players[u.white].name} - {t.players[u.black].name}")
     rg.unresolved = []
 
 
@@ -561,7 +586,8 @@ def results_check(
     on_board = {pid for g in rg.games for pid in g.players()}
     for pid, p in sorted(t.players.items()):
         if p.plays(round_no) and pid not in on_board and not p.joker:
-            warn(f"{p.name} (ID {pid}) is registered for round {round_no} but not paired")
+            warn(f"{p.name} (ID {pid}) is registered for round {round_no} but not paired "
+                 f"(latecomer? 'gotourney pair {round_no}' pairs them on new boards)")
     for w in t.warnings:
         if w.startswith(f"round {round_no}, ") :
             warn(w)
@@ -701,3 +727,36 @@ def translation_file(
         fail(f"{path} already exists. Use --force to overwrite it.")
     path.write_text(translation_template(lang), encoding="utf-8")
     typer.echo(f"Wrote {path}. Set  language = \"custom\"  in the [output] section of {CONFIG_FILE} to use it.")
+
+
+@app.command()
+def start(
+    round_no: int = typer.Argument(..., metavar="ROUND", help="Round number."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Start a round: mark all its boards as finalized.
+
+    'gotourney pair' never changes finalized boards; afterwards it only pairs latecomers (players
+    registered for the round who are not on a board yet) on new boards.
+    """
+    from .pairing import number_boards
+    from .rounds import read_not_playing
+
+    t = load_tournament(directory)
+    rg = t.rounds.get(round_no)
+    path = round_file(directory, round_no)
+    if rg is None:
+        fail(f"{path.name} not found. Pair the round first: gotourney pair {round_no}")
+    if not rg.games:
+        fail(f"{path.name} has no boards. Pair the round first: gotourney pair {round_no}")
+    ensure_not_open(path)
+    ratings = t.rating_before(round_no)
+    newly = sum(1 for g in rg.games if not g.finalized)
+    for g in rg.games:
+        g.finalized = True
+    _finalized_boards(t, rg, round_no, ratings)          # fills an empty handicap / board number
+    number_boards(rg.games, ratings)
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    save_round(path, rg.games, labels, ratings, not_playing=read_not_playing(path))
+    typer.echo(f"Round {round_no} started: {len(rg.games)} board(s) finalized ({newly} newly). "
+               f"'gotourney pair {round_no}' will now only pair latecomers.")
