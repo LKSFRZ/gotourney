@@ -353,10 +353,12 @@ mit <code>--classic</code>.</p>
   <li><b>Update EGD list</b> lädt eine neue Kopie der EGD-Spielerliste herunter.</li>
 </ul>
 <div class="note"><b>Die EGD-Spielerliste.</b> Die Suche verwendet eine lokale Kopie der vollständigen
-EGD-Spielerliste (etwa 56.500 Spieler). Sie liegt in <code>~/.cache/gotourney/</code> und wird erneut
-heruntergeladen, wenn sie älter als einen Tag ist. Gibt es am Turnierort kein Internet, wird die zuletzt
-heruntergeladene Liste verwendet. Führen Sie zur Sicherheit am Vorabend <code>gotourney egd update</code>
-aus.</div>
+EGD-Spielerliste (etwa 56.500 Spieler). Sie liegt in <code>~/.cache/gotourney/</code>. Wenn die Liste gebraucht
+wird – die Weboberfläche startet oder ein Befehl sucht in der EGD – und die gespeicherte Kopie älter als einen Tag
+ist, wird eine neue heruntergeladen. Solange das Programm nicht läuft, passiert nichts, und eine laufende
+Weboberfläche behält die Liste vom Start (<i>EGD-Liste aktualisieren</i> auf der Spielerseite holt eine neue). Gibt
+es am Turnierort kein Internet, wird die zuletzt heruntergeladene Liste verwendet. Führen Sie zur Sicherheit am
+Vorabend <code>gotourney egd update</code> aus (oder starten Sie das Programm einmal mit Internet).</div>
 
 <h3>5.2 Anmelden auf der Kommandozeile</h3>
 <pre>gotourney players add --pin 12345678                       # alles andere aus der EGD

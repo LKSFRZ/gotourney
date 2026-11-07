@@ -114,7 +114,9 @@ Other distributions use other package names:
 - **pipx:** `pipx install -e ~/TournamentOrgaTool` makes `gotourney` available in every terminal
   without activating anything.
 - **EGD player list:** run `gotourney egd update` once to download it. It is cached in
-  `~/.cache/gotourney` and refreshed daily, so search keeps working at a venue without internet.
+  `~/.cache/gotourney`, so search keeps working at a venue without internet. It is downloaded again when
+  the program needs it (web interface start, EGD search commands) and the cached copy is more than a day
+  old – not in the background, and a running web interface keeps the list it started with.
 - **Font:** the PDFs use the DejaVu font that comes with gotourney. To choose another font, set
   `GOTOURNEY_FONT` to a `.ttf` file. It must contain ○ and ●.
 - **Updating:** replace the project folder with the new version and run `pip install -e .` again.

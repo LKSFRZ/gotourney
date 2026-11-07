@@ -140,8 +140,11 @@ How ratings, pairing and handicap work is explained on the page <a href="{{ url_
   </ol>
   <ul>
     <li><b>Not in the EGD:</b> fill in the form by hand. Name and rank are enough; an empty GoR is taken from the rank.</li>
-    <li><b>Offline:</b> the EGD player list is stored on your computer and updated once a day, so the search also works at a
-      venue without internet. <span class="btnlike">Update EGD list</span> downloads it now.</li>
+    <li><b>Offline:</b> the EGD player list is stored on your computer, so the search also works at a venue without
+      internet. When the program starts and the stored list is more than a day old, it downloads a new one (nothing
+      happens while the program is closed, and a running program keeps the list it started with).
+      <span class="btnlike">Update EGD list</span> downloads it now. Tip: start the program once with internet the day
+      before the tournament.</li>
     <li><b>Change a player:</b> click the name in the list. <b>Remove:</b> only possible as long as the player is in no
       round; afterwards untick their remaining rounds instead.</li>
     <li><span class="btnlike">Check registration</span> lists errors (e.g. missing rank) and warnings before pairing.</li>

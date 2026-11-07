@@ -338,9 +338,12 @@ with <code>--classic</code>.</p>
   <li><b>Update EGD list</b> downloads a fresh copy of the EGD player list.</li>
 </ul>
 <div class="note"><b>The EGD player list.</b> Searching uses a local copy of the complete EGD player list
-(about 56,500 players). It is stored in <code>~/.cache/gotourney/</code> and downloaded again when it is more
-than a day old. If there is no internet at the venue, the last downloaded list is used. Run
-<code>gotourney egd update</code> the evening before the tournament to be safe.</div>
+(about 56,500 players). It is stored in <code>~/.cache/gotourney/</code>. When the list is needed – the web
+interface starts, or a command searches the EGD – and the stored copy is more than a day old, a new one is
+downloaded. Nothing happens while the program is not running, and a running web interface keeps the list it
+started with (<i>Update EGD list</i> on the Players page fetches a new one). If there is no internet at the venue,
+the last downloaded list is used. To be safe, run <code>gotourney egd update</code> (or start the program once with
+internet) the evening before the tournament.</div>
 
 <h3>5.2 Registering on the command line <span class="badge now">AVAILABLE</span></h3>
 <pre>gotourney players add --pin 12345678                       # everything else from the EGD
