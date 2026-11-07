@@ -12,13 +12,18 @@ dependencies = [
     "reportlab>=4.0",
     "flask>=3.0",
     "tomlkit>=0.12",
+    "waitress>=3.0",
 ]
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+build = ["pyinstaller>=6", "pillow>=10"]
 
 [project.scripts]
 gotourney = "gotourney.cli:app"
+
+[project.gui-scripts]
+gotourney-app = "gotourney.app:main"
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -32,4 +37,4 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.setuptools.package-data]
-gotourney = ["data/*.csv", "web/templates/*.html", "web/static/*"]
+gotourney = ["data/*.csv", "data/*.png", "data/fonts/*", "data/docs/*", "web/templates/*.html", "web/static/*"]

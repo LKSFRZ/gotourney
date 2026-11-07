@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}{{ t("app_title") }}{% endblock %}</title>
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
@@ -20,6 +21,7 @@
       <a href="{{ url_for('settings_page') }}" class="{{ 'current' if here == '/settings' }}">{{ t("settings_title") }}</a>
     {% endif %}
     <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>
+    <a href="{{ url_for('help_page') }}" target="_blank" rel="noopener">{{ t("help") }}</a>
     <span class="lang" aria-label="{{ t('language') }}">
       {% for code in languages %}
         {% if code == lang %}<strong>{{ code|upper }}</strong>{% else %}<a href="{{ url_for('set_lang', code=code) }}">{{ code|upper }}</a>{% endif %}

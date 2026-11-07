@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Go-Turnier – Schnellstart</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 16mm 16mm; }
+  :root { --accent: #1f4e79; --muted: #5f6b76; --line: #d6dbe0; --warn: #b35c00; }
+  body { font-family: "DejaVu Sans", "Noto Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #1c232b; }
+  h1 { font-size: 22pt; color: var(--accent); margin: 0 0 2pt 0; }
+  h2 { font-size: 14pt; color: var(--accent); border-bottom: 1.5pt solid var(--accent); padding-bottom: 2pt;
+       margin: 16pt 0 7pt 0; break-after: avoid; }
+  h3 { font-size: 11pt; color: var(--accent); margin: 10pt 0 3pt 0; break-after: avoid; }
+  p { margin: 3pt 0 6pt 0; }
+  ul, ol { margin: 3pt 0 6pt 0; padding-left: 17pt; }
+  li { margin: 2.5pt 0; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f1f3f5; padding: 0 2pt; border-radius: 2pt; }
+  .subtitle { color: var(--muted); font-size: 11pt; margin-bottom: 10pt; }
+  .btn { display: inline-block; border: 0.8pt solid var(--accent); border-radius: 3pt; padding: 0 4pt; font-size: 9pt;
+         color: var(--accent); white-space: nowrap; }
+  .note { background: #f3f7fb; border: 0.6pt solid #c6d6e6; border-left: 3pt solid var(--accent); padding: 5pt 8pt;
+          margin: 8pt 0; break-inside: avoid; }
+  .warn { background: #fdf5ec; border: 0.6pt solid #ecc9a3; border-left: 3pt solid var(--warn); padding: 5pt 8pt;
+          margin: 8pt 0; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 8pt 0; font-size: 9pt; }
+  th, td { border: 0.6pt solid var(--line); padding: 3pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #e8eef4; color: #16324d; }
+  tr { break-inside: avoid; }
+  figure { margin: 6pt 0 8pt 0; text-align: center; break-inside: avoid; }
+  figure img { border: 0.6pt solid var(--line); }
+  figure.wide img { width: 68%; }
+  figure.small img { width: 52%; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 2pt; }
+  .steps > li { margin-bottom: 6pt; }
+  .pagebreak { break-before: page; }
+  .two { display: flex; gap: 12pt; align-items: flex-start; }
+  .two > div { flex: 1; }
+  .two > div + div { flex: 0 0 36%; }
+</style>
+</head>
+<body>
+
+<h1>Go-Turnier – Schnellstart</h1>
+<div class="subtitle">Ein Goturnier mit Turnierwertung (TGoR) ausrichten – alles im Webbrowser.</div>
+
+<h2>1. Installieren und starten</h2>
+<p>Laden Sie das Archiv für Ihren Computer herunter und entpacken Sie es (Doppelklick). Sonst muss nichts
+installiert werden.</p>
+<table>
+  <tr><th style="width:17%">System</th><th>Programm starten</th></tr>
+  <tr><td><b>Windows</b></td><td>Ordner <code>GoTournament</code> öffnen und <code>GoTournament.exe</code> doppelklicken.
+    Beim ersten Start meldet Windows eventuell <i>„Der Computer wurde durch Windows geschützt“</i>: auf
+    <b>Weitere Informationen</b> und dann <b>Trotzdem ausführen</b> klicken. Tipp: Rechtsklick auf
+    <code>GoTournament.exe</code> → <i>Senden an → Desktop (Verknüpfung erstellen)</i>.</td></tr>
+  <tr><td><b>macOS</b></td><td><code>Go Tournament.app</code> in den Ordner <i>Programme</i> ziehen. Beim ersten Start
+    <b>Rechtsklick</b> auf das Programm → <b>Öffnen</b> → <b>Öffnen</b>. (Falls macOS sich weigert:
+    <i>Systemeinstellungen → Datenschutz &amp; Sicherheit</i>, nach unten scrollen, <b>Dennoch öffnen</b>.)
+    Benötigt einen Mac mit Apple-Prozessor (M1 oder neuer).</td></tr>
+  <tr><td><b>Linux</b></td><td>Archiv entpacken und <code>GoTournament/GoTournament</code> starten.</td></tr>
+</table>
+<p>Die Warnungen erscheinen, weil das Programm kostenlos ist und nicht bei Microsoft oder Apple registriert
+(„signiert“) wurde. Sie kommen nur beim ersten Start.</p>
+
+<div class="two">
+<div>
+<p>Beim Start öffnet das Programm ein <b>kleines Fenster</b> und zeigt das Turnierprogramm in Ihrem
+<b>Webbrowser</b>. Das Programm läuft nur auf Ihrem Computer; ins Internet geht nur die Suche nach Spielern
+in der EGD.</p>
+<ul>
+  <li><span class="btn">Im Browser öffnen</span> – falls Sie den Browser-Tab geschlossen haben.</li>
+  <li><span class="btn">Turnierordner öffnen …</span> – ein Turnier öffnen, das woanders liegt
+    (z. B. auf einem USB-Stick).</li>
+  <li>Wenn Sie das Fenster schließen, endet das Programm. Alles ist bereits gespeichert.</li>
+</ul>
+</div>
+<div><figure><img src="img/quickstart/launcher_de.png" style="width:100%"><figcaption>Das Programmfenster</figcaption></figure></div>
+</div>
+
+<p><b>Außerdem nützlich:</b> <b>LibreOffice</b> (kostenlos, <i>libreoffice.org</i>), um die Turnierdateien
+(<code>.ods</code>) zu öffnen – freiwillig, alles geht auch im Browser. Eine <b>Internetverbindung</b> bei der
+Anmeldung, für die EGD-Suche. Ein <b>Drucker</b> für die Auslosungen.</p>
+
+<h2>2. Vor dem Turnier</h2>
+<ol class="steps">
+  <li><b>Turnier anlegen:</b> auf der Startseite Namen und Rundenzahl eingeben und
+    <span class="btn">Turnier anlegen</span> klicken. Ihre Turniere liegen im Ordner
+    <code>Dokumente/Go-Turniere</code>, ein Ordner pro Turnier, und erscheinen auf der Startseite.</li>
+  <li><b>Einstellungen</b> (Menü oben): Ort, Daten, Runden, Vorgabe, Preise und die zusätzlichen Spielerangaben
+    (z. B. <i>Fee paid</i>, <i>Age group</i>) prüfen. Jedes Feld ist erklärt. Dann
+    <span class="btn">Einstellungen speichern</span>.</li>
+  <li><b>Spieler</b>: einen Teil des Namens in <i>In der EGD suchen</i> tippen (z. B. <code>becker a</code>) und den
+    Spieler auswählen – das Formular wird ausgefüllt. Rang, Runden und Startgeld prüfen, dann
+    <span class="btn">Spieler hinzufügen</span>. Spieler, die nicht in der EGD stehen: Formular von Hand ausfüllen
+    (mindestens Name und Rang).</li>
+</ol>
+
+<figure class="wide"><img src="img/quickstart/qs_de_players.png"><figcaption>Spieler: links die EGD-Suche, rechts die angemeldeten Spieler</figcaption></figure>
+
+<h2>3. Am Turniertag</h2>
+<p>Die <b>Übersicht</b> zeigt immer den <b>nächsten Schritt</b> mit den passenden Knöpfen. Folgen Sie ihm einfach:</p>
+
+<figure class="wide"><img src="img/quickstart/qs_de_dashboard.png"><figcaption>Übersicht: der blaue Kasten zeigt den nächsten Schritt</figcaption></figure>
+
+<ol class="steps">
+  <li><b>Anmeldung abschließen:</b> <span class="btn">Anmeldung prüfen</span> zeigt fehlende oder zweifelhafte
+    Angaben. Dann <span class="btn">Runde 1 auslosen</span>.</li>
+  <li><b>Auslosung drucken:</b> <span class="btn">Auslosung (nach Brett)</span> und <span class="btn">Auslosung (A–Z)</span>
+    öffnen druckfertige PDFs (mit Farben, Vorgabe und Komi). Aushängen.</li>
+  <li><b>Runde starten</b>, wenn die Partien beginnen: <span class="btn">Runde 1 starten</span>. Ab jetzt stehen die
+    Bretter fest. Nachzügler können noch angemeldet und untereinander gelost werden
+    (<span class="btn">Nachzügler auslosen</span>).</li>
+  <li><b>Ergebnisse eintragen:</b> <span class="btn">Ergebnisse eintragen</span>, dann an jedem Brett auf den Sieger
+    klicken. Das wird sofort gespeichert. Kampflose Partien und Sonderfälle stehen unter <i>Mehr</i>.</li>
+  <li>Wenn alle Ergebnisse da sind: <b>Tabelle</b> ansehen, dann <span class="btn">Runde 2 auslosen</span> – und so weiter.</li>
+</ol>
+
+<figure class="wide"><img src="img/quickstart/qs_de_round_1.png"><figcaption>Ergebnisse eintragen: ein Klick auf den Sieger</figcaption></figure>
+
+<h2>4. Nach der letzten Runde</h2>
+<ol class="steps">
+  <li><b>Tabelle</b> (Menü oben): <b>Siegerehrung</b> – Folien mit allen Preisträgern (PDF, im Vollbild zeigen).
+    Welche Preise es gibt, steht in den Einstellungen.</li>
+  <li><b>Wandtabelle</b> → <span class="btn">Erstellen</span>: die Endplätze. Die Schreibweise von Namen können Sie in
+    <code>wall_list.ods</code> korrigieren.</li>
+  <li><b>EGD-Ergebnisdatei</b> (<code>.h9</code>): an den Ratingverantwortlichen Ihres Landesverbands schicken.</li>
+</ol>
+
+<h2>5. Gut zu wissen</h2>
+<ul>
+  <li><b>Alles ist eine Datei.</b> Alle Daten liegen im Turnierordner: <code>players.ods</code>,
+    <code>round_1.ods</code>, …, <code>tournament.toml</code> (Einstellungen). Sie können die <code>.ods</code>-Dateien
+    jederzeit in LibreOffice öffnen und dort ändern – die Browserseite aktualisiert sich selbst.</li>
+  <li><b>Immer nur einer:</b> Solange eine Datei in LibreOffice offen ist (🔒 im Browser), kann das Programm sie nicht
+    ändern. Speichern (im <i>.ods</i>-Format bleiben) und schließen, dann im Browser weitermachen.</li>
+  <li><b>Sicherungen:</b> Vor jeder Auslosung und jedem Rundenstart werden alle Dateien im Ordner <code>backups</code>
+    gesichert. Zum Zurückgehen eine Sicherung in den Turnierordner entpacken.</li>
+  <li><b>Neu auslosen:</b> Eine Runde, die noch nicht gestartet ist, kann neu ausgelost werden (z. B. nach einer späten
+    Absage). Einzelne Bretter ändern Sie von Hand über das Menü <b>⋯</b> neben der Brettnummer.</li>
+  <li><b>Sprache:</b> Die Browserseiten wechseln Sie mit <b>EN / DE</b> oben rechts; die Sprache der Ausdrucke ist eine
+    Einstellung.</li>
+  <li><b>Wie alles funktioniert:</b> TGoR, Vorgabe, Auslosungsregeln, Preise und die Dateien sind ausführlich in der
+    <b>Anleitung.pdf</b> erklärt.</li>
+</ul>
+
+<div class="note"><b>Probleme?</b> Zeigt die Browserseite einen Fehler, lesen Sie die Meldung – sie sagt, was zu tun ist.
+Startet das Programm nicht, starten Sie es erneut; läuft es schon, öffnet sich einfach der Browser.
+Die Protokolldatei <code>gotourney.log</code> liegt im Einstellungsordner des Programms
+(Windows: <code>%APPDATA%\gotourney</code>, macOS: <code>~/Library/Application Support/gotourney</code>,
+Linux: <code>~/.config/gotourney</code>).</div>
+
+</body>
+</html>

@@ -24,9 +24,24 @@ by hand. Features:
 - PDFs in English, German, French or a custom language.
 
 The full documentation is in [`Guide.pdf`](Guide.pdf) (English) and
-[`Anleitung.pdf`](Anleitung.pdf) (German).
+[`Anleitung.pdf`](Anleitung.pdf) (German). Directors who use the program (not the command line) need only
+the short quick-start guide: [`Quickstart.pdf`](src/gotourney/data/docs/Quickstart.pdf) /
+[`Schnellstart.pdf`](src/gotourney/data/docs/Schnellstart.pdf).
 
-## Installation
+## The program (no installation)
+
+For tournament directors there is a ready-made program for **Windows**, **macOS** (Apple processor)
+and **Linux**. It needs no Python. Download the archive from the *Releases* page, unpack it and start
+`GoTournament.exe` (Windows), `Go Tournament.app` (macOS) or `GoTournament/GoTournament` (Linux).
+The program shows a small window and opens the web interface (see below) in the browser.
+The quick-start guide is in the archive and behind *Help* in the menu.
+
+The programs are not signed, so Windows and macOS warn on the first start; the quick-start guide
+explains how to open them anyway.
+
+The rest of this README is about installing the command line tools with Python.
+
+## Installation (command line)
 
 You need:
 
@@ -41,7 +56,7 @@ The examples assume the folder is `TournamentOrgaTool` in your home folder.
 Ubuntu / Debian:
 
 ```sh
-sudo apt install python3 python3-venv python3-tk fonts-dejavu-core libreoffice-calc
+sudo apt install python3 python3-venv python3-tk libreoffice-calc
 cd ~/TournamentOrgaTool
 python3 -m venv .venv
 .venv/bin/pip install -e .
@@ -51,8 +66,8 @@ gotourney --help
 
 Other distributions use other package names:
 
-- Fedora: `sudo dnf install python3 python3-tkinter dejavu-sans-fonts libreoffice-calc`
-- Arch: `sudo pacman -S python tk ttf-dejavu libreoffice-fresh`
+- Fedora: `sudo dnf install python3 python3-tkinter libreoffice-calc`
+- Arch: `sudo pacman -S python tk libreoffice-fresh`
 
 ### macOS
 
@@ -71,8 +86,6 @@ Other distributions use other package names:
    gotourney --help
    ```
 
-4. **Fonts (optional).** The PDFs use Arial Unicode or Arial, which come with macOS. For the same look
-   as on Linux, install DejaVu: `brew install --cask font-dejavu`.
 
 ### Windows
 
@@ -92,9 +105,6 @@ Other distributions use other package names:
    PowerShell may refuse to run `activate` ("running scripts is disabled"). Either run
    `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or call the tool without activating:
    `.venv\Scripts\gotourney --help`.
-4. **Fonts (optional).** Without extra fonts the PDFs use Arial, and the star on the award slides
-   becomes `*`. For all symbols, install the free [DejaVu fonts](https://dejavu-fonts.github.io/):
-   right-click `DejaVuSans.ttf` and `DejaVuSans-Bold.ttf`, then choose *Install*.
 
 ### After the installation
 
@@ -105,8 +115,8 @@ Other distributions use other package names:
   without activating anything.
 - **EGD player list:** run `gotourney egd update` once to download it. It is cached in
   `~/.cache/gotourney` and refreshed daily, so search keeps working at a venue without internet.
-- **Font:** to choose a font for the PDFs yourself, set `GOTOURNEY_FONT` to a `.ttf` file. It must
-  contain ○ and ●.
+- **Font:** the PDFs use the DejaVu font that comes with gotourney. To choose another font, set
+  `GOTOURNEY_FONT` to a `.ttf` file. It must contain ○ and ●.
 - **Updating:** replace the project folder with the new version and run `pip install -e .` again.
   Tournament folders are not affected.
 
@@ -166,4 +176,20 @@ as a zip file in `backups/`.
 ```
 
 The source code is in `src/gotourney/` and the tests are in `tests/`. The guides are generated from
-`docs/guide.html` and `docs/guide_de.html`.
+`docs/guide.html`, `docs/guide_de.html`, `docs/quickstart.html` and `docs/quickstart_de.html`
+(print them to PDF with Chromium: `chromium --headless --no-pdf-header-footer --print-to-pdf=Guide.pdf
+docs/guide.html`). The quick-start PDFs belong in `src/gotourney/data/docs/`, because the program
+shows them under *Help*.
+
+### Building the program
+
+```sh
+.venv/bin/pip install -e '.[build]'    # PyInstaller and Pillow
+.venv/bin/python packaging/build.py    # -> dist/GoTournament-<version>-<system>-<cpu>.(zip|tar.gz)
+```
+
+PyInstaller builds only for the system it runs on. The GitHub Actions workflow
+`.github/workflows/build.yml` runs the tests and builds all three programs on every push; for a tag
+like `v0.3.0` it also creates a release with the three archives. The program itself is
+`gotourney-app` (`src/gotourney/app.py`): without arguments it starts the web interface with its
+small window; with arguments it works like the `gotourney` command.

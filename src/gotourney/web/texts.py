@@ -14,8 +14,8 @@ TEXTS: dict[str, dict[str, str]] = {
         # home page
         "home_intro": "Run a Go tournament with tournament ratings (TGoR): registration, pairings, results, "
                       "standings, wall list, EGD file and award ceremony – step by step.",
-        "recent": "Recently opened",
-        "no_recent": "No tournaments opened yet.",
+        "recent": "Your tournaments",
+        "no_recent": "No tournaments yet. Create one on the right.",
         "open_title": "Open a tournament",
         "open_text": "Folder of an existing tournament (contains tournament.toml):",
         "open_button": "Open",
@@ -327,8 +327,8 @@ TEXTS: dict[str, dict[str, str]] = {
         "help": "Hilfe",
         "home_intro": "Ein Goturnier mit Turnierwertung (TGoR) ausrichten: Anmeldung, Auslosung, Ergebnisse, "
                       "Tabelle, Wandtabelle, EGD-Datei und Siegerehrung – Schritt für Schritt.",
-        "recent": "Zuletzt geöffnet",
-        "no_recent": "Noch keine Turniere geöffnet.",
+        "recent": "Ihre Turniere",
+        "no_recent": "Noch keine Turniere. Legen Sie rechts eines an.",
         "open_title": "Turnier öffnen",
         "open_text": "Ordner eines vorhandenen Turniers (enthält tournament.toml):",
         "open_button": "Öffnen",

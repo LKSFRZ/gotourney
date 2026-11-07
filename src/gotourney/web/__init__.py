@@ -61,6 +61,27 @@ def default_folder(lang: str) -> Path:
     return (docs if docs.is_dir() else Path.home()) / ("Go-Turniere" if lang == "de" else "Go tournaments")
 
 
+def find_tournaments() -> list[str]:
+    """Recently opened tournaments, then the other ones in the default folders (newest first)."""
+    found = []
+    for base in {default_folder("en"), default_folder("de")}:
+        try:
+            found += [c for c in base.iterdir() if (c / CONFIG_FILE).is_file()]
+        except OSError:
+            continue
+
+    def changed(path: Path) -> float:
+        try:
+            return (path / CONFIG_FILE).stat().st_mtime
+        except OSError:
+            return 0.0
+    recent = load_recent()
+    known = {os.path.normcase(str(Path(p).resolve())) for p in recent}
+    others = [str(c.resolve()) for c in sorted(found, key=changed, reverse=True)
+              if os.path.normcase(str(c.resolve())) not in known]
+    return recent + others
+
+
 def open_with_system(path: Path) -> None:
     """Open a file with its usual program (e.g. LibreOffice for .ods)."""
     if sys.platform.startswith("win"):
@@ -73,7 +94,9 @@ def open_with_system(path: Path) -> None:
 
 def start_registration_window(directory: Path) -> None:
     env = dict(os.environ, GOTOURNEY_NO_HINTS="1")
-    subprocess.Popen([sys.executable, "-m", "gotourney", "gui", "-d", str(directory)], env=env)
+    # the packaged program runs the command line itself when it gets arguments (see app.py)
+    command = [sys.executable] if getattr(sys, "frozen", False) else [sys.executable, "-m", "gotourney"]
+    subprocess.Popen(command + ["gui", "--classic", "-d", str(directory)], env=env)
 
 
 class EgdIndex:
@@ -136,6 +159,7 @@ def create_app(directory: Path | None = None) -> Flask:
     app.secret_key = secrets.token_hex(32)
     app.config["TOURNAMENT_DIR"] = Path(directory).resolve() if directory else None
     app.config["CSRF"] = secrets.token_urlsafe(24)
+    app.config["LAUNCH"] = secrets.token_urlsafe(24)       # lets the launcher window open a folder
     app.config["OPENER"] = open_with_system
     app.config["REGISTRATION"] = start_registration_window
     app.config["EGD"] = EgdIndex()
@@ -193,7 +217,32 @@ def create_app(directory: Path | None = None) -> Flask:
     def home():
         if tdir() and not request.args.get("choose"):
             return redirect(url_for("dashboard"))
-        return render_template("home.html", recent=load_recent(), default_folder=default_folder(lang()))
+        return render_template("home.html", recent=find_tournaments(), default_folder=default_folder(lang()))
+
+    @app.get("/help")
+    def help_page():
+        """The quick-start guide (PDF) in the language of the interface."""
+        name = "Schnellstart.pdf" if lang() == "de" else "Quickstart.pdf"
+        return send_from_directory(Path(__file__).parent.parent / "data" / "docs", name)
+
+    @app.get("/api/ping")
+    def api_ping():
+        return jsonify(app="gotourney", version=__version__)
+
+    @app.get("/launch/<token>")
+    def launch(token: str):
+        """Used by the launcher window ("Open tournament folder ..."): open that folder."""
+        if not secrets.compare_digest(token, app.config["LAUNCH"]):
+            abort(403)
+        if request.args.get("path"):
+            path = Path(request.args["path"]).expanduser()
+            if not (path / CONFIG_FILE).exists():
+                say("error", "not_a_tournament", path=path)
+                return redirect(url_for("home", choose=1))
+            app.config["TOURNAMENT_DIR"] = path.resolve()
+            remember(path.resolve())
+            return redirect(url_for("dashboard"))
+        return redirect(url_for("home"))
 
     @app.get("/lang/<code>")
     def set_lang(code: str):
@@ -961,16 +1010,67 @@ def phase_card(t, lang: str) -> dict:
     return card
 
 
-def run(directory: Path | None = None, port: int = 8765, open_browser: bool = True, start_path: str = "/") -> None:
+DEFAULT_PORT = 8765
+
+
+def running_instance(port: int) -> bool:
+    """Is a gotourney web interface already answering on this port (e.g. started twice)?"""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/ping", timeout=1) as r:
+            return json.loads(r.read().decode()).get("app") == "gotourney"
+    except (OSError, ValueError):
+        return False
+
+
+def port_free(port: int) -> bool:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        try:
+            s.bind(("127.0.0.1", port))
+            return True
+        except OSError:
+            return False
+
+
+def free_port() -> int:
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+def make_server(app: Flask, port: int):
+    """A waitress server on 127.0.0.1 (call .run() to serve, .close() to stop)."""
+    from waitress import create_server
+    return create_server(app, host="127.0.0.1", port=port, threads=8, ident="gotourney")
+
+
+def run(directory: Path | None = None, port: int = DEFAULT_PORT, open_browser: bool = True,
+        start_path: str = "/") -> None:
     """Start the local web interface (blocks until stopped with Ctrl+C)."""
     import webbrowser
 
+    if not port_free(port):
+        if running_instance(port) and directory is None:
+            url = f"http://127.0.0.1:{port}{start_path}"
+            print(f"gotourney is already running: {url}")
+            if open_browser:
+                webbrowser.open(url)
+            return
+        port = free_port()
     app = create_app(directory)
     app.config["EGD"].ensure()                    # load the EGD player list in the background
     if directory is not None:
         remember(Path(directory).resolve())
     url = f"http://127.0.0.1:{port}{start_path}"
+    server = make_server(app, port)
     if open_browser:
         threading.Timer(1.0, lambda: webbrowser.open(url)).start()
     print(f"gotourney web interface: {url}   (stop with Ctrl+C)")
-    app.run(host="127.0.0.1", port=port, debug=False, use_reloader=False)
+    try:
+        server.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.close()

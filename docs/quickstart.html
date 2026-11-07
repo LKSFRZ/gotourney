@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Go Tournament – Quick start</title>
+<style>
+  @page { size: A4; margin: 16mm 16mm 16mm 16mm; }
+  :root { --accent: #1f4e79; --muted: #5f6b76; --line: #d6dbe0; --warn: #b35c00; }
+  body { font-family: "DejaVu Sans", "Noto Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #1c232b; }
+  h1 { font-size: 22pt; color: var(--accent); margin: 0 0 2pt 0; }
+  h2 { font-size: 14pt; color: var(--accent); border-bottom: 1.5pt solid var(--accent); padding-bottom: 2pt;
+       margin: 16pt 0 7pt 0; break-after: avoid; }
+  h3 { font-size: 11pt; color: var(--accent); margin: 10pt 0 3pt 0; break-after: avoid; }
+  p { margin: 3pt 0 6pt 0; }
+  ul, ol { margin: 3pt 0 6pt 0; padding-left: 17pt; }
+  li { margin: 2.5pt 0; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f1f3f5; padding: 0 2pt; border-radius: 2pt; }
+  .subtitle { color: var(--muted); font-size: 11pt; margin-bottom: 10pt; }
+  .btn { display: inline-block; border: 0.8pt solid var(--accent); border-radius: 3pt; padding: 0 4pt; font-size: 9pt;
+         color: var(--accent); white-space: nowrap; }
+  .note { background: #f3f7fb; border: 0.6pt solid #c6d6e6; border-left: 3pt solid var(--accent); padding: 5pt 8pt;
+          margin: 8pt 0; break-inside: avoid; }
+  .warn { background: #fdf5ec; border: 0.6pt solid #ecc9a3; border-left: 3pt solid var(--warn); padding: 5pt 8pt;
+          margin: 8pt 0; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 8pt 0; font-size: 9pt; }
+  th, td { border: 0.6pt solid var(--line); padding: 3pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #e8eef4; color: #16324d; }
+  tr { break-inside: avoid; }
+  figure { margin: 6pt 0 8pt 0; text-align: center; break-inside: avoid; }
+  figure img { border: 0.6pt solid var(--line); }
+  figure.wide img { width: 68%; }
+  figure.small img { width: 52%; }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 2pt; }
+  .steps > li { margin-bottom: 6pt; }
+  .pagebreak { break-before: page; }
+  .two { display: flex; gap: 12pt; align-items: flex-start; }
+  .two > div { flex: 1; }
+  .two > div + div { flex: 0 0 36%; }
+</style>
+</head>
+<body>
+
+<h1>Go Tournament – Quick start</h1>
+<div class="subtitle">Run a Go tournament with tournament ratings (TGoR) – everything in your web browser.</div>
+
+<h2>1. Install and start</h2>
+<p>Download the archive for your computer and unpack it (double-click). No other installation is needed.</p>
+<table>
+  <tr><th style="width:17%">System</th><th>Start the program</th></tr>
+  <tr><td><b>Windows</b></td><td>Open the folder <code>GoTournament</code> and double-click <code>GoTournament.exe</code>.
+    On the first start Windows may show <i>“Windows protected your PC”</i>: click <b>More info</b>, then
+    <b>Run anyway</b>. Tip: right-click <code>GoTournament.exe</code> → <i>Send to → Desktop (create shortcut)</i>.</td></tr>
+  <tr><td><b>macOS</b></td><td>Drag <code>Go Tournament.app</code> into <i>Applications</i>. On the first start,
+    <b>right-click</b> the app → <b>Open</b> → <b>Open</b>. (If macOS refuses: <i>System Settings → Privacy &amp; Security</i>,
+    scroll down, <b>Open Anyway</b>.) Needs a Mac with Apple processor (M1 or newer).</td></tr>
+  <tr><td><b>Linux</b></td><td>Unpack the archive and start <code>GoTournament/GoTournament</code>.</td></tr>
+</table>
+<p>The warnings appear because the program is free and not registered (“signed”) with Microsoft or Apple. They
+appear only on the first start.</p>
+
+<div class="two">
+<div>
+<p>When it starts, the program opens a <b>small window</b> and shows the tournament program in your
+<b>web browser</b>. The program runs only on your computer; nothing is sent to the internet except the
+look-up of players in the EGD.</p>
+<ul>
+  <li><span class="btn">Open in browser</span> – if you closed the browser tab.</li>
+  <li><span class="btn">Open tournament folder …</span> – open a tournament stored somewhere else
+    (e.g. on a USB stick).</li>
+  <li>Closing the window ends the program. Everything is already saved.</li>
+</ul>
+</div>
+<div><figure><img src="img/quickstart/launcher_en.png" style="width:100%"><figcaption>The program window</figcaption></figure></div>
+</div>
+
+<p><b>Also useful:</b> <b>LibreOffice</b> (free, <i>libreoffice.org</i>) to open the tournament files (<code>.ods</code>) –
+optional, everything can be done in the browser. An <b>internet connection</b> during registration, for the EGD
+search. A <b>printer</b> for the pairings.</p>
+
+<h2>2. Before the tournament</h2>
+<ol class="steps">
+  <li><b>Create the tournament:</b> on the start page enter the name and the number of rounds and click
+    <span class="btn">Create tournament</span>. Your tournaments are stored in the folder
+    <code>Documents/Go tournaments</code>, one folder per tournament, and appear on the start page.</li>
+  <li><b>Settings</b> (top menu): check place, dates, rounds, handicap, prizes and the additional player data
+    (e.g. <i>Fee paid</i>, <i>Age group</i>). Each field has an explanation. Click <span class="btn">Save settings</span>.</li>
+  <li><b>Players</b>: type part of a name into <i>Search the EGD</i> (e.g. <code>becker a</code>) and choose the
+    player – the form is filled in. Check rank, rounds and fee, then <span class="btn">Add player</span>.
+    Players who are not in the EGD: fill in the form by hand (at least name and rank).</li>
+</ol>
+
+<figure class="wide"><img src="img/quickstart/qs_en_players.png"><figcaption>Players: EGD search on the left, registered players on the right</figcaption></figure>
+
+<h2>3. On the tournament day</h2>
+<p>The <b>Overview</b> always shows the <b>next step</b> with the right buttons. Just follow it:</p>
+
+<figure class="wide"><img src="img/quickstart/qs_en_dashboard.png"><figcaption>Overview: the blue box shows the next step</figcaption></figure>
+
+<ol class="steps">
+  <li><b>Close registration:</b> <span class="btn">Check registration</span> shows missing or doubtful data.
+    Then <span class="btn">Pair round 1</span>.</li>
+  <li><b>Print the pairing:</b> <span class="btn">Pairing (by board)</span> and <span class="btn">Pairing (A–Z)</span>
+    open printable PDFs (with colours, handicap and komi). Put them up.</li>
+  <li><b>Start the round</b> when the games begin: <span class="btn">Start round 1</span>. From now on the boards are
+    fixed. Late players can still be added and paired among each other (<span class="btn">Pair latecomers</span>).</li>
+  <li><b>Enter results:</b> <span class="btn">Enter results</span>, then click the winner on each board. It is saved
+    immediately. Forfeits and other cases are under <i>More</i>.</li>
+  <li>When all results are in: look at the <b>Standings</b>, then <span class="btn">Pair round 2</span> – and so on.</li>
+</ol>
+
+<figure class="wide"><img src="img/quickstart/qs_en_round_1.png"><figcaption>Entering results: one click on the winner</figcaption></figure>
+
+<h2>4. After the last round</h2>
+<ol class="steps">
+  <li><b>Standings</b> (top menu): <b>Award ceremony</b> – slides with all prize winners (PDF, show it full-screen).
+    Which prizes exist is set in the settings.</li>
+  <li><b>Wall list</b> → <span class="btn">Create</span>: the final places. You may correct the spelling of names in
+    <code>wall_list.ods</code>.</li>
+  <li><b>EGD result file</b> (<code>.h9</code>): send it to your national rating officer.</li>
+</ol>
+
+<h2>5. Good to know</h2>
+<ul>
+  <li><b>Everything is a file.</b> All data is in the tournament folder: <code>players.ods</code>,
+    <code>round_1.ods</code>, …, <code>tournament.toml</code> (settings). You can open the <code>.ods</code> files in
+    LibreOffice at any time and change them there – the browser page updates itself.</li>
+  <li><b>Only one at a time:</b> while a file is open in LibreOffice (🔒 in the browser), the program cannot change
+    it. Save it (keep the <i>.ods</i> format) and close it, then continue in the browser.</li>
+  <li><b>Backups:</b> before every pairing and round start, all files are saved in the folder <code>backups</code>.
+    To go back, unpack a backup into the tournament folder.</li>
+  <li><b>Pairing again:</b> a round that has not been started can be paired again (e.g. after a late
+    cancellation). Single boards can be changed by hand with the <b>⋯</b> menu next to the board number.</li>
+  <li><b>Language:</b> the browser pages switch with <b>EN / DE</b> at the top right; the language of the printouts
+    is a setting.</li>
+  <li><b>How it works:</b> the TGoR, handicap, pairing rules, prizes and the files are explained in detail in
+    <b>Guide.pdf</b> (German: Anleitung.pdf).</li>
+</ul>
+
+<div class="note"><b>Problems?</b> If the browser page shows an error, read the message – it says what to do. If the
+program does not start, start it again; if it is already running, the browser simply opens it.
+The log file <code>gotourney.log</code> is in the program's settings folder
+(Windows: <code>%APPDATA%\gotourney</code>, macOS: <code>~/Library/Application Support/gotourney</code>,
+Linux: <code>~/.config/gotourney</code>).</div>
+
+</body>
+</html>

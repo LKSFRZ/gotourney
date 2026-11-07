@@ -23,9 +23,8 @@
 <div class="title">
   <h1>{{ tour.cfg.tournament.name }}</h1>
   <p class="muted">
-    {{ tour.cfg.tournament.place }}{% if tour.cfg.tournament.place and tour.cfg.tournament.dates %} · {% endif %}{{ dates(tour.cfg.tournament.dates) }}
-    · {{ t("players_count", n=tour.players|length) }}
-    · {{ t("rounds_count", n=tour.cfg.tournament.rounds) }}
+    {{ [tour.cfg.tournament.place, dates(tour.cfg.tournament.dates), t("players_count", n=tour.players|length),
+        t("rounds_count", n=tour.cfg.tournament.rounds)] | select | join(" · ") }}
   </p>
 </div>
 

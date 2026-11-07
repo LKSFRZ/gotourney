@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (in progress: W0–W5 done; W6 packaging open)
+## 11. Web interface (W0–W6 done)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -332,14 +332,24 @@ Each phase is usable on its own; the command line keeps working throughout.
   including pairing rules, extra fields and prizes.
 - ✅ **W5 – End of the tournament.** Standings, wall list, `.h9`, award slides as pages with downloads;
   automatic backup of the tournament folder before each round.
-- **W6 – Packaging.** One program per operating system (Windows, macOS, Linux) that needs no Python
-  installation; a short quick-start guide for directors.
+- **W6 – Packaging.** ✅ One program per operating system (Windows, macOS, Linux) that needs no Python
+  installation; a short quick-start guide for directors. Done (2026-11-07):
+  - PyInstaller (`packaging/gotourney.spec`, `packaging/build.py`), one folder per program; macOS as
+    `Go Tournament.app`. GitHub Actions builds all three and makes a release for `v*` tags.
+  - Launcher `gotourney-app` (`app.py`): small Tk window (open in browser, open tournament folder …,
+    quit), language from the system; a second start just opens the browser; with arguments it is the
+    command line. Without a display it falls back to the console.
+  - Server: waitress instead of Flask's development server; free port if 8765 is taken.
+  - DejaVu fonts are bundled, so PDFs work on every system without installing fonts.
+  - Start page lists all tournaments in `Documents/Go tournaments` (and `Go-Turniere`) automatically.
+  - Quick-start guide (EN/DE, with screenshots), in the archive and under *Help* in the web menu.
+  - Not done: code signing (costs money; the guide explains how to open unsigned programs); Intel Macs
+    (GitHub's macOS runners are Apple Silicon).
 - **Later / optional.** Read-only view for projector and players' phones on the venue network;
   helpers entering results on a second device.
 
 ### 11.4 Open points
 
-- Default location for tournament folders of non-technical users (e.g. `Documents/Go tournaments`).
 - Unsigned programs trigger warnings on Windows and macOS; code signing costs money and effort.
 - Building the programs for Windows and macOS needs those systems (or a CI service).
 - Accessibility and use on small laptop screens.

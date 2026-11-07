@@ -1,7 +1,9 @@
 import re
+from pathlib import Path
 
 import pytest
 
+from gotourney import workflow
 from gotourney.models import Result
 from gotourney.rounds import player_label, read_not_playing, save_round
 from gotourney.tournament import Tournament
@@ -444,3 +446,59 @@ def test_pdfs_are_created_when_opened(make_tournament):
     post(c, app, "/do/wall", next="/documents")
     r = c.get("/file/Test.h9")
     assert r.status_code == 200 and b"; TC[]" in r.data
+
+
+# ---------------------------------------------------------------- packaging / launcher
+
+def test_ping_and_launch(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(None)
+    assert c.get("/api/ping").get_json()["app"] == "gotourney"
+    assert c.get(f"/launch/wrong?path={d}").status_code == 403
+    r = c.get(f"/launch/{app.config['LAUNCH']}", query_string={"path": str(d)})
+    assert r.status_code == 302 and r.headers["Location"].endswith("/dashboard")
+    assert app.config["TOURNAMENT_DIR"] == d.resolve()
+    r = c.get(f"/launch/{app.config['LAUNCH']}", query_string={"path": str(d / "nothing")}, follow_redirects=True)
+    assert "tournament" in page(r).lower() and app.config["TOURNAMENT_DIR"] == d.resolve()
+
+
+def test_home_lists_tournaments_in_the_default_folder(tmp_path, monkeypatch):
+    from gotourney.web import find_tournaments
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    (tmp_path / "Documents").mkdir()
+    workflow.create_tournament(tmp_path / "Documents" / "Go tournaments" / "Spring Cup", "Spring Cup", 3, "en")
+    workflow.create_tournament(tmp_path / "Documents" / "Go-Turniere" / "Herbstturnier", "Herbst", 3, "de")
+    (tmp_path / "Documents" / "Go tournaments" / "not a tournament").mkdir()
+    names = [Path(p).name for p in find_tournaments()]
+    assert sorted(names) == ["Herbstturnier", "Spring Cup"]
+    app, c = client_for(None)
+    html = page(c.get("/"))
+    assert "Spring Cup" in html and "Herbstturnier" in html
+
+
+def test_real_server_and_second_start(tmp_path):
+    import threading
+    from gotourney.web import create_app, free_port, make_server, port_free, running_instance
+    port = free_port()
+    assert port_free(port) and not running_instance(port)
+    server = make_server(create_app(None), port)
+    threading.Thread(target=server.run, daemon=True).start()
+    try:
+        assert not port_free(port) and running_instance(port)
+    finally:
+        server.close()
+
+
+def test_bundled_font_is_used():
+    from gotourney.printing import find_fonts
+    regular, bold, _ = find_fonts()
+    assert regular.name == "DejaVuSans.ttf" and "gotourney" in str(regular.parent)
+
+
+def test_help_opens_the_quick_start():
+    app, c = client_for(None)
+    r = c.get("/help")
+    assert r.status_code == 200 and r.mimetype == "application/pdf"
+    c.get("/lang/de")
+    r = c.get("/help")
+    assert r.status_code == 200 and "Schnellstart" in r.headers.get("Content-Disposition", "Schnellstart")

@@ -32,6 +32,8 @@ def font_candidates() -> list[tuple[Path, Path]]:
     if env:
         parts = env.split(os.pathsep)
         cands.append((Path(parts[0]), Path(parts[1] if len(parts) > 1 and parts[1] else parts[0])))
+    bundled = Path(__file__).parent / "data" / "fonts"                                    # shipped with gotourney
+    cands.append((bundled / "DejaVuSans.ttf", bundled / "DejaVuSans-Bold.ttf"))
     dejavu_dirs = [
         Path("/usr/share/fonts/truetype/dejavu"), Path("/usr/share/fonts/TTF"), Path("/usr/share/fonts/dejavu"),
         Path.home() / ".local/share/fonts", Path.home() / ".fonts",                          # Linux
