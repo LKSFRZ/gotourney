@@ -990,7 +990,7 @@ def round_rows(t) -> list[dict]:
     rows = []
     for r in range(1, t.cfg.tournament.rounds + 1):
         rg = t.rounds.get(r)
-        row = {"r": r, "status": "st_not_paired", "done": 0, "boards": 0, "files": []}
+        row = {"r": r, "status": "st_not_paired", "done": 0, "boards": 0, "files": [], "action": ""}
         if rg:
             row["boards"] = len(rg.games)
             row["done"] = sum(1 for g in rg.games if g.result is not None)
@@ -1002,6 +1002,8 @@ def round_rows(t) -> list[dict]:
                 row["status"] = "st_running"
             else:
                 row["status"] = "st_paired"
+            row["action"] = {"st_names": "act_confirm_names", "st_complete": "act_view_results",
+                             "st_running": "act_enter_results", "st_paired": "act_show_boards"}[row["status"]]
             for name in (f"round_{r}.ods", f"round_{r}.pdf", f"round_{r}_alphabetical.pdf"):
                 p = t.directory / name
                 if p.exists():

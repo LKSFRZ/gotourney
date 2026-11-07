@@ -576,3 +576,19 @@ def test_players_form_marks_unsaved_input_after_an_error(make_tournament):
     assert 'data-unsaved="false"' in html and 'id="unsaved"' in html
     r = post(c, app, "/players/save", surname="Neu", rank="99x")      # invalid rank: form is shown again
     assert r.status_code == 422 and 'data-unsaved="true"' in page(r)
+
+
+def test_overview_has_a_button_per_round(make_tournament):
+    def button(html, r):
+        m = re.search(r'<a class="button small ?(primary)?"\s+href="/round/%d">([^<]+)</a>' % r, html)
+        return m and (m.group(2), bool(m.group(1)))
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=3)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    assert button(page(c.get("/dashboard")), 1) == ("Show boards", False)      # paired, not started
+    post(c, app, "/do/start", round="1")
+    assert button(page(c.get("/dashboard")), 1) == ("Enter results", True)     # running: highlighted
+    finish(d, 1)
+    html = page(c.get("/dashboard"))
+    assert button(html, 1) == ("Show results", False)
+    assert button(html, 2) is None                                             # not paired: no button

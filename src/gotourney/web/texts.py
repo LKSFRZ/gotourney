@@ -181,6 +181,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_settings": "Settings",
         "act_enter_results": "Enter results",
         "act_show_boards": "Show boards",
+        "act_view_results": "Show results", "act_confirm_names": "Confirm names",
         "rp_pairing_title": "Pairing",
         "rp_pairing_help": "Before the round starts you can still change the pairing. Fixed boards (📌) are kept "
                            "when pairing again; all other boards get new pairings.",
@@ -511,6 +512,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "act_settings": "Einstellungen",
         "act_enter_results": "Ergebnisse eintragen",
         "act_show_boards": "Bretter anzeigen",
+        "act_view_results": "Ergebnisse ansehen", "act_confirm_names": "Namen bestätigen",
         "rp_pairing_title": "Auslosung",
         "rp_pairing_help": "Bevor die Runde beginnt, können Sie die Auslosung noch ändern. Feste Bretter (📌) bleiben "
                            "beim Neu-Auslosen erhalten; alle anderen Bretter werden neu gepaart.",

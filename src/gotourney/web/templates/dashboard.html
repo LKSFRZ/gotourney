@@ -43,14 +43,15 @@
 </section>
 
 <div class="grid">
-  <section class="card">
+  <section class="card rounds-card">
     <h2>{{ t("rounds_title") }}</h2>
+    <div class="table-scroll">
     <table class="rounds">
-      <thead><tr><th>{{ t("col_round") }}</th><th>{{ t("col_status") }}</th><th>{{ t("col_results") }}</th><th>{{ t("col_files") }}</th></tr></thead>
+      <thead><tr><th>{{ t("col_round") }}</th><th>{{ t("col_status") }}</th><th>{{ t("col_results") }}</th><th>{{ t("col_files") }}</th><th></th></tr></thead>
       <tbody>
       {% for row in rounds %}
         <tr class="{{ row.status }}">
-          <td>{% if row.boards %}<a href="{{ url_for('round_page', r=row.r) }}">{{ row.r }}</a>{% else %}{{ row.r }}{% endif %}</td>
+          <td class="round-no">{{ row.r }}</td>
           <td><span class="badge {{ row.status }}">{{ t(row.status) }}</span></td>
           <td>{% if row.boards %}{{ row.done }} / {{ row.boards }}{% endif %}</td>
           <td class="files">
@@ -62,10 +63,17 @@
               {% endif %}
             {% endfor %}
           </td>
+          <td class="round-action">
+            {% if row.action %}
+              <a class="button small {{ 'primary' if row.status == 'st_running' }}"
+                 href="{{ url_for('round_page', r=row.r) }}">{{ t(row.action) }}</a>
+            {% endif %}
+          </td>
         </tr>
       {% endfor %}
       </tbody>
     </table>
+    </div>
   </section>
 
   <section class="card">

@@ -117,7 +117,21 @@ table.rounds { width: 100%; border-collapse: collapse; font-size: 15px; }
 table.rounds th, table.rounds td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line);
                                    vertical-align: top; }
 table.rounds th { font-size: 13px; color: var(--muted); font-weight: 600; }
+table.rounds td.round-no { font-weight: 700; }
+table.rounds td.round-action { text-align: right; white-space: nowrap; }
+.button.small { padding: 4px 10px; font-size: 14px; }
+.button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+.button.primary:hover { filter: brightness(1.08); }
 td.files { font-size: 14px; }
+.grid > .rounds-card { grid-column: 1 / -1; }          /* the main table of the overview: full width */
+table.rounds td { vertical-align: middle; }
+@media (max-width: 640px) {                              /* phones: the round button matters more than files */
+  table.rounds th:nth-child(3), table.rounds td:nth-child(3),
+  table.rounds th:nth-child(4), table.rounds td.files { display: none; }
+  table.rounds th, table.rounds td { padding: 8px 4px; }
+  table.rounds td.round-action { white-space: normal; }
+  table.rounds td.round-action .button { white-space: normal; text-align: center; padding: 4px 8px; }
+}
 td.files a, td.files form { margin-right: 8px; }
 .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 13px; white-space: nowrap;
          background: var(--bg); color: var(--muted); border: 1px solid var(--line); }
