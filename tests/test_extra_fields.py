@@ -40,7 +40,8 @@ def test_cli_add_with_extra_fields_and_standings(tmp_path):
     r = runner.invoke(app, ["players", "add", "X", "Y", "-r", "2k", "-x", "Shirt=L", "-d", d])
     assert r.exit_code == 1 and "unknown field" in r.output
     pl = load_players(tmp_path, 1, ["Email", "Fee paid"])
-    assert pl.extra_fields == ["Email", "Fee paid", "Age group"]   # column from init is kept
+    assert pl.extra_fields == ["Email", "Fee paid"]
+    assert pl.other_fields == []          # the empty "Age group" column from init is gone
     assert pl.players[0].extra == {"Email": "john@example.org", "Fee paid": "yes"}
     header = read_sheet(tmp_path / "players.ods").header
     assert header.index("Email") < header.index("Notes")
@@ -67,9 +68,45 @@ def test_hand_added_column_is_kept(tmp_path):
     write_sheet(tmp_path / "players.ods", "Players", cols + [Column("T-shirt")],
                 [[r.get(c.title) for c in cols] + ["XL"] for r in sheet.rows])
     pl = load_players(tmp_path, 1)
-    assert pl.extra_fields == ["T-shirt"] and pl.players[0].extra == {"T-shirt": "XL"}
+    # not configured: not shown anywhere, but the data is kept
+    assert pl.extra_fields == [] and pl.other_fields == ["T-shirt"]
+    assert pl.players[0].extra == {"T-shirt": "XL"}
     # rewriting (e.g. after adding another player) keeps the column and its data
     q = new_player(pl.players, surname="Roe", first_name="Jane", rank="2k", gor=None, rounds={1})
     save_players(tmp_path, pl.players + [q], 1, pl.extra_fields)
     again = load_players(tmp_path, 1)
-    assert again.extra_fields == ["T-shirt"] and again.players[0].extra == {"T-shirt": "XL"}
+    assert again.other_fields == ["T-shirt"] and again.players[0].extra == {"T-shirt": "XL"}
+    # once configured, it is a normal additional field
+    assert load_players(tmp_path, 1, ["T-shirt"]).extra_fields == ["T-shirt"]
+
+
+def test_no_fields_without_setting():
+    from gotourney.config import default_prizes
+    cfg = parse_config({})
+    assert cfg.registration.extra_fields == [] and cfg.registration.field_values == {}
+    assert [p.type for p in cfg.awards.prizes] == ["wins", "place"]
+    cfg = parse_config({"registration": {"extra_fields": ["Age group"]}})
+    assert [p.type for p in cfg.awards.prizes] == ["wins", "best_in_group", "place"]
+    assert [p.type for p in default_prizes(5)] == ["wins", "place"]
+
+
+def test_empty_column_of_removed_field_disappears(tmp_path):
+    from gotourney.registration import new_player
+    a = new_player([], surname="Doe", first_name="John", rank="1k", gor=None, rounds={1})
+    a.extra = {"Fee paid": "yes"}
+    save_players(tmp_path, [a], 1, ["Fee paid", "Age group"])
+    assert "Age group" in read_sheet(tmp_path / "players.ods").header
+    pl = load_players(tmp_path, 1, [])                     # both fields removed from the settings
+    save_players(tmp_path, pl.players, 1, pl.extra_fields)
+    header = read_sheet(tmp_path / "players.ods").header
+    assert "Age group" not in header and "Fee paid" in header   # data is never thrown away
+
+
+def test_settings_refuse_rule_on_removed_field(tmp_path):
+    from gotourney import settings as st
+    from gotourney.workflow import Problem
+    runner.invoke(app, ["init", str(tmp_path), "--rounds", "3"])
+    _, version = st.read_settings(tmp_path)
+    with pytest.raises(Problem, match="Age group"):          # the default "best child" prize uses it
+        st.save_settings(tmp_path, {"registration": {"extra_fields": ["Fee paid"],
+                                                      "field_values": {"Fee paid": ["yes", "no"]}}}, version)

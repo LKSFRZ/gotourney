@@ -12,6 +12,7 @@
   <tr class="list-row">
     <td><select name="rule_field_{{ i }}">
       {% for f in rule_fields %}<option {% if rule and rule.field == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+      {% if rule and rule.field not in rule_fields %}<option selected>{{ rule.field }}</option>{% endif %}
     </select></td>
     <td><select name="rule_type_{{ i }}">
       {% for ty in rule_types %}<option value="{{ ty }}" {% if rule and rule.type == ty %}selected{% endif %}>{{ t("rt_" ~ ty) }}</option>{% endfor %}
@@ -40,6 +41,7 @@
     <td><input name="pz_min_wins_{{ i }}" value="{{ '%g'|format(p.min_wins) if p and p.min_wins else '' }}" size="4"></td>
     <td><select name="pz_field_{{ i }}"><option value=""></option>
       {% for f in rule_fields %}<option {% if p and p.group_field == f %}selected{% endif %}>{{ f }}</option>{% endfor %}
+      {% if p and p.group_field and p.group_field not in rule_fields %}<option selected>{{ p.group_field }}</option>{% endif %}
     </select></td>
     <td><input name="pz_groups_{{ i }}" value="{{ groups_text(p.all_groups) if p else '' }}"></td>
     <td><input name="pz_count_{{ i }}" value="{{ p.count if p and p.count != 1 else '' }}" size="3"></td>

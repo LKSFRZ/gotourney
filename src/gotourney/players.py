@@ -72,7 +72,8 @@ def columns(rounds: int, extra_fields=()) -> list[Column]:
 class PlayerList:
     players: list[Player]
     warnings: list[str]
-    extra_fields: list[str] = field(default_factory=list)   # configured + additional columns in the file
+    extra_fields: list[str] = field(default_factory=list)   # the configured additional fields
+    other_fields: list[str] = field(default_factory=list)   # other columns in the file (kept, not shown)
 
     def by_id(self) -> dict[int, Player]:
         return {p.id: p for p in self.players}
@@ -94,8 +95,9 @@ def _number(text: str, what: str, where: str) -> float | None:
 def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
     """Read players.ods. Raises OdsError on problems that make the file unusable.
 
-    ``extra_fields`` are the additional fields from the settings. Any other column in the file
-    that the tools do not know is kept as an additional field as well.
+    ``extra_fields`` are the additional fields from the settings; only these are shown and used.
+    Data in other unknown columns (e.g. a field removed from the settings) is kept in
+    ``Player.extra`` so it survives saving; those columns are listed in ``other_fields``.
     """
     path = Path(directory) / PLAYERS_FILE
     sheet = read_sheet(path)
@@ -113,7 +115,8 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
         warnings.append(
             f"{path.name}: column(s) {', '.join(extra)} ignored, the tournament has {rounds} rounds"
         )
-    fields = merge_fields(extra_fields, (h for h in sheet.header if h.strip() and not is_builtin_column(h)))
+    configured = merge_fields(extra_fields)
+    fields = merge_fields(configured, (h for h in sheet.header if h.strip() and not is_builtin_column(h)))
     # Rounds added later (no column in the file yet) count as played by everyone.
     new_rounds = {i for i in range(1, rounds + 1) if round_column(i) not in headers}
     for row in sheet.rows:
@@ -166,11 +169,12 @@ def load_players(directory: Path, rounds: int, extra_fields=()) -> PlayerList:
             errors.append(str(e))
     if errors:
         raise OdsError("\n".join(errors))
-    return PlayerList(players, warnings, fields)
+    return PlayerList(players, warnings, configured, fields[len(configured):])
 
 
 def save_players(directory: Path, players: list[Player], rounds: int, extra_fields=()) -> Path:
-    """Write players.ods. Additional fields: those given, then any others the players have."""
+    """Write players.ods. Additional fields: those given (configured), then any other column
+    that still holds data. Empty columns of fields no longer configured disappear."""
     path = Path(directory) / PLAYERS_FILE
     fields = merge_fields(extra_fields, (k for p in players for k in p.extra))
     rows = []

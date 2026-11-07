@@ -147,6 +147,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "st_outdated": "Warn if the last EGD tournament is more than … years ago",
         "st_tolerance": "Warn if rank and GoR differ by more than … points",
         "st_extra_fields": "Additional player data",
+        "st_columns_locked": "players.ods is open in LibreOffice, so its columns were not adapted to the changed fields yet. That happens the next time a player is saved.",
         "st_extra_help": "One line per field. Values (comma-separated) give a dropdown; empty = free text.",
         "st_xf_name": "Field", "st_xf_values": "Values (optional)", "st_add_field": "Add field",
         "st_sec_awards": "Award ceremony",
@@ -457,6 +458,7 @@ TEXTS: dict[str, dict[str, str]] = {
         "st_outdated": "Warnen, wenn das letzte EGD-Turnier länger als … Jahre her ist",
         "st_tolerance": "Warnen, wenn Rang und GoR um mehr als … Punkte abweichen",
         "st_extra_fields": "Zusätzliche Spielerangaben",
+        "st_columns_locked": "players.ods ist in LibreOffice geöffnet, deshalb wurden die Spalten noch nicht an die geänderten Angaben angepasst. Das passiert beim nächsten Speichern eines Spielers.",
         "st_extra_help": "Eine Zeile pro Feld. Werte (mit Komma getrennt) ergeben eine Auswahlliste; leer = freier "
                          "Text.",
         "st_xf_name": "Feld", "st_xf_values": "Werte (optional)", "st_add_field": "Feld hinzufügen",

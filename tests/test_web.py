@@ -354,6 +354,27 @@ def test_settings_page(make_tournament):
     assert r.status_code == 422 and "changed elsewhere" in page(r)
 
 
+def test_extra_fields_follow_the_settings(make_tournament):
+    from gotourney.ods import read_sheet
+    d = make_tournament([(2000,), (1990,)], rounds=3)
+    app, c = client_for(d)
+    assert "Age group" in page(c.get("/players"))
+    form = {"name": "Cup", "class": "A", "time": "60", "rounds": "3", "language": "en",
+            "translation_file": "translation.toml", "k_factor": "3", "top_bar": "3d", "reduction": "0",
+            "komi_even": "6.5", "komi_handicap": "0.5", "random_seed": "1", "gor_outdated_years": "5",
+            "rank_gor_tolerance": "300", "rule_field_0": "Club", "rule_type_0": "avoid_same", "rule_points_0": "150",
+            "xf_name_0": "Fee paid", "xf_values_0": "yes, no", "xf_name_1": "Shirt size", "xf_values_1": "S, M, L",
+            "pz_type_0": "place", "pz_places_0": "3, 2, 1"}
+    version = re.search(r'name="version" value="([^"]+)"', page(c.get("/settings"))).group(1)
+    r = post(c, app, "/settings", version=version, **form)
+    assert "Settings saved" in page(r)
+    html = page(c.get("/players"))
+    assert "Age group" not in html and "Shirt size" in html
+    assert "Age group" not in page(c.get("/settings"))
+    header = read_sheet(d / "players.ods").header           # the columns follow at once
+    assert "Shirt size" in header and "Age group" not in header
+
+
 def test_settings_cannot_reduce_rounds_below_paired(make_tournament):
     from gotourney.config import load_config
     d = make_tournament([(2000,), (1990,)], rounds=3)

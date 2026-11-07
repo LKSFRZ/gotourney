@@ -432,9 +432,15 @@ extra_fields = ["Fee paid", "Age group"]
   <li><code>players check</code> warnt bei Werten, die nicht in der Liste stehen, z. B. von Hand in
   <code>players.ods</code> eingetragen.</li>
   <li><code>players.ods</code> bekommt pro Feld eine Spalte vor <i>Notes</i>.</li>
-  <li><b>Spalten, die Sie von Hand in <code>players.ods</code> ergänzen,</b> werden genauso behandelt: Sie
-  bleiben erhalten, wenn die Werkzeuge die Datei neu schreiben, und erscheinen im Fenster (nach einem
-  Neustart) und in der Tabelle.</li>
+  <li><b>Es gibt nur die Felder, die in <code>extra_fields</code> stehen.</b> Fügen Sie in den Einstellungen ein
+  Feld hinzu oder entfernen eines, folgen Formulare, Listen und <code>standings.ods</code>;
+  <code>players.ods</code> bekommt die neue Spalte sofort. Ein entferntes Feld verschwindet überall; seine
+  Spalte in <code>players.ods</code> bleibt nur, wenn noch Daten darin stehen (es geht nichts verloren). Eine
+  Auslosungsregel oder ein Preis, der ein entferntes Feld noch nutzt, muss vorher entfernt werden. Ein Turnier
+  ohne <code>extra_fields</code> hat keine zusätzlichen Felder.</li>
+  <li><b>Spalten, die Sie von Hand in <code>players.ods</code> ergänzen,</b> bleiben erhalten, wenn die
+  Werkzeuge die Datei neu schreiben, werden aber erst angezeigt und genutzt, wenn Sie sie in
+  <code>extra_fields</code> aufnehmen.</li>
   <li><code>standings.ods</code> enthält alle zusätzlichen Felder nach der TGoR-Spalte, sodass Sie die Tabelle
   zum Beispiel nach Altersklasse sortieren oder filtern können.</li>
   <li>Die Werte beeinflussen nie die Wertung. Die Auslosung beeinflussen sie nur, wenn Sie für das Feld eine

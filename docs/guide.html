@@ -413,8 +413,13 @@ extra_fields = ["Fee paid", "Age group"]
   <li><code>players check</code> warns about values that are not in the list, e.g. typed by hand into
   <code>players.ods</code>.</li>
   <li><code>players.ods</code> gets one column per field, before <i>Notes</i>.</li>
-  <li><b>Columns you add to <code>players.ods</code> by hand</b> are treated the same way: they are kept when
-  the tools rewrite the file, and they appear in the window (after a restart) and in the standings.</li>
+  <li><b>Only the fields listed in <code>extra_fields</code> exist.</b> Add or remove a field in the settings
+  and the forms, lists and <code>standings.ods</code> follow; <code>players.ods</code> gets the new column
+  at once. A removed field disappears everywhere; its column in <code>players.ods</code> is only kept if it
+  still contains data (nothing is thrown away). A pairing rule or prize that still uses a removed field
+  must be removed first. A tournament without <code>extra_fields</code> has no additional fields.</li>
+  <li><b>Columns you add to <code>players.ods</code> by hand</b> are kept when the tools rewrite the file,
+  but are only shown and used once you add them to <code>extra_fields</code>.</li>
   <li><code>standings.ods</code> lists all additional fields after the TGoR column, so you can, for example,
   sort or filter the standings by age group.</li>
   <li>The values never affect the rating. They affect the pairing only if you write a pairing rule for

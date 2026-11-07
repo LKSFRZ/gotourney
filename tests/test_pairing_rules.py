@@ -17,9 +17,13 @@ def pairs(result):
 
 # ---------------------------------------------------------------- settings
 
-def test_default_rules_and_fields():
+def test_default_rules_and_fields(tmp_path):
+    from gotourney.config import load_config, write_template
     cfg = parse_config({})
     assert [(r.field, r.type, r.points) for r in cfg.pairing.rules] == [("Club", "avoid_same", 150)]
+    assert cfg.registration.extra_fields == []          # only what tournament.toml lists
+    write_template(tmp_path, "Test")                    # a new tournament lists the two default fields
+    cfg = load_config(tmp_path)
     assert cfg.registration.extra_fields == ["Fee paid", "Age group"]
     assert cfg.registration.values_for("fee PAID") == ["yes", "no"]
     assert cfg.registration.values_for("Age group") == ["U7", "U11", "U15", "U19", "Ü50"]

@@ -12,7 +12,7 @@ from pathlib import Path
 
 import tomlkit
 
-from .config import CONFIG_FILE, Config, ConfigError, parse_config
+from .config import CONFIG_FILE, Config, ConfigError, parse_config, unknown_field_uses
 from .rounds import round_file
 from .workflow import Problem
 
@@ -62,6 +62,9 @@ def save_settings(directory: Path, changes: dict, version: str) -> Config:
         cfg = parse_config(merged)
     except ConfigError as e:
         raise Problem("invalid", str(e)) from None
+    problems = unknown_field_uses(cfg)
+    if problems:
+        raise Problem("invalid", " ".join(problems))
     paired = max((r for r in range(1, 100) if round_file(directory, r).exists()), default=0)
     if cfg.tournament.rounds < paired:
         raise Problem("invalid", f"round {paired} is already paired; the tournament needs at least {paired} rounds")

@@ -114,8 +114,6 @@ places = [3, 2, 1]
 PRIZE_TYPES = ("place", "wins", "best_in_group", "rating_gain")
 PRIZE_PLACEHOLDERS = ("place", "ordinal", "wins", "games", "group", "n")
 
-DEFAULT_EXTRA_FIELDS = ["Fee paid", "Age group"]
-DEFAULT_FIELD_VALUES = {"Fee paid": ["yes", "no"], "Age group": ["U7", "U11", "U15", "U19", "Ü50"]}
 RULE_TYPES = ("avoid_same", "prefer_same", "forbid_same", "require_same")
 RULE_BUILTIN_FIELDS = ("Club", "Country", "Rank")
 DEFAULT_CLUB_PENALTY = 150.0
@@ -194,9 +192,8 @@ class PairingSettings:
 class RegistrationSettings:
     gor_outdated_years: int = 5
     rank_gor_tolerance: int = 300
-    extra_fields: list[str] = field(default_factory=lambda: list(DEFAULT_EXTRA_FIELDS))
-    field_values: dict[str, list[str]] = field(
-        default_factory=lambda: {k: list(v) for k, v in DEFAULT_FIELD_VALUES.items()})
+    extra_fields: list[str] = field(default_factory=list)      # only what tournament.toml lists
+    field_values: dict[str, list[str]] = field(default_factory=dict)
 
     def values_for(self, name: str) -> list[str] | None:
         """Allowed values (dropdown) of an additional field, or None for free text."""
@@ -221,12 +218,12 @@ class Prize:
         return self.groups or ([self.values] if self.values else [])
 
 
-def default_prizes(rounds: int) -> list[Prize]:
-    return [
-        Prize("wins", min_wins=float(rounds)),
-        Prize("best_in_group", group_field="Age group", values=["U7", "U11", "U15"]),
-        Prize("place", places=[3, 2, 1]),
-    ]
+def default_prizes(rounds: int, extra_fields=()) -> list[Prize]:
+    """Prizes used when [awards] has none; the age group prize only if that field exists."""
+    prizes = [Prize("wins", min_wins=float(rounds))]
+    if "age group" in {f.strip().lower() for f in extra_fields}:
+        prizes.append(Prize("best_in_group", group_field="Age group", values=["U7", "U11", "U15"]))
+    return prizes + [Prize("place", places=[3, 2, 1])]
 
 
 @dataclass
@@ -344,7 +341,7 @@ def _groups(raw, where: str) -> list[list[str]]:
     return groups
 
 
-def _awards(a: dict, rounds: int) -> AwardSettings:
+def _awards(a: dict, rounds: int, extra_fields=()) -> AwardSettings:
     if not isinstance(a, dict):
         raise ConfigError("awards: expected a table [awards]")
     unknown = set(a) - {"title_slide", "prizes"}
@@ -355,7 +352,7 @@ def _awards(a: dict, rounds: int) -> AwardSettings:
         raise ConfigError("awards.title_slide: expected true or false")
     raw = a.get("prizes")
     if raw is None:
-        return AwardSettings(title_slide, default_prizes(rounds))
+        return AwardSettings(title_slide, default_prizes(rounds, extra_fields))
     if not isinstance(raw, list):
         raise ConfigError("awards.prizes: write each prize as an [[awards.prizes]] table")
     prizes = []
@@ -417,8 +414,6 @@ def _output(o: dict) -> OutputSettings:
 
 
 def _field_values(g: dict) -> dict[str, list[str]]:
-    if "extra_fields" not in g and "field_values" not in g:
-        return {k: list(v) for k, v in DEFAULT_FIELD_VALUES.items()}
     raw = g.get("field_values", {})
     if not isinstance(raw, dict):
         raise ConfigError("registration.field_values: expected a table like \"Fee paid\" = [\"yes\", \"no\"]")
@@ -439,6 +434,7 @@ def parse_config(data: dict) -> Config:
     h = data.get("handicap", {})
     p = data.get("pairing", {})
     g = data.get("registration", {})
+    extra_fields = [f.strip() for f in _get(g, "extra_fields", list, [], "registration")]
     cfg = Config(
         tournament=TournamentInfo(
             code=_get(t, "code", str, "", "tournament"),
@@ -464,11 +460,10 @@ def parse_config(data: dict) -> Config:
         registration=RegistrationSettings(
             gor_outdated_years=_get(g, "gor_outdated_years", int, 5, "registration"),
             rank_gor_tolerance=_get(g, "rank_gor_tolerance", int, 300, "registration"),
-            extra_fields=[f.strip() for f in _get(g, "extra_fields", list, DEFAULT_EXTRA_FIELDS,
-                                                  "registration")],
+            extra_fields=extra_fields,
             field_values=_field_values(g),
         ),
-        awards=_awards(data.get("awards", {}), _get(t, "rounds", int, 5, "tournament")),
+        awards=_awards(data.get("awards", {}), _get(t, "rounds", int, 5, "tournament"), extra_fields),
         output=_output(data.get("output", {})),
     )
     _validate(cfg)
@@ -506,6 +501,21 @@ def _validate(cfg: Config) -> None:
     for name in cfg.registration.field_values:
         if name.lower() not in seen:
             raise ConfigError(f"registration.field_values: {name!r} is not in registration.extra_fields")
+
+
+def unknown_field_uses(cfg: Config) -> list[str]:
+    """Pairing rules and prizes that use a field which is neither standard nor an additional field."""
+    known = {f.lower() for f in RULE_BUILTIN_FIELDS} | {f.lower() for f in cfg.registration.extra_fields}
+    problems = []
+    for i, rule in enumerate(cfg.pairing.rules, 1):
+        if rule.field.lower() not in known:
+            problems.append(f"pairing rule {i} uses the field {rule.field!r}, which is not an additional "
+                            f"player field. Add the field again or remove the rule.")
+    for i, prize in enumerate(cfg.awards.prizes, 1):
+        if prize.type == "best_in_group" and prize.group_field.lower() not in known:
+            problems.append(f"prize {i} uses the field {prize.group_field!r}, which is not an additional "
+                            f"player field. Add the field again or remove the prize.")
+    return problems
 
 
 def load_config(directory: Path) -> Config:

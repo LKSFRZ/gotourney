@@ -577,8 +577,15 @@ def create_app(directory: Path | None = None) -> Flask:
         if request.method == "POST":
             try:
                 changes = settings_from_form(request.form)
-                st.save_settings(d, changes, request.form.get("version", ""))
+                old_fields = st.read_settings(d)[0].registration.extra_fields
+                cfg = st.save_settings(d, changes, request.form.get("version", ""))
                 say("success", "st_saved")
+                if cfg.registration.extra_fields != old_fields:
+                    try:
+                        if not workflow.sync_player_columns(d):
+                            say("warning", "st_columns_locked")
+                    except workflow.Problem as e:
+                        flash(str(e), "error")
                 return redirect(url_for("settings_page"))
             except ValueError as e:
                 errors.append(str(e))
@@ -589,13 +596,9 @@ def create_app(directory: Path | None = None) -> Flask:
         except workflow.Problem as e:
             flash(str(e), "error")
             return redirect(url_for("dashboard"))
-        try:
-            _, pl = workflow.load_registration(d)
-            extra = pl.extra_fields
-        except workflow.Problem:
-            extra = cfg.registration.extra_fields
         return render_template("settings.html", cfg=cfg, settings_version=version, errors=errors,
-                               rule_fields=list(RULE_BUILTIN_FIELDS) + list(extra), rule_types=RULE_TYPES,
+                               rule_fields=list(RULE_BUILTIN_FIELDS) + list(cfg.registration.extra_fields),
+                               rule_types=RULE_TYPES,
                                prize_types=PRIZE_TYPES, groups_text=groups_text), (422 if errors else 200)
 
     # ------------------------------------------------------------ actions

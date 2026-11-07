@@ -687,6 +687,22 @@ def remove_player(directory: Path, player_id: int):
     return player
 
 
+
+def sync_player_columns(directory: Path) -> bool:
+    """Rewrite players.ods so its columns match the configured additional fields.
+
+    New fields get an (empty) column; columns of removed fields go away if they are empty
+    (data is never thrown away). Returns False if players.ods is open in LibreOffice."""
+    from .players import PLAYERS_FILE, save_players
+    path = Path(directory) / PLAYERS_FILE
+    if not path.exists():
+        return True
+    if is_open_in_libreoffice(path):
+        return False
+    cfg, pl = load_registration(directory)
+    save_players(directory, pl.players, cfg.tournament.rounds, pl.extra_fields)
+    return True
+
 # ---------------------------------------------------------------- changing boards by hand
 
 def _load_round_for_change(directory: Path, round_no: int):
