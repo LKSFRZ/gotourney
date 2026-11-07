@@ -41,7 +41,7 @@ def test_default_prizes(finished):
     t = Tournament.load(finished)
     awards, notes = compute_awards(t)
     titles = [(a.title, t.players[a.player].surname) for a in awards]
-    assert titles[0] == ("All 2 games won", "P1")
+    assert titles[0] == ("2 wins", "P1")
     assert titles[1] == ("Best child", "P4") or titles[1] == ("Best child", "P3")
     assert [a.title for a in awards[-3:]] == ["3rd place", "2nd place", "1st place"]
     assert awards[-1].player == 1 and awards[-1].place == 1

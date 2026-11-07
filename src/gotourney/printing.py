@@ -13,6 +13,7 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from reportlab.lib.styles import ParagraphStyle
 
+from .i18n import Translator, builtin
 from .rounds import BLACK_STONE, MARKS, WHITE_STONE, RoundGames, player_label
 from .tournament import Tournament
 
@@ -41,11 +42,13 @@ def _register_fonts() -> tuple[str, str]:
                      "sudo apt install fonts-dejavu-core)")
 
 
-def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
+def pairing_pdf(t: Tournament, rg: RoundGames, path: Path, tr: Translator | None = None) -> Path:
+    tr = tr or builtin("en")
     regular, bold = _register_fonts()
     games = sorted(rg.games, key=lambda g: g.board)
 
-    header = ["Board", "White", "White\nwin", "Draw", "Black\nwin", "Black", "Handi-\ncap"]
+    header = [tr.t(k) for k in ("col_board", "col_white", "col_white_win", "col_draw",
+                                "col_black_win", "col_black", "col_handicap")]
     data = [header]
     for g in games:
         marks = MARKS[g.result] if g.result else ("", "", "")
@@ -73,10 +76,18 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
     for row in data[1:]:
         for col in (1, 5):
             row[col] = _fit(row[col], regular, body_size, name_w - 8)
-    table = Table(data, colWidths=[board_w, name_w, mark_w, mark_w, mark_w, name_w, handicap_w],
-                  repeatRows=1)
+    widths = [board_w, name_w, mark_w, mark_w, mark_w, name_w, handicap_w]
+    # header font: largest size (9.5 down to 6 pt) at which every header line fits its column
+    header_size = 9.5
+    while header_size > 6 and any(
+            pdfmetrics.stringWidth(line, bold, header_size) > w - 4
+            for text, w in zip(header, widths) for line in text.split("\n")):
+        header_size -= 0.5
+    table = Table(data, colWidths=widths, repeatRows=1)
     style = [
-        ("FONT", (0, 0), (-1, 0), bold, 9.5),
+        ("FONT", (0, 0), (-1, 0), bold, header_size),
+        ("LEFTPADDING", (2, 0), (4, 0), 2),
+        ("RIGHTPADDING", (2, 0), (4, 0), 2),
         ("FONT", (0, 1), (-1, -1), regular, body_size),
         ("FONT", (0, 1), (0, -1), bold, body_size),
         ("ALIGN", (0, 0), (0, -1), "CENTER"),
@@ -98,13 +109,18 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
         style.append(("BACKGROUND", (5, i), (6, i), colors.HexColor("#f3f6f9")))
     table.setStyle(TableStyle(style))
 
-    title_style = ParagraphStyle("title", fontName=bold, fontSize=16, leading=20, spaceAfter=2)
+    name = t.cfg.tournament.name or t.directory.resolve().name
+    title_text = tr.t("pairing_title", tournament=name, round=rg.number)
+    title_size = 16.0
+    while title_size > 11 and pdfmetrics.stringWidth(title_text, bold, title_size) > usable - 14:  # frame padding
+        title_size -= 0.5
+    title_style = ParagraphStyle("title", fontName=bold, fontSize=title_size, leading=title_size + 4,
+                                 spaceAfter=2)
     sub_style = ParagraphStyle("sub", fontName=regular, fontSize=10, leading=13,
                                textColor=colors.HexColor("#5f6b76"))
-    name = t.cfg.tournament.name or t.directory.resolve().name
     story = [
-        Paragraph(f"{_esc(name)} – Round {rg.number}", title_style),
-        Paragraph(f"{len(games)} boards", sub_style),
+        Paragraph(_esc(title_text), title_style),
+        Paragraph(_esc(tr.t("pairing_boards", n=len(games))), sub_style),
         Spacer(1, 6 * mm),
         table,
     ]
@@ -113,12 +129,12 @@ def pairing_pdf(t: Tournament, rg: RoundGames, path: Path) -> Path:
         canvas.saveState()
         canvas.setFont(regular, 8)
         canvas.setFillColor(colors.HexColor("#5f6b76"))
-        canvas.drawRightString(page_w - margin, 10 * mm, f"Round {rg.number} – page {doc.page}")
+        canvas.drawRightString(page_w - margin, 10 * mm, tr.t("pairing_footer", round=rg.number, page=doc.page))
         canvas.restoreState()
 
     doc = SimpleDocTemplate(str(path), pagesize=A4, leftMargin=margin, rightMargin=margin,
                             topMargin=margin, bottomMargin=18 * mm,
-                            title=f"{name} – Round {rg.number}")
+                            title=tr.t("pairing_title", tournament=name, round=rg.number))
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     return path
 

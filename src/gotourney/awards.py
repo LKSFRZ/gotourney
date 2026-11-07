@@ -10,6 +10,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas as pdfcanvas
 
 from .config import Prize
+from .i18n import Translator, builtin
 from .players import field_value
 from .printing import _register_fonts
 from .rank import Rank
@@ -49,19 +50,19 @@ class Award:
 
 
 def ordinal(n: int) -> str:
-    if 10 <= n % 100 <= 20:
-        suffix = "th"
-    else:
-        suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suffix}"
+    """English ordinal (1st, 2nd, ...); other languages: Translator.ordinal."""
+    return builtin("en").ordinal(n)
 
 
 def _norm(v: str) -> str:
     return v.strip().casefold()
 
 
-def compute_awards(t: Tournament) -> tuple[list[Award], list[str]]:
-    """The prize winners in slide order, and notes about prizes nobody qualified for."""
+def compute_awards(t: Tournament, tr: Translator | None = None) -> tuple[list[Award], list[str]]:
+    """The prize winners in slide order, and notes about prizes nobody qualified for.
+
+    Prizes without a title get the default title of the output language."""
+    tr = tr or builtin("en")
     for r, rg in t.rounds.items():
         if not rg.complete:
             raise AwardError(f"round {r} has missing results; enter them first")
@@ -76,9 +77,10 @@ def compute_awards(t: Tournament) -> tuple[list[Award], list[str]]:
         return sum(1 for h in t.history[pid] if h.counts_as_played)
 
     def make(prize: Prize, pid: int, n: int, group: str = "", group_label: str = "") -> Award:
-        values = {"place": place_of[pid], "ordinal": ordinal(place_of[pid]),
+        values = {"place": place_of[pid], "ordinal": tr.ordinal(place_of[pid]),
                   "wins": format_wins(t.wins(pid)), "games": games(pid), "group": group_label, "n": n}
-        return Award(prize.title.format(**values), pid, place_of[pid], t.wins(pid), games(pid),
+        title = prize.title.format(**values) if prize.title else tr.t(f"prize_{prize.type}", **values)
+        return Award(title, pid, place_of[pid], t.wins(pid), games(pid),
                      final[pid] - t.start[pid], group, prize.type)
 
     def eligible(prize: Prize, pid: int) -> bool:
@@ -162,11 +164,11 @@ def _background(c, large: bool = False) -> None:
         _stone(c, x0 + gx * step, y0 + gy * step, r, black)
 
 
-def _header(c, t: Tournament, regular: str) -> None:
+def _header(c, t: Tournament, tr: Translator, regular: str) -> None:
     c.setFillColor(TEXT_MUTED)
     c.setFont(regular, 14)
     c.drawString(40, SLIDE_H - 40, t.cfg.tournament.name or t.directory.resolve().name)
-    dates = " – ".join(sorted(set(t.cfg.tournament.dates)))
+    dates = tr.date_range(t.cfg.tournament.dates)
     if dates:
         c.drawRightString(SLIDE_W - 40, SLIDE_H - 40, dates)
     c.setStrokeColor(BG_LIGHT)
@@ -188,7 +190,7 @@ def _medal(c, cx: float, cy: float, award: Award, bold: str) -> None:
     c.drawCentredString(cx, cy - size * 0.36, label)
 
 
-def _title_slide(c, t: Tournament, regular: str, bold: str) -> None:
+def _title_slide(c, t: Tournament, tr: Translator, regular: str, bold: str) -> None:
     _background(c, large=True)
     info = t.cfg.tournament
     name = info.name or t.directory.resolve().name
@@ -198,17 +200,18 @@ def _title_slide(c, t: Tournament, regular: str, bold: str) -> None:
     c.drawCentredString(SLIDE_W / 2, SLIDE_H / 2 + 40, name)
     c.setFillColor(ACCENT)
     c.setFont(bold, 30)
-    c.drawCentredString(SLIDE_W / 2, SLIDE_H / 2 - 10, "Award ceremony")
-    details = "  ·  ".join(x for x in [info.place, " – ".join(sorted(set(info.dates)))] if x)
+    c.drawCentredString(SLIDE_W / 2, SLIDE_H / 2 - 10, tr.t("awards_title"))
+    details = "  ·  ".join(x for x in [info.place, tr.date_range(info.dates)] if x)
     if details:
         c.setFillColor(TEXT_SOFT)
         c.setFont(regular, 20)
         c.drawCentredString(SLIDE_W / 2, SLIDE_H / 2 - 55, details)
 
 
-def _award_slide(c, t: Tournament, a: Award, number: int, total: int, regular: str, bold: str) -> None:
+def _award_slide(c, t: Tournament, tr: Translator, a: Award, number: int, total: int,
+                 regular: str, bold: str) -> None:
     _background(c)
-    _header(c, t, regular)
+    _header(c, t, tr, regular)
     p = t.players[a.player]
     cx = SLIDE_W / 2
     _medal(c, cx, SLIDE_H - 118, a, bold)
@@ -230,8 +233,9 @@ def _award_slide(c, t: Tournament, a: Award, number: int, total: int, regular: s
     c.setFont(regular, 22)
     c.drawCentredString(cx, SLIDE_H / 2 - 62, info)
 
-    stats = [f"Place {a.place}", f"{format_wins(a.wins)} of {a.games} games won",
-             f"TGoR {t.final_ratings()[a.player]:.0f} ({a.gain:+.0f})"]
+    stats = [tr.t("award_place", place=a.place),
+             tr.t("award_games", wins=format_wins(a.wins), games=a.games),
+             tr.t("award_tgor", tgor=f"{t.final_ratings()[a.player]:.0f}", change=f"{a.gain:+.0f}")]
     if a.group:
         stats.insert(0, a.group)
     c.setFillColor(TEXT_MUTED)
@@ -242,19 +246,20 @@ def _award_slide(c, t: Tournament, a: Award, number: int, total: int, regular: s
     c.drawString(40, 24, f"{number} / {total}")
 
 
-def awards_pdf(t: Tournament, awards: list[Award], path: Path) -> Path:
+def awards_pdf(t: Tournament, awards: list[Award], path: Path, tr: Translator | None = None) -> Path:
+    tr = tr or builtin("en")
     regular, bold = _register_fonts()
     c = pdfcanvas.Canvas(str(path), pagesize=(SLIDE_W, SLIDE_H))
     name = t.cfg.tournament.name or t.directory.resolve().name
-    c.setTitle(f"{name} – Award ceremony")
+    c.setTitle(f"{name} – {tr.t('awards_title')}")
     if t.cfg.awards.title_slide:
-        _title_slide(c, t, regular, bold)
+        _title_slide(c, t, tr, regular, bold)
         c.showPage()
     for i, a in enumerate(awards, start=1):
-        _award_slide(c, t, a, i, len(awards), regular, bold)
+        _award_slide(c, t, tr, a, i, len(awards), regular, bold)
         c.showPage()
     if not awards and not t.cfg.awards.title_slide:
-        _title_slide(c, t, regular, bold)
+        _title_slide(c, t, tr, regular, bold)
         c.showPage()
     c.save()
     return path

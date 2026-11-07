@@ -125,20 +125,27 @@ def init(
     directory: Path = typer.Argument(..., help="Directory for the new tournament (created if needed)."),
     name: str = typer.Option("", "--name", "-n", help="Tournament name."),
     rounds: int = typer.Option(5, "--rounds", "-r", min=1, help="Number of rounds."),
+    language: str = typer.Option("en", "--language", "-l",
+                                 help="Language of the PDFs: en, de or fr (custom: edit tournament.toml)."),
 ) -> None:
-    """Create a new tournament: tournament.toml and an empty players.ods."""
+    """Create a new tournament: tournament.toml, an empty players.ods and translation.toml."""
+    from .i18n import TRANSLATION_FILE, translation_template
+
     directory.mkdir(parents=True, exist_ok=True)
     existing = [f for f in (CONFIG_FILE, PLAYERS_FILE) if (directory / f).exists()]
     if existing:
         fail(f"{directory} already contains {', '.join(existing)}; not overwriting.")
-    write_template(directory, name or directory.resolve().name, rounds)
     try:
+        write_template(directory, name or directory.resolve().name, rounds, language)
         cfg = load_config(directory)
         save_players(directory, [], cfg.tournament.rounds, cfg.registration.extra_fields)
     except (ConfigError, OdsError) as e:
         fail(str(e))
-    typer.echo(f"Created {directory / CONFIG_FILE} and {directory / PLAYERS_FILE} "
-               f"({cfg.tournament.rounds} rounds).")
+    if not (directory / TRANSLATION_FILE).exists():
+        (directory / TRANSLATION_FILE).write_text(translation_template("de"), encoding="utf-8")
+    typer.echo(f"Created {directory / CONFIG_FILE}, {directory / PLAYERS_FILE} and "
+               f"{directory / TRANSLATION_FILE} ({cfg.tournament.rounds} rounds, "
+               f"language {cfg.output.language}).")
     typer.echo(f"Edit {CONFIG_FILE} (name, place, dates, rounds, k_factor, ...) before registering players.")
 
 
@@ -419,6 +426,18 @@ def pair(
     _write_pairing_pdf(directory, round_no)
 
 
+def translator(t: Tournament):
+    """Texts for the PDFs in the configured output language."""
+    from .i18n import TranslationError, get_translator
+    try:
+        tr, warnings = get_translator(t.cfg, t.directory)
+    except TranslationError as e:
+        fail(str(e))
+    for w in warnings:
+        warn(w)
+    return tr
+
+
 def _write_pairing_pdf(directory: Path, round_no: int) -> None:
     from .printing import PrintError, pairing_pdf, pdf_path
 
@@ -426,8 +445,9 @@ def _write_pairing_pdf(directory: Path, round_no: int) -> None:
     rg = t.rounds.get(round_no)
     if rg is None:
         fail(f"{round_file(directory, round_no).name} not found")
+    tr = translator(t)
     try:
-        path = pairing_pdf(t, rg, pdf_path(directory, round_no))
+        path = pairing_pdf(t, rg, pdf_path(directory, round_no), tr)
     except (PrintError, OSError) as e:
         warn(f"PDF not written: {e}")
         return
@@ -564,7 +584,8 @@ def awards(
     if t.last_round < t.cfg.tournament.rounds:
         warn(f"only {t.last_round} of {t.cfg.tournament.rounds} rounds have been played")
     try:
-        winners, notes = compute_awards(t)
+        tr = translator(t)
+        winners, notes = compute_awards(t, tr)
     except AwardError as e:
         fail(str(e))
     for n in notes:
@@ -573,8 +594,32 @@ def awards(
         typer.echo(f"{a.title:<32} {t.players[a.player].name:<28} place {a.place}")
     path = output or directory / AWARDS_FILE
     try:
-        awards_pdf(t, winners, path)
+        awards_pdf(t, winners, path, tr)
     except (PrintError, OSError) as e:
         fail(f"PDF not written: {e}")
     slides = len(winners) + (1 if t.cfg.awards.title_slide else 0)
     typer.echo(f"Wrote {path} ({slides} slides).")
+
+
+@app.command("translation-file")
+def translation_file(
+    language: str = typer.Option("de", "--language", "-l", help="Texts to start from: de, en or fr."),
+    force: bool = typer.Option(False, "--force", help="Overwrite an existing file."),
+    directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
+) -> None:
+    """Write an example translation file for [output] language = "custom" (default: German texts)."""
+    from .i18n import TEXTS, normalize_language, translation_template
+
+    lang = normalize_language(language)
+    if lang not in TEXTS:
+        fail("choose de, en or fr as the starting point")
+    name = "translation.toml"
+    try:
+        name = load_config(directory).output.translation_file
+    except ConfigError:
+        pass
+    path = directory / name
+    if path.exists() and not force:
+        fail(f"{path} already exists. Use --force to overwrite it.")
+    path.write_text(translation_template(lang), encoding="utf-8")
+    typer.echo(f"Wrote {path}. Set  language = \"custom\"  in the [output] section of {CONFIG_FILE} to use it.")

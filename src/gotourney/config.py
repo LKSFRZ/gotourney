@@ -23,6 +23,10 @@ time    = 60                 # TM, basic thinking time in minutes
 comment = ""                 # CM, e.g. "(submitted by ...)"
 rounds  = {rounds}                 # number of rounds; R1..Rn columns in players.ods follow this
 
+[output]
+language = "{language}"            # language of the PDFs (pairing, award ceremony): en, de, fr or custom
+translation_file = "translation.toml"   # texts for language = "custom" (example: German)
+
 [rating]
 k_factor = 3.0               # multiplies the EGD 'con' factor (bonus term is not used)
 top_bar  = "3d"              # starting TGoR is capped here: a rank ("3d" = 2300) or a GoR number; "none" = no bar
@@ -87,6 +91,7 @@ extra_fields = ["Fee paid", "Age group"]    # additional player data (columns in
 #   "rating_gain"    count = 1                        biggest TGoR gain (final - start)
 # Optional for every prize:
 #   title     = slide heading; placeholders {{place}} {{ordinal}} {{wins}} {{games}} {{group}} {{n}}
+#               (without a title, a default in the output language is used)
 #   exclusive = true    skip players who already got an earlier prize
 [awards]
 title_slide = true           # first slide with tournament name, place and dates
@@ -94,28 +99,20 @@ title_slide = true           # first slide with tournament name, place and dates
 [[awards.prizes]]
 type     = "wins"
 min_wins = {rounds}
-title    = "All {{games}} games won"
 
 [[awards.prizes]]
 type   = "best_in_group"
 field  = "Age group"
 values = ["U7", "U11", "U15"]
-title  = "Best child"
+title  = "{best_child}"
 
 [[awards.prizes]]
 type   = "place"
 places = [3, 2, 1]
-title  = "{{ordinal}} place"
 """
 
 PRIZE_TYPES = ("place", "wins", "best_in_group", "rating_gain")
 PRIZE_PLACEHOLDERS = ("place", "ordinal", "wins", "games", "group", "n")
-DEFAULT_PRIZE_TITLES = {
-    "place": "{ordinal} place",
-    "wins": "{wins} wins",
-    "best_in_group": "Best player ({group})",
-    "rating_gain": "Biggest TGoR gain",
-}
 
 DEFAULT_EXTRA_FIELDS = ["Fee paid", "Age group"]
 DEFAULT_FIELD_VALUES = {"Fee paid": ["yes", "no"], "Age group": ["U7", "U11", "U15", "U19", "Ü50"]}
@@ -210,7 +207,7 @@ class RegistrationSettings:
 @dataclass
 class Prize:
     type: str                                   # one of PRIZE_TYPES
-    title: str = ""
+    title: str = ""                             # "" = default title in the output language
     places: list[int] = field(default_factory=list)
     min_wins: float = 0.0
     group_field: str = ""                       # TOML key: field
@@ -226,9 +223,9 @@ class Prize:
 
 def default_prizes(rounds: int) -> list[Prize]:
     return [
-        Prize("wins", "All {games} games won", min_wins=float(rounds)),
-        Prize("best_in_group", "Best child", group_field="Age group", values=["U7", "U11", "U15"]),
-        Prize("place", "{ordinal} place", places=[3, 2, 1]),
+        Prize("wins", min_wins=float(rounds)),
+        Prize("best_in_group", group_field="Age group", values=["U7", "U11", "U15"]),
+        Prize("place", places=[3, 2, 1]),
     ]
 
 
@@ -239,6 +236,12 @@ class AwardSettings:
 
 
 @dataclass
+class OutputSettings:
+    language: str = "en"                        # en, de, fr or custom
+    translation_file: str = "translation.toml"
+
+
+@dataclass
 class Config:
     tournament: TournamentInfo = field(default_factory=TournamentInfo)
     rating: RatingSettings = field(default_factory=RatingSettings)
@@ -246,6 +249,7 @@ class Config:
     pairing: PairingSettings = field(default_factory=PairingSettings)
     registration: RegistrationSettings = field(default_factory=RegistrationSettings)
     awards: AwardSettings = field(default_factory=AwardSettings)
+    output: OutputSettings = field(default_factory=OutputSettings)
 
 
 def _get(section: dict, key: str, typ, default, where: str):
@@ -366,7 +370,7 @@ def _awards(a: dict, rounds: int) -> AwardSettings:
         typ = _get(p, "type", str, "", where).strip().lower()
         if typ not in PRIZE_TYPES:
             raise ConfigError(f"{where}: type must be one of {', '.join(PRIZE_TYPES)}")
-        title = _get(p, "title", str, DEFAULT_PRIZE_TITLES[typ], where)
+        title = _get(p, "title", str, "", where)
         try:
             title.format(**{k: "x" for k in PRIZE_PLACEHOLDERS})
         except (KeyError, IndexError, ValueError) as e:
@@ -398,6 +402,18 @@ def _awards(a: dict, rounds: int) -> AwardSettings:
                 raise ConfigError(f"{where}: give either 'values' (one group) or 'groups'")
         prizes.append(prize)
     return AwardSettings(title_slide, prizes)
+
+
+def _output(o: dict) -> OutputSettings:
+    from .i18n import LANGUAGES, normalize_language
+    if not isinstance(o, dict):
+        raise ConfigError("output: expected a table [output]")
+    raw = _get(o, "language", str, "en", "output")
+    lang = normalize_language(raw)
+    if lang is None:
+        raise ConfigError(f"output.language: {raw!r} is not supported (use {', '.join(LANGUAGES)})")
+    file = _get(o, "translation_file", str, "translation.toml", "output").strip() or "translation.toml"
+    return OutputSettings(lang, file)
 
 
 def _field_values(g: dict) -> dict[str, list[str]]:
@@ -453,6 +469,7 @@ def parse_config(data: dict) -> Config:
             field_values=_field_values(g),
         ),
         awards=_awards(data.get("awards", {}), _get(t, "rounds", int, 5, "tournament")),
+        output=_output(data.get("output", {})),
     )
     _validate(cfg)
     return cfg
@@ -506,9 +523,14 @@ def load_config(directory: Path) -> Config:
         raise ConfigError(f"{path}: {e}") from e
 
 
-def write_template(directory: Path, name: str, rounds: int = 5) -> Path:
+def write_template(directory: Path, name: str, rounds: int = 5, language: str = "en") -> Path:
+    from .i18n import TEXTS, normalize_language
     if rounds < 1:
         raise ConfigError("the number of rounds must be at least 1")
+    lang = normalize_language(language)
+    if lang not in TEXTS:
+        raise ConfigError(f"language {language!r} is not supported here (use en, de or fr)")
     path = Path(directory) / CONFIG_FILE
-    path.write_text(TEMPLATE.format(name=name.replace('"', "'"), rounds=rounds), encoding="utf-8")
+    path.write_text(TEMPLATE.format(name=name.replace('"', "'"), rounds=rounds, language=lang,
+                                    best_child=TEXTS[lang]["example_best_child"]), encoding="utf-8")
     return path

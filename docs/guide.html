@@ -138,8 +138,10 @@ gotourney --help</pre>
 in every terminal without activating anything.</p>
 
 <h2>4. Setting up a tournament <span class="badge now">AVAILABLE</span></h2>
-<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht" --rounds 5</pre>
-<p>This creates the folder with <code>tournament.toml</code> and an empty <code>players.ods</code>. Open
+<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht" --rounds 5 --language de</pre>
+<p>This creates the folder with <code>tournament.toml</code>, an empty <code>players.ods</code> and
+<code>translation.toml</code> (see 4.1). <code>--language</code> (<code>en</code>, <code>de</code> or
+<code>fr</code>, default <code>en</code>) sets the language of the PDFs. Open
 <code>tournament.toml</code> in a text editor and fill in the settings <b>before</b> registering players:</p>
 
 <table>
@@ -153,6 +155,9 @@ in every terminal without activating anything.</p>
   <tr><td><code>time</code></td><td>75</td><td>Basic thinking time in minutes (TM).</td></tr>
   <tr><td><code>comment</code></td><td>"(submitted by …)"</td><td>Comment (CM).</td></tr>
   <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds (also <code>init --rounds</code>).</td></tr>
+  <tr><td colspan="3"><b>[output]</b></td></tr>
+  <tr><td><code>language</code></td><td>"de"</td><td>Language of the PDFs (pairing, award ceremony): <code>en</code>, <code>de</code>, <code>fr</code> or <code>custom</code> (see 4.1).</td></tr>
+  <tr><td><code>translation_file</code></td><td>"translation.toml"</td><td>The texts for <code>language = "custom"</code>.</td></tr>
   <tr><td colspan="3"><b>[rating]</b></td></tr>
   <tr><td><code>k_factor</code></td><td>3.0</td><td>Multiplies the EGD <code>con</code> factor. Higher values make ratings move faster during the tournament.</td></tr>
   <tr><td><code>top_bar</code></td><td>"3d"</td><td>Cap for the starting TGoR: a rank (<code>"3d"</code> = 2300) or a GoR number (<code>2350</code>). <code>"none"</code> switches the bar off. Only the start is capped; during the tournament the TGoR can rise above the bar.</td></tr>
@@ -174,6 +179,27 @@ in every terminal without activating anything.</p>
 <code>rounds</code>. New rounds count as played by all registered players until you change that in
 <code>players.ods</code>. Columns of removed rounds are ignored and disappear the next time
 <code>players.ods</code> is written.</div>
+
+<h3>4.1 Language of the PDFs</h3>
+<p>The printable pairing (<code>round_r.pdf</code>) and the award ceremony slides (<code>awards.pdf</code>)
+are written in the language set in <code>tournament.toml</code>:</p>
+<pre>[output]
+language = "de"                        # en, de, fr or custom
+translation_file = "translation.toml"</pre>
+<ul>
+  <li>This covers all fixed texts: column headings, "Round", "Award ceremony", place, games won, the default
+  prize titles, ordinal numbers (1st / 1. / 1re) and the date format (2026-09-26 / 26.09.2026 /
+  26/09/2026). Prize titles you write yourself in <code>[awards]</code> are used as they are.</li>
+  <li>The terminal output, the <code>.ods</code> files and the <code>.h9</code> file stay in English; the
+  <code>.h9</code> format is fixed by the EGD.</li>
+  <li><b>Custom language:</b> set <code>language = "custom"</code> and edit <code>translation.toml</code>.
+  <code>gotourney init</code> writes this file with the <b>German</b> texts as an example; each entry is
+  commented. Keep the placeholders in braces, e.g. <code>{round}</code>; <code>\n</code> is a line break.
+  Exceptions for ordinal numbers go into the <code>[ordinals]</code> section (e.g. <code>1 = "1re"</code>).
+  Missing entries are taken from English, with a warning.</li>
+  <li><code>gotourney translation-file</code> writes the example file again (<code>--language en|de|fr</code>
+  to start from other texts, <code>--force</code> to overwrite an existing file).</li>
+</ul>
 
 <h2 class="pagebreak">5. Registering players</h2>
 
@@ -508,18 +534,16 @@ title_slide = true
 [[awards.prizes]]
 type     = "wins"
 min_wins = 5                      # the number of rounds
-title    = "All {games} games won"
 
 [[awards.prizes]]
 type   = "best_in_group"
 field  = "Age group"
 values = ["U7", "U11", "U15"]
-title  = "Best child"
+title  = "Best child"             # "Bestes Kind" with --language de
 
 [[awards.prizes]]
 type   = "place"
-places = [3, 2, 1]
-title  = "{ordinal} place"</pre>
+places = [3, 2, 1]</pre>
 <table>
   <thead><tr><th style="width:20%">type</th><th style="width:40%">Who gets the prize</th><th>Settings</th></tr></thead>
   <tr><td><code>place</code></td><td>The players on these final places, in the given order.</td><td><code>places = [3, 2, 1]</code></td></tr>
@@ -528,9 +552,11 @@ title  = "{ordinal} place"</pre>
   <tr><td><code>rating_gain</code></td><td>The biggest TGoR gain (final TGoR minus starting TGoR).</td><td><code>count = 1</code></td></tr>
 </table>
 <ul>
-  <li><b>title</b> is the slide heading. It may contain <code>{place}</code>, <code>{ordinal}</code> (1st,
-  2nd, ...), <code>{wins}</code>, <code>{games}</code>, <code>{group}</code> and <code>{n}</code> (1, 2, ...
-  within the prize). For German titles write for example <code>title = "{place}. Platz"</code>.</li>
+  <li><b>title</b> is the slide heading. Without a title, a default in the output language is used (e.g.
+  "3rd place" / "3. Platz", "5 wins" / "5 Siege"). A title may contain <code>{place}</code>,
+  <code>{ordinal}</code> (1st, 2nd, ... in the output language), <code>{wins}</code>, <code>{games}</code>,
+  <code>{group}</code> and <code>{n}</code> (1, 2, ... within the prize), e.g.
+  <code>title = "All {games} games won"</code>.</li>
   <li><b>exclusive = true</b> skips players who already received an earlier prize (earlier in the list),
   e.g. so that the tournament winner does not also get the prize for the biggest gain.</li>
   <li>A prize that nobody qualifies for (e.g. nobody won all games) is skipped with a note.</li>
@@ -591,7 +617,7 @@ system.</p>
 <h2>12. Command reference</h2>
 <table>
   <thead><tr><th style="width:38%">Command</th><th>Purpose</th><th style="width:13%">Status</th></tr></thead>
-  <tr><td><code>gotourney init &lt;dir&gt; [--name] [--rounds]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney init &lt;dir&gt; [--name] [--rounds] [--language]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney gui [--update-list]</code></td><td>Registration window with EGD autocomplete</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players add …</code></td><td>Register a player (with <code>--pin</code>: data from the EGD)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney players list</code></td><td>Show registered players</td><td><span class="badge now">AVAILABLE</span></td></tr>
@@ -606,6 +632,7 @@ system.</p>
   <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney h9 [-o file]</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney awards [-o file]</code></td><td>Award ceremony slides → awards.pdf</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney translation-file [--language] [--force]</code></td><td>Example translation file for <code>language = "custom"</code></td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney version</code></td><td>Show the version</td><td><span class="badge now">AVAILABLE</span></td></tr>
 </table>
 <p class="small">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>
