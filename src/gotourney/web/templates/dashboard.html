@@ -36,6 +36,7 @@
   <p>{{ card.text }}</p>
   {% if card.extra %}<p class="note">{{ card.extra }}</p>{% endif %}
   <div class="actions">
+    {% if card.link %}<a class="button {{ 'primary' if card.link_primary else '' }}" href="{{ card.link.href }}">{{ card.link.label }}</a>{% endif %}
     {% for a in card.actions %}{{ action_form(a) }}{% endfor %}
     {% for f in card.files %}
       <a class="button" href="{{ url_for('download', name=f.file) }}" target="_blank" rel="noopener">{{ f.label }}</a>
@@ -51,7 +52,7 @@
       <tbody>
       {% for row in rounds %}
         <tr class="{{ row.status }}">
-          <td>{{ row.r }}</td>
+          <td>{% if row.boards %}<a href="{{ url_for('round_page', r=row.r) }}">{{ row.r }}</a>{% else %}{{ row.r }}{% endif %}</td>
           <td><span class="badge {{ row.status }}">{{ t(row.status) }}</span></td>
           <td>{% if row.boards %}{{ row.done }} / {{ row.boards }}{% endif %}</td>
           <td class="files">

@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}{{ t("rp_title", r=r) }} – {{ tour.cfg.tournament.name }}{% endblock %}
+{% block nav %}<a href="{{ url_for('dashboard') }}">{{ t("dashboard") }}</a> <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>{% endblock %}
+
+{% block content %}
+<div class="title">
+  <h1>{{ t("rp_title", r=r) }}</h1>
+  <p class="muted">{{ tour.cfg.tournament.name }}</p>
+</div>
+
+{% if locked %}<p class="msg error">{{ t("rp_locked", r=r) }}</p>{% endif %}
+{% if later %}<p class="msg warning">{{ t("rp_later") }}</p>{% endif %}
+
+<section class="card progress-card">
+  <div class="progress-line">
+    <strong id="progress-text">{{ t("rp_progress", done=summary.done, boards=summary.boards) }}</strong>
+    <span id="toast" class="toast" role="status" aria-live="polite"></span>
+  </div>
+  <div class="bar" aria-hidden="true"><div id="bar-fill" style="width: {{ summary.percent }}%"></div></div>
+  <p class="muted small">{{ t("rp_help", r=r) }}</p>
+  <div class="tools">
+    <label class="check"><input type="checkbox" id="only-missing"> {{ t("rp_only_missing") }}</label>
+    <input type="search" id="filter" placeholder="{{ t('rp_filter') }}" aria-label="{{ t('rp_filter') }}">
+  </div>
+</section>
+
+<section id="all-done" class="card next" {% if summary.missing %}hidden{% endif %}>
+  <p class="eyebrow">{{ t("next_step") }}</p>
+  <h2>{{ t("rp_all_done", r=r) }}</h2>
+  <p><a class="button primary" href="{{ url_for('dashboard') }}">{{ t("dashboard") }} &rarr;</a></p>
+</section>
+
+<section class="card">
+  <table class="boards">
+    <thead><tr>
+      <th>{{ t("rp_board") }}</th><th>{{ t("rp_white") }}</th><th>{{ t("rp_result") }}</th>
+      <th>{{ t("rp_black") }}</th><th>{{ t("rp_handicap") }}</th>
+    </tr></thead>
+    <tbody id="boards">
+      {% for row in rows %}{% include "_board_row.html" %}{% endfor %}
+    </tbody>
+  </table>
+  <p id="no-match" class="muted" hidden>{{ t("rp_no_match") }}</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var version = {{ folder_version|tojson }};
+  var texts = {saved: {{ t("rp_saved")|tojson }}, error: {{ t("rp_error")|tojson }},
+               progress: {{ t("rp_progress", done="{done}", boards="{boards}")|tojson }}};
+  var tbody = document.getElementById("boards");
+  var toast = document.getElementById("toast");
+
+  function showToast(message, ok) {
+    toast.textContent = message;
+    toast.className = "toast " + (ok ? "ok" : "bad");
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(function () { toast.textContent = ""; }, ok ? 1500 : 6000);
+  }
+
+  function applyFilter() {
+    var q = document.getElementById("filter").value.trim().toLowerCase();
+    var onlyMissing = document.getElementById("only-missing").checked;
+    var shown = 0;
+    tbody.querySelectorAll("tr.board-row").forEach(function (tr) {
+      var visible = (!q || tr.dataset.search.indexOf(q) >= 0 || tr.id === "board-" + q)
+                    && (!onlyMissing || tr.dataset.done === "0");
+      tr.hidden = !visible;
+      if (visible) shown++;
+    });
+    document.getElementById("no-match").hidden = shown > 0;
+  }
+
+  function updateSummary(s) {
+    document.getElementById("progress-text").textContent =
+      texts.progress.replace("{done}", s.done).replace("{boards}", s.boards);
+    document.getElementById("bar-fill").style.width = s.percent + "%";
+    document.getElementById("all-done").hidden = s.missing > 0;
+  }
+
+  // save a result without reloading the page (the forms also work without JavaScript)
+  tbody.addEventListener("submit", function (event) {
+    var form = event.target;
+    var button = event.submitter;
+    if (!form.classList.contains("result-form") || !button) return;
+    event.preventDefault();
+    var data = new FormData(form);
+    data.set("result", button.value);
+    fetch(form.action, {method: "POST", body: data, headers: {"X-Requested-With": "fetch"}})
+      .then(function (r) { return r.json(); })
+      .then(function (res) {
+        if (!res.ok) { showToast(texts.error + ": " + res.message, false); return; }
+        var row = form.closest("tr");
+        row.outerHTML = res.row;
+        version = res.version;
+        updateSummary(res.summary);
+        applyFilter();
+        showToast(texts.saved, true);
+      })
+      .catch(function () { showToast(texts.error, false); });
+  });
+
+  document.getElementById("filter").addEventListener("input", applyFilter);
+  document.getElementById("only-missing").addEventListener("change", applyFilter);
+
+  // reload when the round file was changed elsewhere (e.g. saved in LibreOffice)
+  setInterval(function () {
+    fetch("{{ url_for('api_version') }}").then(function (r) { return r.json(); }).then(function (d) {
+      if (d.v && d.v !== version && !document.querySelector("details.more[open]")) window.location.reload();
+    }).catch(function () {});
+  }, 3000);
+})();
+</script>
+{% endblock %}

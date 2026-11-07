@@ -143,10 +143,11 @@ gotourney web                  # opens the browser; or: gotourney web -d my_tour
 ```
 
 A local web page (only reachable from your own computer) with an overview of the tournament and a
-button for the next step: create or open a tournament, pair and start rounds, check results, create
-standings, wall list, EGD file and award slides. Results are still entered in the round file
-(LibreOffice opens with one click); entering them in the browser, registration and a settings form
-will follow. The interface is available in English and German.
+button for the next step: create or open a tournament, pair and start rounds, **enter results by
+clicking** (saved immediately in the round file), create standings, wall list, EGD file and award
+slides. LibreOffice can still be used for the same files at any time; the pages update themselves.
+Registration and a settings form in the browser will follow. The interface is available in English
+and German.
 
 ## Development
 

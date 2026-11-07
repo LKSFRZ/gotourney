@@ -274,7 +274,7 @@ One line per player, fixed-width columns:
    board order; tests with hand-checked scenarios (rematch blocking, club penalty, odd counts).
 9. **Polish**: nicer formatting, printable pairings/standings.
 
-## 11. Web interface (in progress: W0 and W1 done)
+## 11. Web interface (in progress: W0, W1 and W2 done)
 
 Goal: tournament directors can run a whole tournament **without supervision and without the
 terminal**. Decisions (2026-11-07):
@@ -320,7 +320,7 @@ Each phase is usable on its own; the command line keeps working throughout.
 - ✅ **W1 – Skeleton + dashboard.** `gotourney web`; choose or create a tournament folder; dashboard
   showing the phase ("Round 2 running – 3 results missing") and a big button for the next step;
   German/English switch; short help texts on every page.
-- **W2 – Results by clicking.** Board list of a round; per board *White / Jigo / Black* and forfeit
+- ✅ **W2 – Results by clicking.** Board list of a round; per board *White / Jigo / Black* and forfeit
   options; missing results highlighted; immediate saving to `round_r.ods`; results check built in.
 - **W2b – Pairing and starting.** Buttons for pair / start; the boards as a table; fix (finalize)
   or release boards; pair two players by hand (also by name search); latecomers; PDF downloads

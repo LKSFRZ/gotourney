@@ -1,0 +1,39 @@
+<tr id="board-{{ row.board }}" class="board-row {{ 'done' if row.result else 'open' }}"
+    data-search="{{ row.search }}" data-done="{{ 1 if row.result else 0 }}">
+  <td class="board-no">{{ row.board }}</td>
+  <td class="player white {{ 'winner' if row.result in ('white', 'white_forfeit') else '' }}">
+    <span class="stone" aria-hidden="true">&#9675;</span> {{ row.white }}
+    <span class="tgor">{{ row.white_tgor }}</span>
+  </td>
+  <td class="result">
+    <form method="post" action="{{ url_for('set_result', r=r) }}" class="result-form">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="board" value="{{ row.board }}">
+      <div class="segmented" role="group" aria-label="{{ t('rp_result') }} {{ t('rp_board') }} {{ row.board }}">
+        <button type="submit" name="result" value="white" aria-pressed="{{ 'true' if row.result == 'white' else 'false' }}"
+                title="{{ t('rp_white_wins') }}">&#9675; <span class="long">{{ t('rp_white_wins') }}</span><span class="short">{{ t('rp_white') }}</span></button>
+        <button type="submit" name="result" value="jigo" aria-pressed="{{ 'true' if row.result == 'jigo' else 'false' }}"
+                title="{{ t('rp_jigo') }}">{{ t('rp_jigo') }}</button>
+        <button type="submit" name="result" value="black" aria-pressed="{{ 'true' if row.result == 'black' else 'false' }}"
+                title="{{ t('rp_black_wins') }}">&#9679; <span class="long">{{ t('rp_black_wins') }}</span><span class="short">{{ t('rp_black') }}</span></button>
+      </div>
+      <details class="more">
+        <summary>{{ t('rp_more') }}</summary>
+        <div class="menu">
+          <button type="submit" name="result" value="white_forfeit" aria-pressed="{{ 'true' if row.result == 'white_forfeit' else 'false' }}">{{ t('rp_white_forfeit') }}</button>
+          <button type="submit" name="result" value="black_forfeit" aria-pressed="{{ 'true' if row.result == 'black_forfeit' else 'false' }}">{{ t('rp_black_forfeit') }}</button>
+          <button type="submit" name="result" value="both_forfeit" aria-pressed="{{ 'true' if row.result == 'both_forfeit' else 'false' }}">{{ t('rp_both_forfeit') }}</button>
+          {% if row.result %}<button type="submit" name="result" value="" class="clear">{{ t('rp_clear') }}</button>{% endif %}
+        </div>
+      </details>
+      {% if row.result in ('white_forfeit', 'black_forfeit', 'both_forfeit') %}
+        <span class="forfeit-note">{{ t('rp_' ~ row.result) }}</span>
+      {% endif %}
+    </form>
+  </td>
+  <td class="player black {{ 'winner' if row.result in ('black', 'black_forfeit') else '' }}">
+    <span class="stone" aria-hidden="true">&#9679;</span> {{ row.black }}
+    <span class="tgor">{{ row.black_tgor }}</span>
+  </td>
+  <td class="handicap">{{ row.handicap }}<span class="komi"> / {{ row.komi }}</span></td>
+</tr>

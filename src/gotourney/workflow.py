@@ -508,3 +508,58 @@ def create_tournament(directory: Path, name: str, rounds: int = 5, language: str
     if not (directory / TRANSLATION_FILE).exists():
         (directory / TRANSLATION_FILE).write_text(translation_template("de"), encoding="utf-8")
     return cfg
+
+
+# ---------------------------------------------------------------- entering a single result
+
+RESULT_VALUES = {
+    "white": "WHITE_WINS", "black": "BLACK_WINS", "jigo": "JIGO",
+    "white_forfeit": "WHITE_WINS_FORFEIT", "black_forfeit": "BLACK_WINS_FORFEIT",
+    "both_forfeit": "BOTH_LOSE_FORFEIT", "": None,
+}
+
+
+def result_value(result) -> str:
+    """The short name of a Result for forms ('white', 'jigo', ...; '' = no result)."""
+    if result is None:
+        return ""
+    return next(k for k, v in RESULT_VALUES.items() if v == result.name)
+
+
+@dataclass
+class SetResultOutcome:
+    tournament: Tournament
+    round: int
+    game: Game
+    boards: int
+    missing: int
+    finalized_now: bool          # the board was fixed because a result was entered
+    later_rounds: bool           # later rounds exist (they keep their pairing)
+
+
+def set_result(directory: Path, round_no: int, board: int, value: str) -> SetResultOutcome:
+    """Enter (or clear, value '') the result of one board and save the round file.
+
+    A board that gets a result is finalized: a game that is played must never be paired again."""
+    from .models import Result
+
+    if value not in RESULT_VALUES:
+        raise Problem("bad_result", f"unknown result {value!r}", {"value": value})
+    t = load(directory)
+    rg = t.rounds.get(round_no)
+    path = round_file(directory, round_no)
+    if rg is None:
+        raise Problem("no_round", f"{path.name} not found", {"round": round_no})
+    check_writable(path)
+    game = next((g for g in rg.games if g.board == board), None)
+    if game is None:
+        raise Problem("no_board", f"round {round_no} has no board {board}", {"board": board})
+    name = RESULT_VALUES[value]
+    game.result = Result[name] if name else None
+    finalized_now = game.result is not None and not game.finalized
+    if finalized_now:
+        game.finalized = True
+    labels = {pid: player_label(p) for pid, p in t.players.items()}
+    save_round(path, rg.games, labels, t.rating_before(round_no), not_playing=read_not_playing(path))
+    return SetResultOutcome(t, round_no, game, len(rg.games), sum(1 for g in rg.games if g.result is None),
+                            finalized_now, any(r > round_no for r in t.rounds))

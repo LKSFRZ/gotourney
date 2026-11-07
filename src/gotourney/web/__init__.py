@@ -214,6 +214,50 @@ def create_app(directory: Path | None = None) -> Flask:
             abort(404)
         return send_from_directory(d, name, as_attachment=request.args.get("dl") == "1")
 
+    # ------------------------------------------------------------ results of a round
+
+    @app.get("/round/<int:r>")
+    def round_page(r: int):
+        d = tdir()
+        if d is None:
+            return redirect(url_for("home", choose=1))
+        try:
+            t = workflow.load(d)
+        except workflow.Problem as e:
+            flash(str(e), "error")
+            return redirect(url_for("dashboard"))
+        rg = t.rounds.get(r)
+        if rg is None:
+            return redirect(url_for("dashboard"))
+        return render_template("round.html", tour=t, r=r, rows=board_rows(t, r),
+                               summary=round_summary(t, r), next_card=phase_card(t, lang()),
+                               locked=workflow.is_open_in_libreoffice(d / f"round_{r}.ods"),
+                               later=any(x > r for x in t.rounds), folder_version=folder_version(d))
+
+    @app.post("/round/<int:r>/result")
+    def set_result(r: int):
+        d = tdir()
+        if d is None:
+            abort(404)
+        board = request.form.get("board", type=int)
+        value = request.form.get("result", "")
+        partial = request.headers.get("X-Requested-With") == "fetch"
+        try:
+            out = workflow.set_result(d, r, board, value)
+        except workflow.Problem as e:
+            if partial:
+                key = "pr_file_open" if e.code == "file_open" else None
+                msg = text(lang(), key, name=f"round_{r}.ods") if key else str(e)
+                return jsonify(ok=False, message=msg), 409
+            explain(e, r)
+            return redirect(url_for("round_page", r=r))
+        t = out.tournament
+        row = next(x for x in board_rows(t, r) if x["board"] == board)
+        if partial:
+            return jsonify(ok=True, row=render_template("_board_row.html", row=row, r=r),
+                           summary=round_summary(t, r), version=folder_version(d))
+        return redirect(url_for("round_page", r=r) + f"#board-{board}")
+
     # ------------------------------------------------------------ actions
 
     @app.post("/do/<action>")
@@ -323,6 +367,32 @@ def round_rows(t) -> list[dict]:
     return rows
 
 
+def board_rows(t, r: int) -> list[dict]:
+    """The boards of a round for the results page."""
+    from ..rounds import player_label
+
+    rg = t.rounds[r]
+    ratings = t.rating_before(r)
+    rows = []
+    for g in sorted(rg.games, key=lambda g: g.board):
+        w, b = t.players[g.white], t.players[g.black]
+        rows.append({
+            "board": g.board, "result": workflow.result_value(g.result),
+            "white": player_label(w), "black": player_label(b),
+            "white_tgor": round(ratings.get(g.white, 0)), "black_tgor": round(ratings.get(g.black, 0)),
+            "handicap": g.handicap, "komi": f"{g.komi:g}", "finalized": g.finalized,
+            "search": f"{w.name} {b.name}".lower(),
+        })
+    return rows
+
+
+def round_summary(t, r: int) -> dict:
+    rg = t.rounds[r]
+    done = sum(1 for g in rg.games if g.result is not None)
+    return {"done": done, "boards": len(rg.games), "missing": len(rg.games) - done,
+            "percent": round(100 * done / len(rg.games)) if rg.games else 0}
+
+
 def other_files(d: Path) -> list[dict]:
     names = ["players.ods", "standings.pdf", "standings.ods", "wall_list.ods", "awards.pdf", CONFIG_FILE]
     names += sorted(p.name for p in d.glob("*.h9"))
@@ -338,7 +408,7 @@ def phase_card(t, lang: str) -> dict:
         "label": label, "action": action, "primary": primary, "confirm": confirm, "form": form}
     files = lambda *names: [{"label": label, "file": name} for label, name in names
                             if (t.directory / name).exists()]
-    card = {"title": "", "text": "", "extra": "", "actions": [], "files": []}
+    card = {"title": "", "text": "", "extra": "", "actions": [], "files": [], "link": None, "link_primary": False}
     if s.phase == "no_players":
         card.update(title=tx("ph_no_players_title"), text=tx("ph_no_players_text"),
                     actions=[act(tx("act_registration"), "registration", primary=True)])
@@ -352,6 +422,7 @@ def phase_card(t, lang: str) -> dict:
                     actions=[act(tx("act_open_round", r=r), "open_file", name=f"round_{r}.ods")])
     elif s.phase == "paired":
         card.update(title=tx("ph_paired_title", r=r), text=tx("ph_paired_text"),
+                    link={"label": tx("act_show_boards"), "href": f"/round/{r}"},
                     actions=[act(tx("act_repair", r=r), "pair", confirm=tx("confirm_repair", r=r), round=r),
                              act(tx("act_start", r=r), "start", primary=True,
                                  confirm=tx("confirm_start", r=r), round=r)],
@@ -360,8 +431,9 @@ def phase_card(t, lang: str) -> dict:
     elif s.phase == "running":
         card.update(title=tx("ph_running_title", r=r),
                     text=tx("ph_running_text", r=r, done=s.boards - s.missing, boards=s.boards),
-                    actions=[act(tx("act_open_round", r=r), "open_file", primary=True, name=f"round_{r}.ods"),
+                    actions=[act(tx("act_open_round", r=r), "open_file", name=f"round_{r}.ods"),
                              act(tx("act_check_results"), "check_results", round=r)],
+                    link={"label": tx("act_enter_results"), "href": f"/round/{r}"}, link_primary=True,
                     files=files((tx("act_pdf_board"), f"round_{r}.pdf"),
                                 (tx("act_pdf_alpha"), f"round_{r}_alphabetical.pdf")))
         late = workflow.check_results(t, r).unpaired

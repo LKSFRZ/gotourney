@@ -135,3 +135,54 @@ def test_version_changes_when_files_change(make_tournament):
     import os, time
     os.utime(d / "players.ods", (time.time() + 5, time.time() + 5))
     assert c.get("/api/version").get_json()["v"] != v1
+
+
+def test_results_page(make_tournament):
+    d = make_tournament([(2000,), (1990,), (1500,), (1490,)], rounds=2)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    r = c.get("/round/1")
+    assert r.status_code == 200 and "0 of 2 results entered" in page(r) and "White wins" in page(r)
+    # click without JavaScript: form post + redirect
+    r = post(c, app, "/round/1/result", board="1", result="white")
+    assert "1 of 2 results entered" in page(r)
+    t = Tournament.load(d)
+    g1 = next(g for g in t.rounds[1].games if g.board == 1)
+    assert g1.result is Result.WHITE_WINS and g1.finalized          # board fixed by the result
+    # click with JavaScript: JSON with the new row
+    r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "2", "result": "both_forfeit"},
+               headers={"X-Requested-With": "fetch"})
+    data = r.get_json()
+    assert data["ok"] and data["summary"] == {"done": 2, "boards": 2, "missing": 0, "percent": 100}
+    assert 'id="board-2"' in data["row"] and "Both lose" in data["row"]
+    assert Tournament.load(d).rounds[1].complete
+    # clearing a result
+    r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "2", "result": ""},
+               headers={"X-Requested-With": "fetch"})
+    assert r.get_json()["summary"]["missing"] == 1
+    # dashboard links to the page
+    assert "/round/1" in page(c.get("/dashboard"))
+
+
+def test_results_page_refuses_while_open_in_libreoffice(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    (d / ".~lock.round_1.ods#").write_text("x")
+    assert "is open in LibreOffice" in page(c.get("/round/1"))
+    r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "1", "result": "white"},
+               headers={"X-Requested-With": "fetch"})
+    assert r.status_code == 409 and "LibreOffice" in r.get_json()["message"]
+    assert Tournament.load(d).rounds[1].games[0].result is None
+
+
+def test_bad_result_values(make_tournament):
+    d = make_tournament([(2000,), (1990,)], rounds=1)
+    app, c = client_for(d)
+    post(c, app, "/do/pair", round="1")
+    r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "1", "result": "draw!!"},
+               headers={"X-Requested-With": "fetch"})
+    assert r.status_code == 409
+    r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "9", "result": "white"},
+               headers={"X-Requested-With": "fetch"})
+    assert r.status_code == 409 and "no board 9" in r.get_json()["message"]
