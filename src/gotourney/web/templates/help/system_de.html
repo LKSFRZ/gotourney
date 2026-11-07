@@ -1,0 +1,237 @@
+{% extends "help/_layout.html" %}
+{% block title %}Turniersystem{% if own %} – {{ cfg.tournament.name }}{% endif %}{% endblock %}
+
+{% block toc %}
+  <li><a href="#short">Kurz gesagt</a></li>
+  <li><a href="#start">Die Startwertung</a></li>
+  <li><a href="#update">Nach jeder Runde</a></li>
+  <li><a href="#calc">Ausprobieren: eine Partie</a></li>
+  <li><a href="#pairing">Auslosung</a></li>
+  <li><a href="#handicap">Vorgabe und Komi</a></li>
+  <li><a href="#odd">Ungerade Spielerzahl</a></li>
+  <li><a href="#special">Jigo, kampflose Partien, Nachzügler</a></li>
+  <li><a href="#winner">Sieger und Preise</a></li>
+  <li><a href="#why">Warum dieses System?</a></li>
+{% endblock %}
+{% block other %}<a href="{{ url_for('docs_page') }}">{{ t("help_docs") }} →</a>{% endblock %}
+
+{% block article %}
+<h1>Das Turniersystem</h1>
+<p class="lead">Statt McMahon-Punkten hat jeder Spieler eine <b>Turnierwertung (TGoR)</b>. Sie beginnt bei der
+EGD-Wertung des Spielers und ändert sich nach jeder Runde nach der EGD-Formel – nur schneller. Wer am Ende die
+höchste TGoR hat, gewinnt.</p>
+<div class="box">
+  {% if own %}Die Zahlen auf dieser Seite sind die Einstellungen von <b>{{ cfg.tournament.name }}</b>: {% else %}Es ist
+  kein Turnier geöffnet, deshalb zeigt diese Seite die <b>Standardeinstellungen</b>: {% endif %}
+  k-Faktor {{ "%g"|format(cfg.rating.k_factor) }},
+  Obergrenze {% if cfg.rating.top_bar is not none %}{{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% else %}keine{% endif %},
+  {% if cfg.handicap.reduction %}Vorgabe um {{ cfg.handicap.reduction }} verringert{% else %}volle Vorgabe{% endif %},
+  {{ cfg.tournament.rounds }} Runden.
+</div>
+
+<section id="short">
+  <h2>Kurz gesagt</h2>
+  <ol>
+    <li>Jeder beginnt mit seiner <b>EGD-Wertung (GoR)</b>{% if cfg.rating.top_bar is not none %}, aber höchstens mit
+      {{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% endif %}.</li>
+    <li>In jeder Runde spielen Sie gegen jemanden mit einer <b>möglichst ähnlichen Wertung</b> – nie zweimal gegen denselben Gegner.</li>
+    <li>Gespielt wird mit <b>{% if cfg.handicap.reduction %}Vorgabe (volle Vorgabe minus {{ cfg.handicap.reduction }}){% else %}voller Vorgabe{% endif %}</b>,
+      jede Partie ist also ein fairer Kampf.</li>
+    <li>Nach der Runde hebt ein Sieg Ihre Wertung, eine Niederlage senkt sie – umso mehr, je überraschender das Ergebnis war.</li>
+    <li>Wer <b>nach der letzten Runde die höchste Wertung</b> hat, gewinnt das Turnier.</li>
+  </ol>
+</section>
+
+<section id="start">
+  <h2>Die Startwertung</h2>
+  <p>Ihre Start-TGoR ist Ihre <b>aktuelle EGD-Wertung (GoR)</b> am Tag der Anmeldung. Spieler ohne EGD-Wertung beginnen
+    mit dem Wert ihres Rangs: <b>1k = 2000, 1d = 2100</b> und 100 Punkte pro Rang (5k = 1600, 10k = 1100, 3d = 2300).
+    Die Turnierleitung darf eine Startwertung korrigieren, die offensichtlich veraltet ist – etwa bei jemandem, der seit
+    Jahren kein gewertetes Turnier gespielt hat.</p>
+  {% if cfg.rating.top_bar is not none %}
+  <h3>Die Obergrenze</h3>
+  <p>Startwertungen werden bei der <b>Obergrenze</b> von {{ "%g"|format(cfg.rating.top_bar) }}
+    ({{ rank_of(cfg.rating.top_bar) }}) gekappt. Alle stärkeren Spieler beginnen genau dort. Ohne Obergrenze hätte der
+    stärkste Spieler einen so großen Vorsprung, dass das Turnier vor der ersten Partie entschieden wäre. Mit ihr starten
+    die Spitzenspieler gleichauf, und der Titel wird am Brett entschieden.</p>
+  <p>Für die Feinwertung (siehe <a href="#winner">Sieger</a>) zählt trotzdem die echte Start-GoR.</p>
+  {% else %}
+  <p>Dieses Turnier hat <b>keine Obergrenze</b>: Jeder beginnt mit seiner vollen Wertung.</p>
+  {% endif %}
+</section>
+
+<section id="update">
+  <h2>Nach jeder Runde</h2>
+  <p>Sind alle Ergebnisse einer Runde da, wird die TGoR jedes Spielers mit der Formel des EGD-Wertungssystems (Fassung
+    2021) neu berechnet. Die Idee: Für jede Partie gibt es aus den beiden Wertungen und der Vorgabe ein <b>erwartetes
+    Ergebnis</b>. Wer besser abschneidet als erwartet, steigt; wer schlechter abschneidet, fällt.</p>
+  <div class="formula">erwartetes Ergebnis  SE  = 1 / (1 + e^(β(Gegner) − β(Sie)))
+                     β(r) = −7 · ln(3300 − r − h)
+neue Wertung         r'  = r + k · con · (S − SE)
+                     con = ((3300 − r) / 200)^1,6</div>
+  <ul class="small">
+    <li><i>r</i> = Wertung vor der Runde, <i>S</i> = 1 bei Sieg, ½ bei Jigo, 0 bei Niederlage.</li>
+    <li><i>h</i> = Vorgabebonus des Spielers mit Schwarz: 0 ohne Vorgabe, sonst 100 · (Steine − 0,5).</li>
+  </ul>
+  <p>Zwei Unterschiede zur EGD:</p>
+  <ul>
+    <li><b>Der k-Faktor ({{ "%g"|format(cfg.rating.k_factor) }})</b> vervielfacht jede Änderung. In der EGD ist er 1. Mit
+      einem größeren k-Faktor bewegen sich die Wertungen schnell genug, um die Spieler in wenigen Runden zu trennen.</li>
+    <li>Der kleine Bonus der EGD gegen Deflation wird nicht verwendet.</li>
+  </ul>
+  <p>Alle Partien einer Runde werden mit den Wertungen <b>vor</b> der Runde gerechnet; die Reihenfolge, in der Ergebnisse
+    eintreffen, spielt also keine Rolle. <b>con</b> ist bei niedrigen Wertungen größer: Die Wertungen schwächerer Spieler
+    bewegen sich stärker, wie in der EGD.</p>
+
+  <h3>Beispiele (k = {{ "%g"|format(cfg.rating.k_factor) }})</h3>
+  <div class="table-scroll">
+  <table class="info">
+    <thead><tr><th>Weiß</th><th>Schwarz</th><th class="num">Vorgabe</th><th class="num">Weiß gewinnt</th>
+      <th class="num">Schwarz gewinnt</th><th class="num">In der EGD (k = 1)<br>Weiß gewinnt</th></tr></thead>
+    <tbody>
+    {% for e in examples %}
+      <tr><td>{{ e.white }} ({{ rank_of(e.white) }})</td><td>{{ e.black }} ({{ rank_of(e.black) }})</td>
+        <td class="num">{{ e.handicap or "keine" }}</td>
+        <td class="num"><span class="up">{{ "%+.0f"|format(e.white_wins[0]) }}</span> / <span class="down">{{ "%+.0f"|format(e.white_wins[1]) }}</span></td>
+        <td class="num"><span class="down">{{ "%+.0f"|format(e.black_wins[0]) }}</span> / <span class="up">{{ "%+.0f"|format(e.black_wins[1]) }}</span></td>
+        <td class="num muted">{{ "%+.0f"|format(e.egd_white_wins[0]) }} / {{ "%+.0f"|format(e.egd_white_wins[1]) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="small muted">Änderungen für Weiß / Schwarz. Die Vorgabe ist die Standardvorgabe für den Wertungsunterschied.</p>
+</section>
+
+<section id="calc">
+  <h2>Ausprobieren: eine Partie</h2>
+  <div class="calc" id="calc-box">
+    <div class="inputs">
+      <label>TGoR Weiß <input id="c-white" type="number" value="1850" step="1"></label>
+      <label>TGoR Schwarz <input id="c-black" type="number" value="1700" step="1"></label>
+      <label>Vorgabe <select id="c-h">{% for h in range(10) %}<option value="{{ h }}">{{ h or "keine" }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="out" id="c-out" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="pairing">
+  <h2>Auslosung</h2>
+  <p>Jede Runde wird so ausgelost, dass die Wertungsunterschiede möglichst klein sind – für das ganze Feld auf einmal
+    (mit dem „Blossom“-Algorithmus), nicht Brett für Brett von oben. Zwei Spieler <b>treffen nie zweimal</b> aufeinander.</p>
+  <p>Genau genommen minimiert das Programm die Summe der <b>quadrierten</b> Unterschiede. Durch das Quadrieren ist ein
+    großer Unterschied schlimmer als mehrere kleine: Zwei Paare mit je 50 Punkten sind besser als eines mit 0 und eines
+    mit 100.</p>
+  {% if cfg.pairing.rules %}
+  <h3>Auslosungsregeln dieses Turniers</h3>
+  <ul>
+    {% for rule in cfg.pairing.rules %}
+      <li><b>{{ rule.field }}</b>: {{ t("rt_" ~ rule.type) }}{% if not rule.hard %} – ein Paar mit gleichem Wert zählt, als
+        lägen die Spieler <b>{{ "%g"|format(rule.points) }} Punkte</b> weiter auseinander{% endif %}{% if rule.all_groups %}
+        (Gruppen: {% for g in rule.all_groups %}{{ g|join(", ") }}{% if not loop.last %} | {% endif %}{% endfor %}){% endif %}.</li>
+    {% endfor %}
+  </ul>
+  <p>Spieler desselben Vereins treffen also nur aufeinander, wenn die Alternative ein deutlich größerer
+    Wertungsunterschied wäre.</p>
+  {% endif %}
+  <h3>Farben und Bretter</h3>
+  <ul>
+    <li>Bei einer Vorgabepartie nimmt der stärkere Spieler <b>Weiß</b>.</li>
+    <li>Bei gleichen Bedingungen werden die Farben ausgeglichen: Wer öfter Weiß hatte, bekommt Schwarz. Hatten beide
+      gleich oft dieselbe Farbe, wird gelost.</li>
+    <li>Brett 1 ist das Paar mit der höchsten Wertung, dann absteigend.</li>
+  </ul>
+</section>
+
+<section id="handicap">
+  <h2>Vorgabe und Komi</h2>
+  <p>Die Vorgabe beträgt <b>einen Stein pro vollen 100 Punkten</b> Wertungsunterschied (immer abgerundet, höchstens 9)
+    {% if cfg.handicap.reduction %}, minus {{ cfg.handicap.reduction }}{% endif %}. Die Spieler dürfen vor der Partie eine
+    andere Vorgabe vereinbaren; gewertet wird die Vorgabe, mit der tatsächlich gespielt wurde.</p>
+  <table class="info">
+    <thead><tr><th>Wertungsunterschied</th><th class="num">Vorgabe</th><th class="num">Komi</th></tr></thead>
+    <tbody>
+    {% for h in handicaps %}
+      <tr><td>{{ h.low }}{% if h.high %} – {{ h.high }}{% else %} und mehr{% endif %}</td>
+        <td class="num">{{ h.stones or "keine" }}</td><td class="num">{{ "%g"|format(h.komi)|replace(".", ",") }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Vorgabe 1 bedeutet: keine Steine, Schwarz beginnt, Komi {{ "%g"|format(cfg.handicap.komi_handicap)|replace(".", ",") }}.</p>
+  <p>Die Vorgabe gleicht den größten Teil des Unterschieds aus, die Partien sind also knapp. Weil abgerundet wird, ist der
+    stärkere Spieler noch leicht im Vorteil – die Wertungsformel weiß das (jeder Stein zählt 100 Punkte, der erste 50) und
+    belohnt eine Überraschung entsprechend.</p>
+</section>
+
+<section id="odd">
+  <h2>Ungerade Spielerzahl</h2>
+  <p>Sind für eine Runde ungerade viele Spieler angemeldet, setzt ein <b>Joker</b> aus. Joker sind Spieler, die bei der
+    Anmeldung zugestimmt haben – oft Spieler vom Ort oder Helfer. Von den Jokern setzt derjenige aus, der die meisten
+    Partien gespielt hat; bei Gleichstand lost das Programm. Wer aussetzt, behält in dieser Runde seine Wertung.</p>
+</section>
+
+<section id="special">
+  <h2>Jigo, kampflose Partien, Nachzügler</h2>
+  <ul>
+    <li><b>Jigo</b> (Unentschieden) zählt für beide als halber Sieg.</li>
+    <li><b>Kampflose Partien</b> werden <b>nicht gewertet</b>: Die Wertungen beider Spieler ändern sich nicht, und die
+      Partie zählt nicht als Sieg. Die beiden gelten trotzdem als „schon gegeneinander gespielt“ und werden nicht noch
+      einmal gelost.</li>
+    <li><b>Wer eine Runde auslässt</b>, behält seine Wertung und kann in der nächsten Runde wieder spielen.</li>
+    <li><b>Nachzügler</b> können nach dem Start einer Runde noch untereinander gelost werden.</li>
+  </ul>
+</section>
+
+<section id="winner">
+  <h2>Sieger und Preise</h2>
+  <p>Sieger ist, wer <b>nach der letzten Runde die höchste TGoR</b> hat. Bei gleicher Wertung liegt vorn, wer mit der
+    <b>niedrigeren Start-GoR</b> begonnen hat – er hat mehr erreicht. Ist auch das gleich, entscheidet das Los.</p>
+  <p>Weitere Preise – meiste Siege, größter Wertungsgewinn, bester Spieler einer Altersklasse – legt die Turnierleitung
+    fest; sie erscheinen bei der Siegerehrung.</p>
+</section>
+
+<section id="why">
+  <h2>Warum dieses System?</h2>
+  <ul>
+    <li><b>Jede Partie ist knapp.</b> Sie spielen immer gegen jemanden Ihrer aktuellen Stärke, mit Vorgabe – keine
+      aussichtslosen Partien in den ersten Runden wie bei McMahon-Grenzen.</li>
+    <li><b>Überraschungen zählen.</b> Ein Sieg gegen einen Stärkeren (oder mit weniger Steinen) bewegt die Wertung mehr als
+      ein erwarteter Sieg.</li>
+    <li><b>Keine McMahon-Grenze, keine Punktgruppen.</b> Die Wertung selbst zeigt, wer gut im Rennen liegt – und es ist die
+      bekannte EGD-Wertung, die Spieler lesen können.</li>
+    <li><b>Fairer Titel.</b> Dank der Obergrenze starten die stärksten Spieler gleichauf und spielen den Titel unter sich aus.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }};
+  var w = document.getElementById("c-white"), b = document.getElementById("c-black"), h = document.getElementById("c-h");
+  var out = document.getElementById("c-out"), touched = false;
+  function fmt(x) { return (x > 0 ? "+" : "") + Math.round(x); }
+  function cls(x) { return x > 0 ? "up" : (x < 0 ? "down" : ""); }
+  function cell(x) { return '<span class="' + cls(x) + '">' + fmt(x) + "</span>"; }
+  function defaultHandicap() {
+    var stones = Math.min(Math.floor(Math.abs(w.value - b.value) / 100), 9) - RED;
+    return Math.max(stones, 0);
+  }
+  function update() {
+    if (!touched) h.value = String(defaultHandicap());
+    var q = "?white=" + encodeURIComponent(w.value) + "&black=" + encodeURIComponent(b.value) + "&handicap=" + h.value + "&k=" + K;
+    fetch("{{ url_for('api_rating') }}" + q).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { out.innerHTML = '<p class="muted">Bitte Wertungen zwischen −900 und 3000 eingeben.</p>'; return; }
+      out.innerHTML = "<p>Erwartetes Ergebnis für Weiß: <b>" + Math.round(d.expected_white * 100) + " %</b></p>" +
+        '<table class="info"><thead><tr><th>Ergebnis</th><th class="num">Weiß</th><th class="num">Schwarz</th></tr></thead><tbody>' +
+        "<tr><td>Weiß gewinnt</td><td class=num>" + cell(d.white.white) + "</td><td class=num>" + cell(d.white.black) + "</td></tr>" +
+        "<tr><td>Jigo</td><td class=num>" + cell(d.jigo.white) + "</td><td class=num>" + cell(d.jigo.black) + "</td></tr>" +
+        "<tr><td>Schwarz gewinnt</td><td class=num>" + cell(d.black.white) + "</td><td class=num>" + cell(d.black.black) + "</td></tr>" +
+        "</tbody></table>";
+    });
+  }
+  w.addEventListener("input", update); b.addEventListener("input", update);
+  h.addEventListener("change", function () { touched = true; update(); });
+  update();
+})();
+</script>
+{% endblock %}

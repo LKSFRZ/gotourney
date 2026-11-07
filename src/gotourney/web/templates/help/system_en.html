@@ -1,0 +1,234 @@
+{% extends "help/_layout.html" %}
+{% block title %}Tournament system{% if own %} – {{ cfg.tournament.name }}{% endif %}{% endblock %}
+
+{% block toc %}
+  <li><a href="#short">In short</a></li>
+  <li><a href="#start">The starting rating</a></li>
+  <li><a href="#update">After every round</a></li>
+  <li><a href="#calc">Try it: one game</a></li>
+  <li><a href="#pairing">Pairing</a></li>
+  <li><a href="#handicap">Handicap and komi</a></li>
+  <li><a href="#odd">Odd number of players</a></li>
+  <li><a href="#special">Jigo, forfeits, late players</a></li>
+  <li><a href="#winner">Winner and prizes</a></li>
+  <li><a href="#why">Why this system?</a></li>
+{% endblock %}
+{% block other %}<a href="{{ url_for('docs_page') }}">{{ t("help_docs") }} →</a>{% endblock %}
+
+{% block article %}
+<h1>The tournament system</h1>
+<p class="lead">Instead of McMahon points, every player has a <b>tournament rating (TGoR)</b>. It starts at the player's
+EGD rating and changes after every round with the EGD formula – only faster. Whoever has the highest TGoR at the end
+wins.</p>
+<div class="box">
+  {% if own %}The numbers on this page are the settings of <b>{{ cfg.tournament.name }}</b>: {% else %}No tournament is
+  open, so this page shows the <b>default settings</b>: {% endif %}
+  k-factor {{ "%g"|format(cfg.rating.k_factor) }},
+  top bar {% if cfg.rating.top_bar is not none %}{{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% else %}none{% endif %},
+  {% if cfg.handicap.reduction %}handicap reduced by {{ cfg.handicap.reduction }}{% else %}full handicap{% endif %},
+  {{ cfg.tournament.rounds }} rounds.
+</div>
+
+<section id="short">
+  <h2>In short</h2>
+  <ol>
+    <li>Everyone starts with their <b>EGD rating (GoR)</b>{% if cfg.rating.top_bar is not none %}, but at most
+      {{ "%g"|format(cfg.rating.top_bar) }} ({{ rank_of(cfg.rating.top_bar) }}){% endif %}.</li>
+    <li>In every round you play someone with a <b>rating as close as possible</b> to yours – never the same opponent twice.</li>
+    <li>Games are played with <b>{% if cfg.handicap.reduction %}handicap (full handicap minus {{ cfg.handicap.reduction }}){% else %}full handicap{% endif %}</b>,
+      so every game is a fair fight.</li>
+    <li>After the round, a win raises your rating and a loss lowers it – more if the result was a surprise.</li>
+    <li>The player with the <b>highest rating after the last round</b> wins the tournament.</li>
+  </ol>
+</section>
+
+<section id="start">
+  <h2>The starting rating</h2>
+  <p>Your starting TGoR is your <b>current EGD rating (GoR)</b> on the day of registration. Players without an EGD rating
+    start at the value of their rank: <b>1k = 2000, 1d = 2100</b>, and 100 points per rank
+    (5k = 1600, 10k = 1100, 3d = 2300). The tournament director may correct a starting rating that is clearly out of
+    date – for example of a player who has not played a rated tournament for years.</p>
+  {% if cfg.rating.top_bar is not none %}
+  <h3>The top bar</h3>
+  <p>Starting ratings are capped at the <b>top bar</b> of {{ "%g"|format(cfg.rating.top_bar) }}
+    ({{ rank_of(cfg.rating.top_bar) }}). All stronger players start exactly at the bar. Without it, the strongest player
+    would start with such a lead that the tournament would be decided before the first game. With the bar, the top
+    players start level and the title is decided on the board.</p>
+  <p>For the tie-break (see <a href="#winner">winner</a>), the real starting GoR is still used.</p>
+  {% else %}
+  <p>This tournament has <b>no top bar</b>: every player starts at their full rating.</p>
+  {% endif %}
+</section>
+
+<section id="update">
+  <h2>After every round</h2>
+  <p>When all results of a round are in, every player's TGoR is recalculated with the formula of the EGD rating system
+    (version 2021). The idea: each game has an <b>expected result</b> from the two ratings and the handicap. If you do
+    better than expected, your rating goes up; if you do worse, it goes down.</p>
+  <div class="formula">expected result   SE  = 1 / (1 + e^(β(opponent) − β(you)))
+                  β(r) = −7 · ln(3300 − r − h)
+new rating        r'  = r + k · con · (S − SE)
+                  con = ((3300 − r) / 200)^1.6</div>
+  <ul class="small">
+    <li><i>r</i> = rating before the round, <i>S</i> = 1 for a win, ½ for jigo, 0 for a loss.</li>
+    <li><i>h</i> = handicap bonus of the player taking black: 0 in an even game, otherwise 100 · (stones − 0.5).</li>
+  </ul>
+  <p>Two differences to the EGD:</p>
+  <ul>
+    <li><b>The k-factor ({{ "%g"|format(cfg.rating.k_factor) }})</b> multiplies every change. In the EGD it is 1. With a
+      bigger k-factor the ratings move fast enough to separate the players within a few rounds.</li>
+    <li>The EGD's small bonus against deflation is not used.</li>
+  </ul>
+  <p>All games of a round are rated from the ratings <b>before</b> the round, so the order in which results come in does
+    not matter. <b>con</b> is larger for lower ratings: the ratings of weaker players move more, just like in the EGD.</p>
+
+  <h3>Examples (k = {{ "%g"|format(cfg.rating.k_factor) }})</h3>
+  <div class="table-scroll">
+  <table class="info">
+    <thead><tr><th>White</th><th>Black</th><th class="num">Handicap</th><th class="num">White wins</th>
+      <th class="num">Black wins</th><th class="num">In the EGD (k = 1)<br>White wins</th></tr></thead>
+    <tbody>
+    {% for e in examples %}
+      <tr><td>{{ e.white }} ({{ rank_of(e.white) }})</td><td>{{ e.black }} ({{ rank_of(e.black) }})</td>
+        <td class="num">{{ e.handicap or "even" }}</td>
+        <td class="num"><span class="up">{{ "%+.0f"|format(e.white_wins[0]) }}</span> / <span class="down">{{ "%+.0f"|format(e.white_wins[1]) }}</span></td>
+        <td class="num"><span class="down">{{ "%+.0f"|format(e.black_wins[0]) }}</span> / <span class="up">{{ "%+.0f"|format(e.black_wins[1]) }}</span></td>
+        <td class="num muted">{{ "%+.0f"|format(e.egd_white_wins[0]) }} / {{ "%+.0f"|format(e.egd_white_wins[1]) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="small muted">Changes for White / Black. The handicap is the default handicap for the rating difference.</p>
+</section>
+
+<section id="calc">
+  <h2>Try it: one game</h2>
+  <div class="calc" id="calc-box">
+    <div class="inputs">
+      <label>White TGoR <input id="c-white" type="number" value="1850" step="1"></label>
+      <label>Black TGoR <input id="c-black" type="number" value="1700" step="1"></label>
+      <label>Handicap <select id="c-h">{% for h in range(10) %}<option value="{{ h }}">{{ h or "even" }}</option>{% endfor %}</select></label>
+    </div>
+    <div class="out" id="c-out" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="pairing">
+  <h2>Pairing</h2>
+  <p>Every round is paired so that the rating differences are as small as possible – over the whole field at once
+    (with the “blossom” algorithm), not board by board from the top. Two players <b>never meet twice</b>.</p>
+  <p>To be exact, the program minimises the sum of the <b>squared</b> differences. Squaring makes one big mismatch worse
+    than several small ones: two pairs with 50 points each are better than one pair with 0 and one with 100.</p>
+  {% if cfg.pairing.rules %}
+  <h3>Pairing rules of this tournament</h3>
+  <ul>
+    {% for rule in cfg.pairing.rules %}
+      <li><b>{{ rule.field }}</b>: {{ t("rt_" ~ rule.type) }}{% if not rule.hard %} – a pair with the same value counts as if
+        the players were <b>{{ "%g"|format(rule.points) }} points</b> further apart{% endif %}{% if rule.all_groups %}
+        (groups: {% for g in rule.all_groups %}{{ g|join(", ") }}{% if not loop.last %} | {% endif %}{% endfor %}){% endif %}.</li>
+    {% endfor %}
+  </ul>
+  <p>So players of the same club meet only if the alternative would be a clearly bigger rating difference.</p>
+  {% endif %}
+  <h3>Colours and boards</h3>
+  <ul>
+    <li>In a handicap game the stronger player takes <b>white</b>.</li>
+    <li>In an even game the colours are balanced: whoever had white more often gets black. If both had the same
+      colours, the colour is drawn.</li>
+    <li>Board 1 is the pair with the highest rating, and so on downwards.</li>
+  </ul>
+</section>
+
+<section id="handicap">
+  <h2>Handicap and komi</h2>
+  <p>The handicap is <b>one stone per full 100 points</b> of rating difference (always rounded down, at most 9)
+    {% if cfg.handicap.reduction %}, minus {{ cfg.handicap.reduction }}{% endif %}. Players may agree on another handicap
+    before the game; the handicap that was actually played is used for the rating.</p>
+  <table class="info">
+    <thead><tr><th>Rating difference</th><th class="num">Handicap</th><th class="num">Komi</th></tr></thead>
+    <tbody>
+    {% for h in handicaps %}
+      <tr><td>{{ h.low }}{% if h.high %} – {{ h.high }}{% else %} and more{% endif %}</td>
+        <td class="num">{{ h.stones or "even" }}</td><td class="num">{{ "%g"|format(h.komi) }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p>Handicap 1 means: no stones, Black plays first, komi {{ "%g"|format(cfg.handicap.komi_handicap) }}.</p>
+  <p>The handicap evens out most of the difference, so the games are close. Because it is rounded down, the stronger
+    player is still slightly favoured – the rating formula knows this (each stone counts as 100 points, the first one
+    as 50) and rewards an upset accordingly.</p>
+</section>
+
+<section id="odd">
+  <h2>Odd number of players</h2>
+  <p>If an odd number of players is registered for a round, one <b>joker</b> sits out. Jokers are players who agreed to
+    this at registration – often local players or helpers. Of the jokers, the one who has played the most games sits out;
+    if that is a tie, the program draws. A player who sits out keeps their rating for that round.</p>
+</section>
+
+<section id="special">
+  <h2>Jigo, forfeits, late players</h2>
+  <ul>
+    <li><b>Jigo</b> (a draw) counts as half a win for both players.</li>
+    <li><b>Forfeits</b> (a game not played) are <b>not rated</b>: the ratings of both players do not change, and the
+      game does not count as a win. The two players are still treated as having met, so they are not paired again.</li>
+    <li><b>Players who miss a round</b> keep their rating; they can play again in the next round.</li>
+    <li><b>Late players</b> can be paired among each other after a round has started.</li>
+  </ul>
+</section>
+
+<section id="winner">
+  <h2>Winner and prizes</h2>
+  <p>The winner is the player with the <b>highest TGoR after the last round</b>. If two players have the same rating, the
+    one with the <b>lower starting GoR</b> ranks higher – they achieved more. If that is equal too, the draw decides.</p>
+  <p>Other prizes – most wins, the biggest rating gain, the best player of an age group – are set by the tournament
+    director and shown in the award ceremony.</p>
+</section>
+
+<section id="why">
+  <h2>Why this system?</h2>
+  <ul>
+    <li><b>Every game is close.</b> You always play someone of your current strength, with handicap – no hopeless games
+      in the first rounds as with McMahon bars.</li>
+    <li><b>Surprises count.</b> A win against a stronger player (or with fewer stones) moves the rating more than an
+      expected win.</li>
+    <li><b>No McMahon bar, no score groups.</b> The rating itself shows who is doing well, and it is the familiar EGD
+      rating, so players can read it.</li>
+    <li><b>Fair title.</b> Thanks to the top bar the strongest players start level and play for the title among each
+      other.</li>
+  </ul>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  var K = {{ cfg.rating.k_factor|tojson }}, RED = {{ cfg.handicap.reduction|tojson }};
+  var w = document.getElementById("c-white"), b = document.getElementById("c-black"), h = document.getElementById("c-h");
+  var out = document.getElementById("c-out"), touched = false;
+  function fmt(x) { return (x > 0 ? "+" : "") + Math.round(x); }
+  function cls(x) { return x > 0 ? "up" : (x < 0 ? "down" : ""); }
+  function cell(x) { return '<span class="' + cls(x) + '">' + fmt(x) + "</span>"; }
+  function defaultHandicap() {
+    var stones = Math.min(Math.floor(Math.abs(w.value - b.value) / 100), 9) - RED;
+    return Math.max(stones, 0);
+  }
+  function update() {
+    if (!touched) h.value = String(defaultHandicap());
+    var q = "?white=" + encodeURIComponent(w.value) + "&black=" + encodeURIComponent(b.value) + "&handicap=" + h.value + "&k=" + K;
+    fetch("{{ url_for('api_rating') }}" + q).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.error) { out.innerHTML = '<p class="muted">Enter ratings between −900 and 3000.</p>'; return; }
+      out.innerHTML = "<p>Expected result for White: <b>" + Math.round(d.expected_white * 100) + " %</b></p>" +
+        '<table class="info"><thead><tr><th>Result</th><th class="num">White</th><th class="num">Black</th></tr></thead><tbody>' +
+        "<tr><td>White wins</td><td class=num>" + cell(d.white.white) + "</td><td class=num>" + cell(d.white.black) + "</td></tr>" +
+        "<tr><td>Jigo</td><td class=num>" + cell(d.jigo.white) + "</td><td class=num>" + cell(d.jigo.black) + "</td></tr>" +
+        "<tr><td>Black wins</td><td class=num>" + cell(d.black.white) + "</td><td class=num>" + cell(d.black.black) + "</td></tr>" +
+        "</tbody></table>";
+    });
+  }
+  w.addEventListener("input", update); b.addEventListener("input", update);
+  h.addEventListener("change", function () { touched = true; update(); });
+  update();
+})();
+</script>
+{% endblock %}

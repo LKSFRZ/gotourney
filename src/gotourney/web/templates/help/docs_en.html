@@ -1,0 +1,257 @@
+{% extends "help/_layout.html" %}
+{% block title %}Documentation{% endblock %}
+
+{% block toc %}
+  <li><a href="#how">How the program works</a></li>
+  <li><a href="#start">Starting and tournaments</a></li>
+  <li><a href="#settings">Settings</a></li>
+  <li><a href="#players">Registering players</a></li>
+  <li><a href="#pair">Pairing a round</a></li>
+  <li><a href="#round">During the round</a></li>
+  <li><a href="#documents">Standings and documents</a></li>
+  <li><a href="#files">The files</a></li>
+  <li><a href="#cli">Command line</a></li>
+  <li><a href="#problems">Problems and solutions</a></li>
+{% endblock %}
+{% block other %}
+  <a href="{{ url_for('system_page') }}">{{ t("nav_system") }} →</a><br>
+  <a href="{{ url_for('help_page') }}" target="_blank" rel="noopener">Quick start (PDF) →</a>
+{% endblock %}
+
+{% block article %}
+<h1>Documentation</h1>
+<p class="lead">Everything you need to run a tournament with this program – from creating it to the EGD result file.
+How ratings, pairing and handicap work is explained on the page <a href="{{ url_for('system_page') }}">Tournament system</a>.</p>
+
+<section id="how">
+  <h2>How the program works</h2>
+  <ul>
+    <li><b>Browser:</b> the program runs on your computer and is shown in your web browser. Nobody else can reach it;
+      it needs the internet only for the EGD player search.</li>
+    <li><b>Files:</b> each tournament is a folder with a few files – settings, players, one file per round. These files
+      are the only record: there is no hidden database. Every page reads them fresh, every button writes them.</li>
+    <li><b>LibreOffice:</b> the player and round files are spreadsheets (<code>.ods</code>). You can open them in
+      LibreOffice Calc at any time, check or change them, save – the browser page updates itself within a few seconds.
+      Browser and LibreOffice are equal: use whatever is more convenient for a step.</li>
+    <li><b>Next step:</b> the <b>Overview</b> always shows what to do next, with the right buttons.</li>
+  </ul>
+</section>
+
+<section id="start">
+  <h2>Starting and tournaments</h2>
+  <p>Start the program (<code>GoTournament</code>, or <code>gotourney web</code> on the command line). A small window
+    appears and the browser opens. The window has <span class="btnlike">Open in browser</span> (if you closed the tab),
+    <span class="btnlike">Open tournament folder …</span> and <span class="btnlike">Quit</span>. Closing the window stops
+    the program; all data is already saved.</p>
+  <ul>
+    <li><b>New tournament:</b> on the page <b>Tournaments</b> enter a name, the number of rounds and the language of the
+      printouts. The program creates a folder in <code>Documents/Go tournaments</code> (German:
+      <code>Documents/Go-Turniere</code>); you can choose another folder.</li>
+    <li><b>Your tournaments</b> lists the tournaments opened recently and all tournaments in that folder.</li>
+    <li><b>Elsewhere</b> (USB stick, shared folder): use <span class="btnlike">Open tournament folder …</span> in the
+      window, or type the path under <i>Open a tournament</i>.</li>
+    <li><b>Language:</b> <b>EN / DE</b> at the top right switches the pages. The language of the PDFs is a setting.</li>
+  </ul>
+</section>
+
+<section id="settings">
+  <h2>Settings</h2>
+  <p>The page <b>Settings</b> edits <code>tournament.toml</code> in the tournament folder. Every change is checked before
+    it is saved; if something is wrong, nothing is saved and the problem is explained. Explanations and comments in the
+    file are kept, so you may also edit it in a text editor.</p>
+  <h3>Tournament</h3>
+  <p>Name, place (<code>DE, Sampletown</code>), dates, EGD class (A–D), thinking time and an EGD comment – these go into the
+    EGD result file. <b>Number of rounds</b> can be changed later, but not below the rounds already paired.</p>
+  <h3>Printouts</h3>
+  <p>Language of all PDFs: English, German, French or <i>custom</i>. For <i>custom</i> the texts come from a translation
+    file in the tournament folder (<code>translation.toml</code>, created with a German example).</p>
+  <h3>Rating, handicap and komi</h3>
+  <table class="info">
+    <tr><td><b>k-factor</b></td><td>How fast ratings change (EGD = 1). Default 3.</td></tr>
+    <tr><td><b>Top bar</b></td><td>Maximum starting rating: a rank like <code>3d</code>, a number like <code>2300</code>,
+      or empty for no bar.</td></tr>
+    <tr><td><b>Handicap reduction</b></td><td>0 = full handicap, 1 = one stone less, … 9 = always even.</td></tr>
+    <tr><td><b>Komi</b></td><td>For even games (6.5, 7 or 7.5) and for handicap games (usually 0.5).</td></tr>
+  </table>
+  <h3>Pairing</h3>
+  <p>The <b>random seed</b> fixes all random decisions (colours, joker, ties): the same seed gives the same pairing.</p>
+  <p><b>Pairing rules</b> use a player column – Club, Country, Rank or an additional field – and work in one of four ways:</p>
+  <table class="info">
+    <thead><tr><th>Rule</th><th>Effect</th></tr></thead>
+    <tr><td>avoid same value</td><td>A pair with the same value counts as if the players were <i>points</i> further apart.
+      Example: Club, 150 points (default).</td></tr>
+    <tr><td>prefer same value</td><td>A pair with different values counts <i>points</i> further apart. Example: Age group,
+      so children preferably play children.</td></tr>
+    <tr><td>never same value</td><td>Such pairs are never made (e.g. members of one family).</td></tr>
+    <tr><td>only same value</td><td>Only such pairs are made (e.g. separate groups).</td></tr>
+  </table>
+  <p><b>Values</b> limit a rule to groups: <code>U7, U11, U15</code> is one group; <code>U7, U11 | U15, U19</code> are two
+    groups. Players whose value is in no group are not affected.</p>
+  <h3>Registration and additional player data</h3>
+  <p>A GoR is marked as possibly <b>outdated</b> if the player's last EGD tournament was more than <i>N</i> years ago, and
+    as <b>doubtful</b> if it differs from the declared rank by more than the tolerance.</p>
+  <p><b>Additional player data</b> are your own columns, e.g. <i>Fee paid</i> or <i>Age group</i>. With values
+    (<code>yes, no</code>) the field is a dropdown; without, it is free text. Only the fields listed here exist: they appear
+    in the registration form, in <code>players.ods</code> and in the standings. Remove a field and it disappears (its
+    column in <code>players.ods</code> stays only if it still contains data). A rule or prize that uses a field must be
+    removed before the field.</p>
+  <h3>Award ceremony</h3>
+  <p>Prizes are shown as slides, one per winner, in the order of the list (put the 1st place last for a climax).</p>
+  <table class="info">
+    <thead><tr><th>Prize</th><th>Who gets it</th></tr></thead>
+    <tr><td>place</td><td>The places given, e.g. <code>3, 2, 1</code>.</td></tr>
+    <tr><td>wins</td><td>Everyone with at least <i>Min. wins</i> wins (e.g. all games won).</td></tr>
+    <tr><td>best of a group</td><td>The best <i>Number</i> players whose <i>Column</i> is in the group, e.g. Age group
+      <code>U7, U11, U15</code> – “best child”. Several groups: one prize per group.</td></tr>
+    <tr><td>biggest TGoR gain</td><td>The <i>Number</i> players with the biggest gain since the start.</td></tr>
+  </table>
+  <p>Empty title = default text in the language of the PDFs. Placeholders in titles: <code>{place}</code>
+    <code>{ordinal}</code> <code>{wins}</code> <code>{games}</code> <code>{group}</code> <code>{n}</code>.
+    <i>Only players without an earlier prize</i> skips players who already got a prize further up the list.</p>
+</section>
+
+<section id="players">
+  <h2>Registering players</h2>
+  <ol>
+    <li><b>Search the EGD:</b> type part of the name, first and last name in any order (<code>becker a</code>,
+      <code>anna beck</code>) or the EGD PIN. Umlauts can be typed as <code>ue</code>, <code>u</code> or <code>ü</code>.
+      Choose a player with the mouse or the arrow keys and Enter – the form is filled in, with the current GoR from the EGD.</li>
+    <li><b>Check</b> rank, GoR and club. Warnings say if the GoR may be outdated or doesn't fit the rank, or if the
+      player is already registered.</li>
+    <li><b>Rounds:</b> untick the rounds the player will miss. <b>Joker:</b> tick if the player may sit out when the
+      number of players is odd.</li>
+    <li>Fill in the additional data and click <span class="btnlike">Add player</span>.</li>
+  </ol>
+  <ul>
+    <li><b>Not in the EGD:</b> fill in the form by hand. Name and rank are enough; an empty GoR is taken from the rank.</li>
+    <li><b>Offline:</b> the EGD player list is stored on your computer and updated once a day, so the search also works at a
+      venue without internet. <span class="btnlike">Update EGD list</span> downloads it now.</li>
+    <li><b>Change a player:</b> click the name in the list. <b>Remove:</b> only possible as long as the player is in no
+      round; afterwards untick their remaining rounds instead.</li>
+    <li><span class="btnlike">Check registration</span> lists errors (e.g. missing rank) and warnings before pairing.</li>
+    <li>Everything is stored in <code>players.ods</code>. Each player has a fixed <b>ID</b>, which the round files use.</li>
+  </ul>
+</section>
+
+<section id="pair">
+  <h2>Pairing a round</h2>
+  <p><span class="btnlike">Pair round 1</span> pairs all players registered for the round (see
+    <a href="{{ url_for('system_page') }}#pairing">how pairing works</a>) and creates <code>round_1.ods</code>.
+    The round page shows the boards. The pairing can be printed in two forms:
+    <span class="btnlike">Pairing (by board)</span> and <span class="btnlike">Pairing (A–Z)</span> (players sorted by
+    surname – easy to find your board). Both PDFs are always created fresh from the round file.</p>
+  <h3>Changing the pairing before the round starts</h3>
+  <p>The <b>⋯</b> menu next to a board number:</p>
+  <ul>
+    <li><b>Fix board</b> 📌 – the board is kept when you pair again. <b>Release board</b> undoes it.</li>
+    <li><b>Swap colours</b>, <b>Set handicap</b> (with stones, the weaker player always takes black). Fix the board as
+      well if the change should survive pairing again.</li>
+    <li><b>Dissolve board</b> – both players become unpaired; <span class="btnlike">Pair again</span> gives them new opponents.</li>
+  </ul>
+  <p><b>Pair two players by hand:</b> choose White, Black and optionally the handicap. They get a fixed board; their
+    previous opponents are paired again.</p>
+  <p><b>Pair again</b> replaces all boards that are not fixed – useful after a late cancellation or registration.</p>
+  <p>In LibreOffice you can also write a pairing into <code>round_N.ods</code> yourself: player IDs, or just names
+    (<code>Becker</code>, <code>becker a</code>). Names are matched to players and shown for confirmation; mark such boards in
+    the column <i>Finalized</i> so they are kept.</p>
+  <div class="box warn">A round can only be paired when all results of the previous rounds are entered. A game that will
+    not be played is entered as a forfeit.</div>
+</section>
+
+<section id="round">
+  <h2>During the round</h2>
+  <p><span class="btnlike">Start round 1</span> when the games begin. From now on all boards are fixed; pairing again
+    only pairs <b>latecomers</b> – players registered for the round who are not on a board yet – on new boards at the end
+    (<span class="btnlike">Pair latecomers</span>).</p>
+  <h3>Entering results</h3>
+  <p><span class="btnlike">Enter results</span>: click <i>White wins</i>, <i>Jigo</i> or <i>Black wins</i> on each board.
+    The result is saved at once (“Saved”). <i>More</i> has forfeits – <i>White/Black wins by forfeit</i>, <i>Both lose</i> –
+    and <i>Clear result</i>. <i>Show only missing results</i> and <i>Find a player</i> help in large rounds. A correction is
+    simply another click.</p>
+  <p>In LibreOffice the results are marks in <code>round_N.ods</code>:</p>
+  <table class="info">
+    <thead><tr><th>Result</th><th>White win</th><th>Draw</th><th>Black win</th></tr></thead>
+    <tr><td>White wins</td><td>x</td><td></td><td></td></tr>
+    <tr><td>Jigo</td><td></td><td>x</td><td></td></tr>
+    <tr><td>Black wins</td><td></td><td></td><td>x</td></tr>
+    <tr><td>White wins by forfeit</td><td>x!</td><td></td><td></td></tr>
+    <tr><td>Both lose (forfeit)</td><td>!</td><td></td><td>!</td></tr>
+  </table>
+  <p>The <b>Handicap</b> and <b>Komi</b> columns may be changed if the players agreed on something else.
+    <span class="btnlike">Check results</span> lists missing or invalid entries.</p>
+  <p>When all results are in, the Overview offers the standings and the next round. Correcting a result of an earlier round
+    later is possible: the ratings are recalculated, the pairings of later rounds stay as they are.</p>
+</section>
+
+<section id="documents">
+  <h2>Standings and documents</h2>
+  <p>The page <b>Standings</b> shows the current table and everything you need at the end:</p>
+  <ul>
+    <li><b>Standings</b> – <code>standings.pdf</code> (to put up: name, rank, TGoR with change, opponents per round) and
+      <code>standings.ods</code> (with all columns, including additional data). Always with the latest results.</li>
+    <li><b>Wall list</b> – the final places in <code>wall_list.ods</code>. <span class="btnlike">Create</span> it after the
+      last round; you may then correct names in it by hand.</li>
+    <li><b>EGD result file</b> – the <code>.h9</code> file made from the wall list. Send it to your national rating
+      officer. A preview of its content is on the page.</li>
+    <li><b>Award ceremony</b> – <code>awards.pdf</code>, slides in 16:9 with the prize winners. Open it and show it
+      full-screen. Club codes are written out as club names.</li>
+  </ul>
+  <h3>Backups</h3>
+  <p>Before every pairing and every round start, all tournament files are saved as a zip file in the folder
+    <code>backups</code> (the newest 30 are kept). <span class="btnlike">Create backup now</span> makes one by hand. To go
+    back: close the program, unpack the backup into the tournament folder (replacing the files) and start again.</p>
+</section>
+
+<section id="files">
+  <h2>The files</h2>
+  <table class="info">
+    <thead><tr><th>File</th><th>Content</th></tr></thead>
+    <tr><td><code>tournament.toml</code></td><td>Settings</td></tr>
+    <tr><td><code>players.ods</code></td><td>Registered players: ID, name, rank, GoR, club, rounds, joker, additional data</td></tr>
+    <tr><td><code>round_1.ods</code>, …</td><td>Pairing and results of each round</td></tr>
+    <tr><td><code>round_1.pdf</code>, <code>round_1_alphabetical.pdf</code></td><td>Printable pairings</td></tr>
+    <tr><td><code>standings.ods</code>, <code>standings.pdf</code></td><td>Standings with TGoR after each round</td></tr>
+    <tr><td><code>wall_list.ods</code></td><td>Final wall list (editable)</td></tr>
+    <tr><td><code>*.h9</code></td><td>Result file for the EGD</td></tr>
+    <tr><td><code>awards.pdf</code></td><td>Slides for the award ceremony</td></tr>
+    <tr><td><code>translation.toml</code></td><td>Texts for the language <i>custom</i></td></tr>
+    <tr><td><code>clubs.csv</code> (optional)</td><td>Additional or corrected club names: <code>code,name</code></td></tr>
+    <tr><td><code>backups/</code></td><td>Automatic backups</td></tr>
+  </table>
+  <p>When you change a file in LibreOffice: keep the <b>.ods format</b> when saving, and <b>close the file</b> afterwards.
+    While a file is open in LibreOffice (🔒), the program does not change it.</p>
+</section>
+
+<section id="cli">
+  <h2>Command line</h2>
+  <p>Everything can also be done with the command <code>gotourney</code> in a terminal (when installed with Python), e.g.
+    <code>gotourney pair 2</code>, <code>gotourney start 2</code>, <code>gotourney standings</code>. Every command has
+    <code>--help</code> and prints the next steps. The full reference is in <b>Guide.pdf</b> (German: Anleitung.pdf),
+    which comes with the program.</p>
+</section>
+
+<section id="problems">
+  <h2>Problems and solutions</h2>
+  <h3>“… is open in LibreOffice”</h3>
+  <p>Save the file in LibreOffice (keep the .ods format), close it, and click again. If LibreOffice crashed, a lock file
+    <code>.~lock.…#</code> may be left in the folder; delete it.</p>
+  <h3>“Odd number of players and no joker”</h3>
+  <p>Mark a player as joker on the Players page (or ask someone to sit out and untick the round for them), then pair again.</p>
+  <h3>“No complete pairing without rematches is possible”</h3>
+  <p>Happens in small tournaments in late rounds, or with strict rules. Pair some players by hand, or relax a
+    <i>never</i>/<i>only</i> rule, then pair again.</p>
+  <h3>A player arrives late</h3>
+  <p>Register them (or tick the round). Before the start: <span class="btnlike">Pair again</span>. After the start:
+    <span class="btnlike">Pair latecomers</span>: the latecomers are paired among each other, so an odd number of them
+    needs a joker among them.</p>
+  <h3>A player leaves the tournament</h3>
+  <p>Untick their remaining rounds on the Players page. If their game in the current round is not played, enter it as a forfeit.</p>
+  <h3>The settings say “changed elsewhere”</h3>
+  <p><code>tournament.toml</code> was changed in the meantime (e.g. in another tab). Reload the page and make your change again.</p>
+  <h3>The EGD search finds nobody</h3>
+  <p>The player list could not be downloaded (no internet). Type the data by hand – name and rank are enough – or try
+    <span class="btnlike">Update EGD list</span> later.</p>
+  <h3>A PDF cannot be created</h3>
+  <p>Close it in your PDF viewer if it is open, and click again.</p>
+</section>
+{% endblock %}

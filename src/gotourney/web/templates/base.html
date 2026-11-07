@@ -21,7 +21,9 @@
       <a href="{{ url_for('settings_page') }}" class="{{ 'current' if here == '/settings' }}">{{ t("settings_title") }}</a>
     {% endif %}
     <a href="{{ url_for('home', choose=1) }}">{{ t("home") }}</a>
-    <a href="{{ url_for('help_page') }}" target="_blank" rel="noopener">{{ t("help") }}</a>
+    {% set here = request.path %}
+    <a href="{{ url_for('system_page') }}" class="{{ 'current' if here == '/system' }}">{{ t("nav_system") }}</a>
+    <a href="{{ url_for('docs_page') }}" class="{{ 'current' if here == '/docs' }}">{{ t("help") }}</a>
     <span class="lang" aria-label="{{ t('language') }}">
       {% for code in languages %}
         {% if code == lang %}<strong>{{ code|upper }}</strong>{% else %}<a href="{{ url_for('set_lang', code=code) }}">{{ code|upper }}</a>{% endif %}

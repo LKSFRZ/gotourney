@@ -163,6 +163,9 @@ tournament, in English or German:
   **enter results by clicking**.
 - **Standings & documents**: standings, wall list, EGD file and award slides; list of backups.
 - **Settings**: all settings of `tournament.toml` as a form (comments in the file are kept).
+- **Tournament system**: the TGoR system explained for directors and players, with the values of the
+  open tournament, example rating changes and a calculator for one game.
+- **Help**: the documentation of the program (also linked: the quick-start PDF).
 
 All data stays in the tournament folder, so LibreOffice can be used for the same files at any time;
 the pages update themselves. Before every pairing and round start, the tournament files are saved

@@ -1,0 +1,271 @@
+{% extends "help/_layout.html" %}
+{% block title %}Dokumentation{% endblock %}
+
+{% block toc %}
+  <li><a href="#how">So funktioniert das Programm</a></li>
+  <li><a href="#start">Start und Turniere</a></li>
+  <li><a href="#settings">Einstellungen</a></li>
+  <li><a href="#players">Spieler anmelden</a></li>
+  <li><a href="#pair">Eine Runde auslosen</a></li>
+  <li><a href="#round">Während der Runde</a></li>
+  <li><a href="#documents">Tabelle und Dokumente</a></li>
+  <li><a href="#files">Die Dateien</a></li>
+  <li><a href="#cli">Kommandozeile</a></li>
+  <li><a href="#problems">Probleme und Lösungen</a></li>
+{% endblock %}
+{% block other %}
+  <a href="{{ url_for('system_page') }}">{{ t("nav_system") }} →</a><br>
+  <a href="{{ url_for('help_page') }}" target="_blank" rel="noopener">Schnellstart (PDF) →</a>
+{% endblock %}
+
+{% block article %}
+<h1>Dokumentation</h1>
+<p class="lead">Alles, was Sie brauchen, um mit diesem Programm ein Turnier auszurichten – vom Anlegen bis zur
+EGD-Ergebnisdatei. Wie Wertung, Auslosung und Vorgabe funktionieren, erklärt die Seite
+<a href="{{ url_for('system_page') }}">Turniersystem</a>.</p>
+
+<section id="how">
+  <h2>So funktioniert das Programm</h2>
+  <ul>
+    <li><b>Browser:</b> Das Programm läuft auf Ihrem Computer und wird in Ihrem Webbrowser angezeigt. Niemand sonst kann
+      darauf zugreifen; das Internet braucht es nur für die Spielersuche in der EGD.</li>
+    <li><b>Dateien:</b> Jedes Turnier ist ein Ordner mit wenigen Dateien – Einstellungen, Spieler, eine Datei pro Runde.
+      Diese Dateien sind die einzige Aufzeichnung: Es gibt keine versteckte Datenbank. Jede Seite liest sie neu, jeder
+      Knopf schreibt sie.</li>
+    <li><b>LibreOffice:</b> Spieler- und Rundendateien sind Tabellen (<code>.ods</code>). Sie können sie jederzeit in
+      LibreOffice Calc öffnen, prüfen, ändern und speichern – die Browserseite aktualisiert sich nach wenigen Sekunden.
+      Browser und LibreOffice sind gleichwertig: Nehmen Sie für jeden Schritt, was bequemer ist.</li>
+    <li><b>Nächster Schritt:</b> Die <b>Übersicht</b> zeigt immer, was als Nächstes zu tun ist, mit den passenden Knöpfen.</li>
+  </ul>
+</section>
+
+<section id="start">
+  <h2>Start und Turniere</h2>
+  <p>Starten Sie das Programm (<code>GoTournament</code> oder <code>gotourney web</code> auf der Kommandozeile). Ein kleines
+    Fenster erscheint und der Browser öffnet sich. Das Fenster hat <span class="btnlike">Im Browser öffnen</span> (falls
+    Sie den Tab geschlossen haben), <span class="btnlike">Turnierordner öffnen …</span> und
+    <span class="btnlike">Beenden</span>. Wenn Sie das Fenster schließen, endet das Programm; alle Daten sind bereits
+    gespeichert.</p>
+  <ul>
+    <li><b>Neues Turnier:</b> Auf der Seite <b>Turniere</b> Namen, Rundenzahl und Sprache der Ausdrucke eingeben. Das
+      Programm legt einen Ordner in <code>Dokumente/Go-Turniere</code> an; Sie können einen anderen Ordner wählen.</li>
+    <li><b>Ihre Turniere</b> zeigt die zuletzt geöffneten Turniere und alle Turniere in diesem Ordner.</li>
+    <li><b>Woanders</b> (USB-Stick, geteilter Ordner): <span class="btnlike">Turnierordner öffnen …</span> im Fenster, oder
+      den Pfad unter <i>Turnier öffnen</i> eingeben.</li>
+    <li><b>Sprache:</b> <b>EN / DE</b> oben rechts wechselt die Seiten. Die Sprache der PDFs ist eine Einstellung.</li>
+  </ul>
+</section>
+
+<section id="settings">
+  <h2>Einstellungen</h2>
+  <p>Die Seite <b>Einstellungen</b> bearbeitet <code>tournament.toml</code> im Turnierordner. Jede Änderung wird vor dem
+    Speichern geprüft; ist etwas falsch, wird nichts gespeichert und das Problem erklärt. Erklärungen und Kommentare in
+    der Datei bleiben erhalten, Sie können sie also auch in einem Texteditor bearbeiten.</p>
+  <h3>Turnier</h3>
+  <p>Name, Ort (<code>DE, Musterstadt</code>), Daten, EGD-Klasse (A–D), Bedenkzeit und ein Kommentar für die EGD – das alles
+    kommt in die EGD-Ergebnisdatei. Die <b>Rundenzahl</b> lässt sich später ändern, aber nicht unter die Zahl der schon
+    ausgelosten Runden.</p>
+  <h3>Ausdrucke</h3>
+  <p>Sprache aller PDFs: Englisch, Deutsch, Französisch oder <i>eigene</i>. Bei <i>eigene</i> kommen die Texte aus einer
+    Übersetzungsdatei im Turnierordner (<code>translation.toml</code>, mit einem deutschen Beispiel angelegt).</p>
+  <h3>Wertung, Vorgabe und Komi</h3>
+  <table class="info">
+    <tr><td><b>k-Faktor</b></td><td>Wie schnell sich die Wertungen ändern (EGD = 1). Standard 3.</td></tr>
+    <tr><td><b>Obergrenze</b></td><td>Höchste Startwertung: ein Rang wie <code>3d</code>, eine Zahl wie <code>2300</code>
+      oder leer für keine Grenze.</td></tr>
+    <tr><td><b>Vorgabe-Reduzierung</b></td><td>0 = volle Vorgabe, 1 = ein Stein weniger, … 9 = immer ohne Vorgabe.</td></tr>
+    <tr><td><b>Komi</b></td><td>Für Partien ohne Vorgabe (6,5, 7 oder 7,5) und für Vorgabepartien (meist 0,5).</td></tr>
+  </table>
+  <h3>Auslosung</h3>
+  <p>Der <b>Zufallsstartwert</b> legt alle Zufallsentscheidungen fest (Farben, Joker, Gleichstände): Gleicher Wert ergibt
+    gleiche Auslosung.</p>
+  <p><b>Auslosungsregeln</b> beziehen sich auf eine Spalte – Club, Country, Rank oder eine zusätzliche Angabe – und wirken
+    auf eine von vier Arten:</p>
+  <table class="info">
+    <thead><tr><th>Regel</th><th>Wirkung</th></tr></thead>
+    <tr><td>gleichen Wert vermeiden</td><td>Ein Paar mit gleichem Wert zählt, als lägen die Spieler <i>Punkte</i> weiter
+      auseinander. Beispiel: Club, 150 Punkte (Standard).</td></tr>
+    <tr><td>gleichen Wert bevorzugen</td><td>Ein Paar mit verschiedenen Werten zählt <i>Punkte</i> weiter auseinander.
+      Beispiel: Altersklasse, damit Kinder bevorzugt gegen Kinder spielen.</td></tr>
+    <tr><td>nie gleicher Wert</td><td>Solche Paare werden nie gebildet (z. B. Mitglieder einer Familie).</td></tr>
+    <tr><td>nur gleicher Wert</td><td>Nur solche Paare werden gebildet (z. B. getrennte Gruppen).</td></tr>
+  </table>
+  <p><b>Werte</b> beschränken eine Regel auf Gruppen: <code>U7, U11, U15</code> ist eine Gruppe; <code>U7, U11 | U15, U19</code>
+    sind zwei Gruppen. Spieler, deren Wert in keiner Gruppe steht, sind nicht betroffen.</p>
+  <h3>Anmeldung und zusätzliche Spielerangaben</h3>
+  <p>Eine GoR gilt als möglicherweise <b>veraltet</b>, wenn das letzte EGD-Turnier des Spielers mehr als <i>N</i> Jahre
+    zurückliegt, und als <b>zweifelhaft</b>, wenn sie um mehr als die Toleranz vom angegebenen Rang abweicht.</p>
+  <p><b>Zusätzliche Spielerangaben</b> sind eigene Spalten, z. B. <i>Fee paid</i> (Startgeld bezahlt) oder <i>Age group</i>
+    (Altersklasse). Mit Werten (<code>yes, no</code>) wird das Feld eine Auswahlliste, ohne ist es freier Text. Es gibt nur
+    die Felder, die hier stehen: Sie erscheinen im Anmeldeformular, in <code>players.ods</code> und in der Tabelle.
+    Entfernen Sie ein Feld, verschwindet es (seine Spalte in <code>players.ods</code> bleibt nur, wenn noch Daten darin
+    stehen). Eine Regel oder ein Preis, der ein Feld nutzt, muss vorher entfernt werden.</p>
+  <h3>Siegerehrung</h3>
+  <p>Preise werden als Folien gezeigt, eine pro Preisträger, in der Reihenfolge der Liste (den 1. Platz ans Ende setzen,
+    für den Höhepunkt).</p>
+  <table class="info">
+    <thead><tr><th>Preis</th><th>Wer ihn bekommt</th></tr></thead>
+    <tr><td>Platz</td><td>Die angegebenen Plätze, z. B. <code>3, 2, 1</code>.</td></tr>
+    <tr><td>Siege</td><td>Alle mit mindestens <i>Mind. Siege</i> Siegen (z. B. alle Partien gewonnen).</td></tr>
+    <tr><td>Bester einer Gruppe</td><td>Die besten <i>Anzahl</i> Spieler, deren <i>Spalte</i> in der Gruppe liegt, z. B.
+      Age group <code>U7, U11, U15</code> – „bestes Kind“. Mehrere Gruppen: ein Preis pro Gruppe.</td></tr>
+    <tr><td>Größter TGoR-Zuwachs</td><td>Die <i>Anzahl</i> Spieler mit dem größten Gewinn seit dem Start.</td></tr>
+  </table>
+  <p>Leerer Titel = Standardtext in der Sprache der PDFs. Platzhalter in Titeln: <code>{place}</code>
+    <code>{ordinal}</code> <code>{wins}</code> <code>{games}</code> <code>{group}</code> <code>{n}</code>.
+    <i>Nur Spieler ohne früheren Preis</i> überspringt Spieler, die weiter oben in der Liste schon einen Preis bekamen.</p>
+</section>
+
+<section id="players">
+  <h2>Spieler anmelden</h2>
+  <ol>
+    <li><b>In der EGD suchen:</b> einen Teil des Namens tippen, Vor- und Nachname in beliebiger Reihenfolge
+      (<code>becker a</code>, <code>anna beck</code>) oder die EGD-PIN. Umlaute können Sie als <code>ue</code>, <code>u</code>
+      oder <code>ü</code> tippen. Spieler mit der Maus oder den Pfeiltasten und Enter wählen – das Formular wird ausgefüllt,
+      mit der aktuellen GoR aus der EGD.</li>
+    <li><b>Prüfen</b> Sie Rang, GoR und Verein. Hinweise erscheinen, wenn die GoR veraltet sein könnte, nicht zum Rang
+      passt oder der Spieler schon angemeldet ist.</li>
+    <li><b>Runden:</b> die Runden abwählen, die der Spieler verpasst. <b>Joker:</b> ankreuzen, wenn der Spieler bei
+      ungerader Spielerzahl aussetzen darf.</li>
+    <li>Zusätzliche Angaben ausfüllen und <span class="btnlike">Spieler hinzufügen</span> klicken.</li>
+  </ol>
+  <ul>
+    <li><b>Nicht in der EGD:</b> Formular von Hand ausfüllen. Name und Rang genügen; eine leere GoR wird aus dem Rang genommen.</li>
+    <li><b>Ohne Internet:</b> Die EGD-Spielerliste liegt auf Ihrem Computer und wird einmal am Tag aktualisiert; die Suche
+      funktioniert also auch im Spiellokal ohne Internet. <span class="btnlike">EGD-Liste aktualisieren</span> lädt sie
+      sofort.</li>
+    <li><b>Spieler ändern:</b> auf den Namen in der Liste klicken. <b>Entfernen:</b> nur, solange der Spieler in keiner
+      Runde steht; danach stattdessen seine restlichen Runden abwählen.</li>
+    <li><span class="btnlike">Anmeldung prüfen</span> zeigt vor der Auslosung Fehler (z. B. fehlender Rang) und Hinweise.</li>
+    <li>Alles steht in <code>players.ods</code>. Jeder Spieler hat eine feste <b>ID</b>, die die Rundendateien verwenden.</li>
+  </ul>
+</section>
+
+<section id="pair">
+  <h2>Eine Runde auslosen</h2>
+  <p><span class="btnlike">Runde 1 auslosen</span> lost alle für die Runde angemeldeten Spieler aus (siehe
+    <a href="{{ url_for('system_page') }}#pairing">wie die Auslosung funktioniert</a>) und legt <code>round_1.ods</code> an.
+    Die Rundenseite zeigt die Bretter. Die Auslosung lässt sich in zwei Formen drucken:
+    <span class="btnlike">Auslosung (nach Brett)</span> und <span class="btnlike">Auslosung (A–Z)</span> (Spieler nach
+    Nachnamen – so findet jeder sein Brett schnell). Beide PDFs werden immer frisch aus der Rundendatei erstellt.</p>
+  <h3>Die Auslosung vor dem Rundenstart ändern</h3>
+  <p>Das Menü <b>⋯</b> neben einer Brettnummer:</p>
+  <ul>
+    <li><b>Brett festhalten</b> 📌 – das Brett bleibt beim erneuten Auslosen erhalten. <b>Brett freigeben</b> macht das
+      rückgängig.</li>
+    <li><b>Farben tauschen</b>, <b>Vorgabe setzen</b> (mit Steinen nimmt immer der schwächere Spieler Schwarz). Halten Sie
+      das Brett zusätzlich fest, wenn die Änderung ein erneutes Auslosen überstehen soll.</li>
+    <li><b>Brett auflösen</b> – beide Spieler sind wieder frei; <span class="btnlike">Neu auslosen</span> gibt ihnen neue Gegner.</li>
+  </ul>
+  <p><b>Zwei Spieler von Hand paaren:</b> Weiß, Schwarz und wahlweise die Vorgabe wählen. Sie bekommen ein festes Brett;
+    ihre bisherigen Gegner werden neu ausgelost.</p>
+  <p><b>Neu auslosen</b> ersetzt alle Bretter, die nicht festgehalten sind – nützlich nach einer späten Absage oder Anmeldung.</p>
+  <p>In LibreOffice können Sie eine Paarung auch selbst in <code>round_N.ods</code> eintragen: Spieler-IDs oder einfach
+    Namen (<code>Becker</code>, <code>becker a</code>). Namen werden den Spielern zugeordnet und zur Bestätigung angezeigt;
+    markieren Sie solche Bretter in der Spalte <i>Finalized</i>, damit sie erhalten bleiben.</p>
+  <div class="box warn">Eine Runde kann erst ausgelost werden, wenn alle Ergebnisse der vorigen Runden eingetragen sind.
+    Eine Partie, die nicht gespielt wird, wird als kampflos eingetragen.</div>
+</section>
+
+<section id="round">
+  <h2>Während der Runde</h2>
+  <p><span class="btnlike">Runde 1 starten</span>, wenn die Partien beginnen. Ab dann stehen alle Bretter fest; erneutes
+    Auslosen lost nur noch <b>Nachzügler</b> – für die Runde angemeldete Spieler ohne Brett – auf neuen Brettern am Ende aus
+    (<span class="btnlike">Nachzügler auslosen</span>). Die Nachzügler werden untereinander gelost; bei ungerader Zahl muss
+    ein Joker unter ihnen sein.</p>
+  <h3>Ergebnisse eintragen</h3>
+  <p><span class="btnlike">Ergebnisse eintragen</span>: an jedem Brett auf <i>Weiß gewinnt</i>, <i>Jigo</i> oder
+    <i>Schwarz gewinnt</i> klicken. Das Ergebnis wird sofort gespeichert („Gespeichert“). Unter <i>Mehr</i> stehen
+    kampflose Ergebnisse – <i>Weiß/Schwarz gewinnt kampflos</i>, <i>Beide verlieren kampflos</i> – und <i>Ergebnis löschen</i>.
+    <i>Nur fehlende Ergebnisse zeigen</i> und <i>Spieler suchen</i> helfen in großen Runden. Eine Korrektur ist einfach
+    ein weiterer Klick.</p>
+  <p>In LibreOffice sind die Ergebnisse Markierungen in <code>round_N.ods</code>:</p>
+  <table class="info">
+    <thead><tr><th>Ergebnis</th><th>White win</th><th>Draw</th><th>Black win</th></tr></thead>
+    <tr><td>Weiß gewinnt</td><td>x</td><td></td><td></td></tr>
+    <tr><td>Jigo</td><td></td><td>x</td><td></td></tr>
+    <tr><td>Schwarz gewinnt</td><td></td><td></td><td>x</td></tr>
+    <tr><td>Weiß gewinnt kampflos</td><td>x!</td><td></td><td></td></tr>
+    <tr><td>Beide verlieren kampflos</td><td>!</td><td></td><td>!</td></tr>
+  </table>
+  <p>Die Spalten <b>Handicap</b> und <b>Komi</b> dürfen Sie ändern, wenn die Spieler etwas anderes vereinbart haben.
+    <span class="btnlike">Ergebnisse prüfen</span> zeigt fehlende oder ungültige Einträge.</p>
+  <p>Sind alle Ergebnisse da, bietet die Übersicht die Tabelle und die nächste Runde an. Ein Ergebnis einer früheren Runde
+    lässt sich auch später noch korrigieren: Die Wertungen werden neu berechnet, die Auslosungen späterer Runden bleiben,
+    wie sie sind.</p>
+</section>
+
+<section id="documents">
+  <h2>Tabelle und Dokumente</h2>
+  <p>Die Seite <b>Tabelle</b> zeigt den aktuellen Stand und alles, was Sie am Ende brauchen:</p>
+  <ul>
+    <li><b>Tabelle</b> – <code>standings.pdf</code> (zum Aushängen: Name, Rang, TGoR mit Änderung, Gegner pro Runde) und
+      <code>standings.ods</code> (mit allen Spalten, auch den zusätzlichen Angaben). Immer mit den neuesten Ergebnissen.</li>
+    <li><b>Wandtabelle</b> – die Endplätze in <code>wall_list.ods</code>. Nach der letzten Runde
+      <span class="btnlike">Erstellen</span>; danach können Sie Namen darin von Hand korrigieren.</li>
+    <li><b>EGD-Ergebnisdatei</b> – die <code>.h9</code>-Datei, aus der Wandtabelle erstellt. Schicken Sie sie an den
+      Ratingverantwortlichen Ihres Landesverbands. Eine Vorschau des Inhalts steht auf der Seite.</li>
+    <li><b>Siegerehrung</b> – <code>awards.pdf</code>, Folien im Format 16:9 mit den Preisträgern. Öffnen und im Vollbild
+      zeigen. Vereinskürzel werden als Vereinsnamen ausgeschrieben.</li>
+  </ul>
+  <h3>Sicherungen</h3>
+  <p>Vor jeder Auslosung und jedem Rundenstart werden alle Turnierdateien als Zip-Datei im Ordner <code>backups</code>
+    gesichert (die neuesten 30 bleiben). <span class="btnlike">Jetzt sichern</span> legt eine Sicherung von Hand an. Zum
+    Zurückgehen: Programm beenden, die Sicherung in den Turnierordner entpacken (Dateien ersetzen) und neu starten.</p>
+</section>
+
+<section id="files">
+  <h2>Die Dateien</h2>
+  <table class="info">
+    <thead><tr><th>Datei</th><th>Inhalt</th></tr></thead>
+    <tr><td><code>tournament.toml</code></td><td>Einstellungen</td></tr>
+    <tr><td><code>players.ods</code></td><td>Angemeldete Spieler: ID, Name, Rang, GoR, Verein, Runden, Joker, zusätzliche Angaben</td></tr>
+    <tr><td><code>round_1.ods</code>, …</td><td>Auslosung und Ergebnisse jeder Runde</td></tr>
+    <tr><td><code>round_1.pdf</code>, <code>round_1_alphabetical.pdf</code></td><td>Auslosungen zum Drucken</td></tr>
+    <tr><td><code>standings.ods</code>, <code>standings.pdf</code></td><td>Tabelle mit der TGoR nach jeder Runde</td></tr>
+    <tr><td><code>wall_list.ods</code></td><td>Endgültige Wandtabelle (bearbeitbar)</td></tr>
+    <tr><td><code>*.h9</code></td><td>Ergebnisdatei für die EGD</td></tr>
+    <tr><td><code>awards.pdf</code></td><td>Folien für die Siegerehrung</td></tr>
+    <tr><td><code>translation.toml</code></td><td>Texte für die Sprache <i>eigene</i></td></tr>
+    <tr><td><code>clubs.csv</code> (freiwillig)</td><td>Zusätzliche oder korrigierte Vereinsnamen: <code>Kürzel,Name</code></td></tr>
+    <tr><td><code>backups/</code></td><td>Automatische Sicherungen</td></tr>
+  </table>
+  <p>Wenn Sie eine Datei in LibreOffice ändern: beim Speichern das <b>.ods-Format behalten</b> und die Datei danach
+    <b>schließen</b>. Solange eine Datei in LibreOffice offen ist (🔒), ändert das Programm sie nicht.</p>
+</section>
+
+<section id="cli">
+  <h2>Kommandozeile</h2>
+  <p>Alles geht auch mit dem Befehl <code>gotourney</code> in einem Terminal (bei Installation mit Python), z. B.
+    <code>gotourney pair 2</code>, <code>gotourney start 2</code>, <code>gotourney standings</code>. Jeder Befehl hat
+    <code>--help</code> und nennt die nächsten Schritte. Die vollständige Beschreibung steht in der <b>Anleitung.pdf</b>,
+    die mit dem Programm kommt.</p>
+</section>
+
+<section id="problems">
+  <h2>Probleme und Lösungen</h2>
+  <h3>„… ist in LibreOffice geöffnet“</h3>
+  <p>Datei in LibreOffice speichern (.ods-Format behalten), schließen und erneut klicken. Ist LibreOffice abgestürzt, liegt
+    vielleicht noch eine Sperrdatei <code>.~lock.…#</code> im Ordner; löschen Sie sie.</p>
+  <h3>„Ungerade Spielerzahl und kein Joker“</h3>
+  <p>Markieren Sie auf der Spielerseite einen Spieler als Joker (oder bitten Sie jemanden auszusetzen und wählen für ihn die
+    Runde ab), dann erneut auslosen.</p>
+  <h3>„Keine vollständige Auslosung ohne Wiederholungen möglich“</h3>
+  <p>Kommt in kleinen Turnieren in späten Runden vor, oder bei strengen Regeln. Paaren Sie einige Spieler von Hand oder
+    lockern Sie eine <i>nie</i>/<i>nur</i>-Regel, dann erneut auslosen.</p>
+  <h3>Ein Spieler kommt zu spät</h3>
+  <p>Anmelden (oder die Runde ankreuzen). Vor dem Start: <span class="btnlike">Neu auslosen</span>. Nach dem Start:
+    <span class="btnlike">Nachzügler auslosen</span>.</p>
+  <h3>Ein Spieler verlässt das Turnier</h3>
+  <p>Auf der Spielerseite seine restlichen Runden abwählen. Wird seine Partie der laufenden Runde nicht gespielt, tragen Sie
+    sie als kampflos ein.</p>
+  <h3>Die Einstellungen melden „inzwischen an anderer Stelle geändert“</h3>
+  <p><code>tournament.toml</code> wurde zwischendurch geändert (z. B. in einem anderen Tab). Seite neu laden und die
+    Änderung noch einmal machen.</p>
+  <h3>Die EGD-Suche findet niemanden</h3>
+  <p>Die Spielerliste konnte nicht geladen werden (kein Internet). Daten von Hand eingeben – Name und Rang genügen – oder
+    später <span class="btnlike">EGD-Liste aktualisieren</span> versuchen.</p>
+  <h3>Ein PDF kann nicht erstellt werden</h3>
+  <p>Schließen Sie es in Ihrem PDF-Betrachter, falls es dort offen ist, und klicken Sie erneut.</p>
+</section>
+{% endblock %}

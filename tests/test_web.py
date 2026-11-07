@@ -502,3 +502,45 @@ def test_help_opens_the_quick_start():
     c.get("/lang/de")
     r = c.get("/help")
     assert r.status_code == 200 and "Schnellstart" in r.headers.get("Content-Disposition", "Schnellstart")
+
+
+# ---------------------------------------------------------------- help pages
+
+@pytest.mark.parametrize("language, words", [("en", ["The tournament system", "Pairing rules of this tournament"]),
+                                             ("de", ["Das Turniersystem", "Auslosungsregeln dieses Turniers"])])
+def test_system_page_uses_the_tournament_settings(make_tournament, language, words):
+    from gotourney import settings as st
+    d = make_tournament([(2000,), (1990,)], rounds=3)
+    _, version = st.read_settings(d)
+    st.save_settings(d, {"rating": {"k_factor": 2.5, "top_bar": "2d"}, "handicap": {"reduction": 1}}, version)
+    app, c = client_for(d)
+    c.get(f"/lang/{language}")
+    html = page(c.get("/system"))
+    for w in words:
+        assert w in html
+    assert "2.5" in html and "2200 (2d)" in html          # k-factor and top bar of this tournament
+    assert "Club" in html and "150" in html               # the default club rule
+    # without a tournament: the defaults
+    app, c = client_for(None)
+    html = page(c.get("/system"))
+    assert "default settings" in html and "2300 (3d)" in html
+
+
+def test_rating_api_matches_the_rating_module():
+    from gotourney.rating import game_changes
+    app, c = client_for(None)
+    data = c.get("/api/rating?white=1850&black=1700&handicap=1&k=3").get_json()
+    dw, db = game_changes(1850, 1700, 1, 1.0, 3)
+    assert data["white"] == {"white": round(dw, 1), "black": round(db, 1)}
+    assert 0.5 < data["expected_white"] < 1
+    assert c.get("/api/rating?white=x&black=1").status_code == 400
+    assert c.get("/api/rating?white=1000&black=1000&handicap=12").status_code == 400
+
+
+def test_docs_page_and_navigation():
+    app, c = client_for(None)
+    html = page(c.get("/docs"))
+    assert "Documentation" in html and 'href="/system"' in html and 'href="/docs"' in html
+    assert "Pairing a round" in html
+    c.get("/lang/de")
+    assert "Eine Runde auslosen" in page(c.get("/docs"))

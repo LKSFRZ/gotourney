@@ -11,6 +11,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "home": "Tournaments",
         "dashboard": "Overview",
         "help": "Help",
+        "nav_system": "Tournament system",
+        "help_contents": "Contents",
+        "help_more": "More about the tournament system",
+        "help_docs": "Documentation of the program",
         # home page
         "home_intro": "Run a Go tournament with tournament ratings (TGoR): registration, pairings, results, "
                       "standings, wall list, EGD file and award ceremony – step by step.",
@@ -325,6 +329,10 @@ TEXTS: dict[str, dict[str, str]] = {
         "home": "Turniere",
         "dashboard": "Übersicht",
         "help": "Hilfe",
+        "nav_system": "Turniersystem",
+        "help_contents": "Inhalt",
+        "help_more": "Mehr zum Turniersystem",
+        "help_docs": "Dokumentation des Programms",
         "home_intro": "Ein Goturnier mit Turnierwertung (TGoR) ausrichten: Anmeldung, Auslosung, Ergebnisse, "
                       "Tabelle, Wandtabelle, EGD-Datei und Siegerehrung – Schritt für Schritt.",
         "recent": "Ihre Turniere",

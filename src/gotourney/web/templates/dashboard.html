@@ -88,6 +88,8 @@
       <summary>{{ t("help_title") }}</summary>
       <ol>{% for step in t("help_steps").split("|") %}<li>{{ step[3:] }}</li>{% endfor %}</ol>
       <p>{{ t("help_files") }}</p>
+      <p><a href="{{ url_for('system_page') }}">{{ t("help_more") }}</a> ·
+         <a href="{{ url_for('docs_page') }}">{{ t("help_docs") }}</a></p>
     </details>
   </section>
 </div>

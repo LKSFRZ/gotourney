@@ -225,6 +225,51 @@ def create_app(directory: Path | None = None) -> Flask:
         name = "Schnellstart.pdf" if lang() == "de" else "Quickstart.pdf"
         return send_from_directory(Path(__file__).parent.parent / "data" / "docs", name)
 
+    def current_config():
+        """(settings of the open tournament or the defaults, True if they belong to a tournament)."""
+        from ..config import ConfigError, load_config, parse_config
+        d = tdir()
+        if d is not None:
+            try:
+                return load_config(d), True
+            except ConfigError:
+                pass
+        return parse_config({}), False
+
+    @app.get("/system")
+    def system_page():
+        """How the TGoR tournament system works, with the values of the open tournament."""
+        cfg, own = current_config()
+        return render_template(f"help/system_{lang()}.html", cfg=cfg, own=own, rank_of=rank_of_gor,
+                               examples=rating_examples(cfg.rating.k_factor),
+                               handicaps=handicap_table(cfg.handicap.reduction, cfg.handicap.komi_even,
+                                                        cfg.handicap.komi_handicap))
+
+    @app.get("/docs")
+    def docs_page():
+        """Documentation of the program."""
+        cfg, own = current_config()
+        return render_template(f"help/docs_{lang()}.html", cfg=cfg, own=own)
+
+    @app.get("/api/rating")
+    def api_rating():
+        """Rating changes of one game, for the calculator on the system page."""
+        from ..rating import expected_score, game_changes
+        try:
+            white = float(request.args["white"])
+            black = float(request.args["black"])
+            handicap = int(request.args.get("handicap", 0))
+            k = float(request.args.get("k", 3))
+            if not (-900 <= white <= 3000 and -900 <= black <= 3000 and 0 <= handicap <= 9 and 0 < k <= 20):
+                raise ValueError
+            result = {}
+            for name, score in (("white", 1.0), ("jigo", 0.5), ("black", 0.0)):
+                dw, db = game_changes(white, black, handicap, score, k)
+                result[name] = {"white": round(dw, 1), "black": round(db, 1)}
+            return jsonify(expected_white=round(expected_score(white, black, 0, handicap), 3), **result)
+        except (KeyError, ValueError):
+            return jsonify(error="invalid"), 400
+
     @app.get("/api/ping")
     def api_ping():
         return jsonify(app="gotourney", version=__version__)
@@ -1008,6 +1053,36 @@ def phase_card(t, lang: str) -> dict:
                     actions=[],
                     files=files((tx("act_standings_pdf"), "standings.pdf"), (tx("act_awards"), "awards.pdf")))
     return card
+
+
+def rank_of_gor(gor: float | None) -> str:
+    from ..rank import Rank
+    return "" if gor is None else str(Rank.from_gor(gor))
+
+
+def rating_examples(k: float) -> list[dict]:
+    """Example games for the system page: rating changes if White / Black wins."""
+    from ..pairing import default_handicap
+    from ..rating import game_changes
+    rows = []
+    for white, black in ((2000, 2000), (2000, 1800), (1000, 1000), (2300, 2200), (1500, 1100)):
+        h = default_handicap(white - black, 0)
+        ww = game_changes(white, black, h, 1.0, k)
+        bw = game_changes(white, black, h, 0.0, k)
+        egd = game_changes(white, black, h, 1.0, 1.0)
+        rows.append({"white": white, "black": black, "handicap": h, "white_wins": ww, "black_wins": bw,
+                     "egd_white_wins": egd})
+    return rows
+
+
+def handicap_table(reduction: int, komi_even: float, komi_handicap: float) -> list[dict]:
+    from ..pairing import default_handicap
+    rows = []
+    for low in range(0, 1000, 100):
+        h = default_handicap(low, reduction)
+        rows.append({"low": low, "high": None if low == 900 else low + 99, "stones": h,
+                     "komi": komi_handicap if h > 0 else komi_even})
+    return rows
 
 
 DEFAULT_PORT = 8765

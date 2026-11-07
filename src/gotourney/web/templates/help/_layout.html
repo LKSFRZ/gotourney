@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="helpdoc">
+  <aside class="toc" aria-label="{{ t('help_contents') }}">
+    <strong>{{ t("help_contents") }}</strong>
+    <ol>{% block toc %}{% endblock %}</ol>
+    <div class="other">{% block other %}{% endblock %}</div>
+  </aside>
+  <article class="prose">{% block article %}{% endblock %}</article>
+</div>
+{% endblock %}
