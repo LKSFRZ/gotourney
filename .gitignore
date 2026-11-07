@@ -10,3 +10,6 @@ build/
 # tournament folders used for testing
 TestTournier/
 SimTurnier/
+
+# real tournament data (local example only)
+T260926G.h9
