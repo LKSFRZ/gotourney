@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>gotourney – Anleitung für die Turnierleitung</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm 17mm; }
+  :root { --accent: #1f4e79; --muted: #5f6b76; --planned: #b35c00; --ok: #2e7d32; --line: #d6dbe0; }
+  body { font-family: "DejaVu Sans", "Noto Sans", Arial, sans-serif; font-size: 10pt; line-height: 1.45; color: #1c232b; }
+  h1 { font-size: 24pt; color: var(--accent); margin: 0 0 4pt 0; }
+  h2 { font-size: 15pt; color: var(--accent); border-bottom: 1.5pt solid var(--accent); padding-bottom: 2pt;
+       margin: 20pt 0 8pt 0; break-after: avoid; }
+  h3 { font-size: 11.5pt; color: var(--accent); margin: 14pt 0 4pt 0; break-after: avoid; }
+  p { margin: 4pt 0 6pt 0; }
+  ul, ol { margin: 4pt 0 6pt 0; padding-left: 18pt; }
+  li { margin: 2pt 0; }
+  code { font-family: "DejaVu Sans Mono", monospace; font-size: 8.8pt; background: #f1f3f5; padding: 0 2pt; border-radius: 2pt; }
+  pre { font-family: "DejaVu Sans Mono", monospace; font-size: 8.4pt; background: #f4f6f8; border: 0.6pt solid var(--line);
+        border-left: 3pt solid var(--accent); padding: 6pt 8pt; margin: 6pt 0 8pt 0; white-space: pre-wrap; break-inside: avoid; }
+  table { border-collapse: collapse; width: 100%; margin: 6pt 0 10pt 0; font-size: 9pt; break-inside: auto; }
+  th, td { border: 0.6pt solid var(--line); padding: 3pt 5pt; text-align: left; vertical-align: top; }
+  th { background: #e8eef4; color: #16324d; }
+  tr { break-inside: avoid; }
+  .badge { display: inline-block; font-size: 7.5pt; font-weight: bold; padding: 0.5pt 4pt; border-radius: 3pt;
+           vertical-align: 1pt; letter-spacing: 0.2pt; white-space: nowrap; }
+  .now { background: #e3f1e4; color: var(--ok); border: 0.6pt solid #9fcfa3; }
+  .planned { background: #fbeee0; color: var(--planned); border: 0.6pt solid #e8b98a; }
+  .note { background: #f3f7fb; border: 0.6pt solid #c6d6e6; border-left: 3pt solid var(--accent); padding: 5pt 8pt; margin: 8pt 0; break-inside: avoid; }
+  .warn { background: #fdf5ec; border: 0.6pt solid #ecc9a3; border-left: 3pt solid var(--planned); padding: 5pt 8pt; margin: 8pt 0; break-inside: avoid; }
+  .subtitle { color: var(--muted); font-size: 11pt; margin-bottom: 14pt; }
+  .cover { border-bottom: 1pt solid var(--line); padding-bottom: 10pt; margin-bottom: 6pt; }
+  .toc { columns: 2; column-gap: 20pt; font-size: 9.5pt; }
+  .toc ol { margin: 0; }
+  .flow { break-inside: avoid; display: flex; gap: 4pt; align-items: stretch; margin: 8pt 0 10pt 0; }
+  .flow div { flex: 1; border: 0.8pt solid var(--accent); border-radius: 4pt; padding: 4pt 5pt; font-size: 8.3pt; background: #f6f9fc; }
+  .flow div b { display: block; color: var(--accent); font-size: 8.8pt; margin-bottom: 1pt; }
+  .flow .arrow { flex: 0 0 auto; border: none; background: none; align-self: center; font-size: 13pt; color: var(--accent); padding: 0; }
+  figure { margin: 8pt 0 10pt 0; text-align: center; break-inside: avoid; }
+  figure img { width: 88%; border: 0.6pt solid var(--line); }
+  figcaption { font-size: 8.5pt; color: var(--muted); margin-top: 3pt; }
+  .pagebreak { break-before: page; }
+  thead { display: table-header-group; }
+  pre.wide { white-space: pre; font-size: 7.3pt; }
+  h2 + table, h3 + table { break-before: avoid; }
+  .small { font-size: 8.5pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>gotourney</h1>
+  <div class="subtitle">Anleitung für die Turnierleitung – ein TGoR-Goturnier mit den Kommandozeilen-Werkzeugen ausrichten<br>
+  Version 0.2 · November 2026</div>
+  <p>Diese Anleitung beschreibt das ganze Turnier, von der Anmeldung bis zum Upload in die EGD. Alle hier
+  beschriebenen Funktionen sind in Version 0.2 verfügbar.</p>
+</div>
+
+<div class="toc">
+<ol>
+  <li>Das Turnierformat</li>
+  <li>Überblick über den Ablauf</li>
+  <li>Installation</li>
+  <li>Ein Turnier anlegen</li>
+  <li>Spieler anmelden</li>
+  <li>Eine Runde auslosen</li>
+  <li>Ergebnisse und Tabelle</li>
+  <li>Wandtabelle und EGD-Upload</li>
+  <li>So wird die Wertung berechnet</li>
+  <li>Dateien von Hand bearbeiten</li>
+  <li>Fehlerbehebung</li>
+  <li>Befehlsübersicht</li>
+</ol>
+</div>
+
+<h2>1. Das Turnierformat</h2>
+<p>Statt McMahon-Punkten hat jeder Spieler eine <b>Turnierwertung (TGoR)</b>:</p>
+<ul>
+  <li><b>Start:</b> Die TGoR beginnt mit dem aktuellen EGD-GoR des Spielers am Anmeldetag. Spieler ohne GoR
+  beginnen mit dem Wert ihres angegebenen Rangs (1k = 2000, 1d = 2100, 100 Punkte pro Rang). Die
+  Turnierleitung kann einen Start-GoR korrigieren, zum Beispiel wenn er offensichtlich veraltet ist. Die
+  Start-TGoR ist nach oben durch die <b>Obergrenze</b> (Top Bar, Standard 3 Dan = 2300) begrenzt: Alle
+  stärkeren Spieler beginnen auf der Obergrenze.</li>
+  <li><b>Nach jeder Runde</b> werden alle TGoRs mit der EGD-Wertungsformel aktualisiert, mit zwei
+  Änderungen. Der Faktor <code>con</code> der Formel wird mit dem <b>k-Faktor</b> des Turniers
+  multipliziert, sodass sich die Wertungen schneller bewegen als in der EGD. Der Anti-Deflations-Bonus der
+  EGD wird nicht verwendet. Alle Partien einer Runde werden mit den TGoRs <i>vor</i> dieser Runde
+  gewertet.</li>
+  <li><b>Auslosung:</b> Die Spieler werden mit dem Blossom-Algorithmus so gepaart, dass die TGoR-Unterschiede
+  möglichst klein sind. Zwei Spieler treffen bei der automatischen Auslosung nie zweimal aufeinander, und
+  Paarungen aus demselben Verein werden nach Möglichkeit vermieden.</li>
+  <li><b>Vorgabe:</b> Standardmäßig wird mit <b>voller Vorgabe</b> gespielt, ein Stein pro 100 TGoR-Punkte
+  Unterschied. Eine Reduzierung („voll minus N“) kann eingestellt werden. Die Spieler können für ihre Partie
+  eine andere Vorgabe vereinbaren.</li>
+  <li><b>Sieger:</b> Es gewinnt der Spieler mit der höchsten End-TGoR. Haben zwei Spieler dieselbe End-TGoR,
+  liegt der mit dem <i>niedrigeren</i> Start-GoR vorne (der echte GoR, nicht durch die Obergrenze begrenzt).
+  Ist auch dieser gleich, entscheidet das Los.</li>
+</ul>
+
+<h2>2. Überblick über den Ablauf</h2>
+<p>Jeder Schritt liest und schreibt LibreOffice-Calc-Dateien (<code>.ods</code>). Zwischen den Schritten
+können Sie sie öffnen, prüfen und von Hand ändern. Die Dateien sind die einzige Aufzeichnung des Turniers:
+Es gibt keine versteckte Datenbank.</p>
+
+<div class="flow">
+  <div><b>1. Anlegen</b><code>gotourney init</code><br>tournament.toml</div><div class="arrow">→</div>
+  <div><b>2. Anmelden</b><code>gotourney gui</code><br>players.ods</div><div class="arrow">→</div>
+  <div><b>3. Runde r auslosen</b><code>gotourney pair r</code><br>round_r.ods</div><div class="arrow">→</div>
+  <div><b>4. Ergebnisse</b>in round_r.ods eintragen<br><code>results check</code></div><div class="arrow">→</div>
+  <div><b>5. Wandtabelle</b><code>gotourney wall</code><br>wall_list.ods</div><div class="arrow">→</div>
+  <div><b>6. EGD-Upload</b><code>gotourney h9</code><br>&lt;name&gt;.h9</div>
+</div>
+<p class="small">Die Schritte 3 und 4 werden für jede Runde wiederholt.</p>
+
+<p>Alle Dateien eines Turniers liegen in einem Ordner:</p>
+<pre>mein_turnier/
+  tournament.toml     Einstellungen                                (Schritt 1)
+  translation.toml    Texte für eine eigene Sprache der PDFs       (Schritt 1)
+  players.ods         angemeldete Spieler                          (Schritt 2)
+  round_1.ods         Auslosung der Runde 1; Ergebnisse hier eintragen (Schritte 3, 4)
+  round_1.pdf         druckbare Auslosung der Runde 1              (Schritt 3)
+  round_2.ods         ...
+  standings.ods       TGoR nach jeder Runde                        (Schritt 4)
+  standings.pdf       druckbare Tabelle / Kreuztabelle             (Schritt 4)
+  wall_list.ods       Wandtabelle, bearbeitbar                     (Schritt 5)
+  awards.pdf          Folien für die Siegerehrung                  (Schritt 5)
+  &lt;name&gt;.h9           Ergebnisdatei für die EGD                    (Schritt 6)</pre>
+
+<p>Alle Befehle verstehen die Option <code>-d &lt;Ordner&gt;</code>, mit der Sie den Turnierordner wählen.
+Ohne sie wird der aktuelle Ordner verwendet. Sie können also einmal <code>cd mein_turnier</code> ausführen
+oder bei jedem Befehl <code>-d mein_turnier</code> angeben.</p>
+
+<h2>3. Installation</h2>
+<p>Die Werkzeuge brauchen Python 3.11 oder neuer. Unter Ubuntu installieren Sie außerdem
+<code>python3-venv</code> und <code>python3-tk</code> (Letzteres für das Anmeldefenster):</p>
+<pre>sudo apt install python3-venv python3-tk
+cd ~/Go/TournamentOrgaTool
+python3 -m venv .venv
+.venv/bin/pip install -e '.[test]'
+source .venv/bin/activate        # danach ist 'gotourney' in diesem Terminal verfügbar
+gotourney --help</pre>
+<p>Alternativ macht <code>pipx install -e ~/Go/TournamentOrgaTool</code> den Befehl <code>gotourney</code> in
+jedem Terminal verfügbar, ohne etwas aktivieren zu müssen.</p>
+
+<h2>4. Ein Turnier anlegen</h2>
+<pre>gotourney init mein_turnier --name "Frühjahrsturnier 2026" --rounds 5 --language de</pre>
+<p>Das legt den Ordner mit <code>tournament.toml</code>, einer leeren <code>players.ods</code> und
+<code>translation.toml</code> an (siehe 4.1). <code>--language</code> (<code>en</code>, <code>de</code> oder
+<code>fr</code>, Standard <code>en</code>) bestimmt die Sprache der PDFs. Öffnen Sie
+<code>tournament.toml</code> in einem Texteditor und tragen Sie die Einstellungen ein, <b>bevor</b> Sie Spieler
+anmelden:</p>
+
+<table>
+  <thead><tr><th style="width:24%">Einstellung</th><th style="width:14%">Beispiel</th><th>Bedeutung</th></tr></thead>
+  <tr><td colspan="3"><b>[tournament]</b> – EGD-Metadaten, stehen im Kopf der .h9-Datei</td></tr>
+  <tr><td><code>code</code></td><td><code>""</code></td><td>EGD-Turniercode. Leer lassen: Die EGD vergibt ihn nach dem Upload.</td></tr>
+  <tr><td><code>name</code></td><td>"Frühjahrsturnier 2026"</td><td>Name des Turniers (EV).</td></tr>
+  <tr><td><code>place</code></td><td>"DE, Musterstadt"</td><td>Land und Ort (PC).</td></tr>
+  <tr><td><code>dates</code></td><td>["2026-09-26", "2026-09-27"]</td><td>Erster und letzter Tag (DT).</td></tr>
+  <tr><td><code>class</code></td><td>"A"</td><td>EGD-Turnierklasse (CL).</td></tr>
+  <tr><td><code>time</code></td><td>75</td><td>Grundbedenkzeit in Minuten (TM).</td></tr>
+  <tr><td><code>comment</code></td><td>"(eingereicht von …)"</td><td>Kommentar (CM).</td></tr>
+  <tr><td><code>rounds</code></td><td>5</td><td>Anzahl der Runden (auch <code>init --rounds</code>).</td></tr>
+  <tr><td colspan="3"><b>[output]</b></td></tr>
+  <tr><td><code>language</code></td><td>"de"</td><td>Sprache der PDFs (Auslosung, Tabelle, Siegerehrung): <code>en</code>, <code>de</code>, <code>fr</code> oder <code>custom</code> (siehe 4.1).</td></tr>
+  <tr><td><code>translation_file</code></td><td>"translation.toml"</td><td>Die Texte für <code>language = "custom"</code>.</td></tr>
+  <tr><td colspan="3"><b>[rating]</b></td></tr>
+  <tr><td><code>k_factor</code></td><td>3.0</td><td>Multipliziert den EGD-Faktor <code>con</code>. Höhere Werte lassen die Wertungen im Turnier schneller steigen und fallen.</td></tr>
+  <tr><td><code>top_bar</code></td><td>"3d"</td><td>Obergrenze für die Start-TGoR: ein Rang (<code>"3d"</code> = 2300) oder eine GoR-Zahl (<code>2350</code>). <code>"none"</code> schaltet die Obergrenze ab. Nur der Start ist begrenzt; im Turnier kann die TGoR über die Obergrenze steigen.</td></tr>
+  <tr><td colspan="3"><b>[handicap]</b></td></tr>
+  <tr><td><code>reduction</code></td><td>0</td><td>Vorgabe „voll minus N“. Steht in der .h9 als <code>HA[h&lt;N&gt;]</code>: h0 = volle Vorgabe, h2 = um 2 Steine reduziert, h9 = keine Vorgabe.</td></tr>
+  <tr><td><code>komi_even</code></td><td>6.5</td><td>Komi in Partien ohne Vorgabe: 6.5, 7 oder 7.5 (chinesische Regeln).</td></tr>
+  <tr><td><code>komi_handicap</code></td><td>0.5</td><td>Komi in Vorgabepartien.</td></tr>
+  <tr><td colspan="3"><b>[pairing]</b></td></tr>
+  <tr><td><code>[[pairing.rules]]</code></td><td>Club, avoid_same, 150</td><td>Auslosungsregeln (siehe 6.3). Standardmäßig ist nur die Vereinsregel aktiv: Paarungen aus demselben Verein zählen, als wäre ihr TGoR-Unterschied 150 Punkte größer.</td></tr>
+  <tr><td><code>random_seed</code></td><td>12345</td><td>Startwert für Zufallsentscheidungen (Farben, Wahl des Jokers, Losentscheid am Ende). Derselbe Startwert ergibt immer dasselbe Ergebnis.</td></tr>
+  <tr><td colspan="3"><b>[registration]</b></td></tr>
+  <tr><td><code>gor_outdated_years</code></td><td>5</td><td>Warnen, wenn das letzte EGD-Turnier eines Spielers länger her ist.</td></tr>
+  <tr><td><code>rank_gor_tolerance</code></td><td>300</td><td>Warnen, wenn angegebener Rang und GoR um mehr als diesen Wert abweichen.</td></tr>
+  <tr><td><code>extra_fields</code></td><td>["Fee paid", "Age group"]</td><td>Zusätzliche Angaben, die Sie für jeden Spieler erfassen möchten (siehe 5.6). Jeder Name wird zu einer Spalte in <code>players.ods</code> und <code>standings.ods</code> und zu einem Feld im Anmeldefenster.</td></tr>
+  <tr><td><code>[registration.field_values]</code></td><td>"Fee paid" = ["yes", "no"]</td><td>Feste Werte für ein zusätzliches Feld. Ein solches Feld bekommt eine Auswahlliste und nimmt nur diese Werte an (siehe 5.6).</td></tr>
+</table>
+<div class="note">Ungültige Einstellungen werden mit ihrem Namen gemeldet, zum Beispiel
+<code>handicap.komi_even must be one of 6.5, 7.0, 7.5</code>. Sie können Einstellungen später ändern, auch
+<code>rounds</code>. Neue Runden gelten für alle angemeldeten Spieler als gespielt, bis Sie das in
+<code>players.ods</code> ändern. Spalten entfernter Runden werden ignoriert und verschwinden beim nächsten
+Schreiben von <code>players.ods</code>.</div>
+
+<h3>4.1 Sprache der PDFs</h3>
+<p>Die druckbare Auslosung (<code>round_r.pdf</code>), die Tabelle (<code>standings.pdf</code>) und die Folien
+der Siegerehrung (<code>awards.pdf</code>) werden in der Sprache aus <code>tournament.toml</code>
+geschrieben:</p>
+<pre>[output]
+language = "de"                        # en, de, fr oder custom
+translation_file = "translation.toml"</pre>
+<ul>
+  <li>Das betrifft alle festen Texte: Spaltenüberschriften, „Runde“, „Siegerehrung“, Platz, gewonnene Partien,
+  die Standardtitel der Preise, Ordnungszahlen (1st / 1. / 1re) und das Datumsformat (2026-09-26 /
+  26.09.2026 / 26/09/2026). Preistitel, die Sie selbst in <code>[awards]</code> schreiben, werden
+  unverändert übernommen.</li>
+  <li>Die Ausgaben im Terminal, die <code>.ods</code>-Dateien und die <code>.h9</code>-Datei bleiben
+  englisch; das <code>.h9</code>-Format ist von der EGD vorgegeben.</li>
+  <li><b>Eigene Sprache:</b> Setzen Sie <code>language = "custom"</code> und bearbeiten Sie
+  <code>translation.toml</code>. <code>gotourney init</code> schreibt diese Datei mit den <b>deutschen</b>
+  Texten als Beispiel; jeder Eintrag ist kommentiert. Behalten Sie die Platzhalter in geschweiften Klammern bei,
+  z. B. <code>{round}</code>; <code>\n</code> ist ein Zeilenumbruch. Ausnahmen für Ordnungszahlen gehören in den
+  Abschnitt <code>[ordinals]</code> (z. B. <code>1 = "1re"</code>). Fehlende Einträge werden mit einer
+  Warnung aus dem Englischen übernommen.</li>
+  <li><code>gotourney translation-file</code> schreibt die Beispieldatei neu (<code>--language en|de|fr</code>,
+  um von anderen Texten auszugehen, <code>--force</code>, um eine vorhandene Datei zu überschreiben).</li>
+</ul>
+
+<h2 class="pagebreak">5. Spieler anmelden</h2>
+
+<h3>5.1 Das Anmeldefenster</h3>
+<pre>gotourney gui -d mein_turnier</pre>
+<figure>
+  <img src="img/gui.png" alt="Anmeldefenster">
+  <figcaption>Das Anmeldefenster: EGD-Suche (oben), Spielerformular (Mitte), angemeldete Spieler (unten).
+  Die Oberfläche ist englisch.</figcaption>
+</figure>
+<ol>
+  <li><b>Suchen:</b> Tippen Sie einen Teil des Namens in das Suchfeld. Namensteile dürfen in beliebiger
+  Reihenfolge stehen (<i>„anna berg“</i> findet <i>van den Berg Anna</i>), und Umlaut-Schreibweisen werden
+  gleich behandelt (<i>„Müller“</i> findet <i>Mueller</i>). Ziffern suchen nach der EGD-PIN. Bereits
+  angemeldete Spieler sind mit <i>(registered)</i> markiert.</li>
+  <li><b>Spieler auswählen:</b> <b>↓</b> und <b>Enter</b> drücken oder doppelklicken. <b>Enter</b> im
+  Suchfeld übernimmt den ersten Treffer. Das Formular wird mit Name, Rang, GoR, PIN, Land und Verein
+  gefüllt. Danach holt das Fenster die aktuellen Daten des Spielers live aus der EGD und aktualisiert den
+  GoR, falls er sich geändert hat.</li>
+  <li><b>Formular prüfen und ergänzen:</b> Runden abwählen, die der Spieler nicht spielt, <b>Joker</b>
+  ankreuzen, wenn der Spieler in Runden mit ungerader Spielerzahl aussetzen darf, und Notizen ergänzen.
+  Unter dem Formular erscheinen orange Hinweise bei:
+  <ul>
+    <li>einer PIN, die schon angemeldet ist;</li>
+    <li>Rang und GoR, die um mehr als <code>rank_gor_tolerance</code> abweichen;</li>
+    <li>einem letzten EGD-Turnier, das länger als <code>gor_outdated_years</code> her ist – der GoR ist dann
+    vielleicht veraltet. Korrigieren Sie das GoR-Feld bei Bedarf.</li>
+  </ul></li>
+  <li><b>Add player</b> (oder Enter in einem Formularfeld) schreibt den Spieler sofort in
+  <code>players.ods</code>.</li>
+</ol>
+<ul>
+  <li><b>Spieler, die nicht in der EGD stehen:</b> Daten ohne Suche direkt ins Formular tippen. Ein Rang
+  genügt; der GoR wird dann aus dem Rang übernommen.</li>
+  <li><b>Bearbeiten:</b> Klicken Sie einen Spieler in der unteren Tabelle an. Das Formular wechselt zu
+  <i>Edit ID n</i>. Mit <b>Save changes</b> speichern, mit <b>Remove player</b> entfernen; <b>New / clear</b>
+  wechselt zurück zum Hinzufügen.</li>
+  <li><b>Check registration</b> führt die Anmeldeprüfung aus (siehe 5.4).</li>
+  <li><b>Update EGD list</b> lädt eine neue Kopie der EGD-Spielerliste herunter.</li>
+</ul>
+<div class="note"><b>Die EGD-Spielerliste.</b> Die Suche verwendet eine lokale Kopie der vollständigen
+EGD-Spielerliste (etwa 56.500 Spieler). Sie liegt in <code>~/.cache/gotourney/</code> und wird erneut
+heruntergeladen, wenn sie älter als einen Tag ist. Gibt es am Turnierort kein Internet, wird die zuletzt
+heruntergeladene Liste verwendet. Führen Sie zur Sicherheit am Vorabend <code>gotourney egd update</code>
+aus.</div>
+
+<h3>5.2 Anmelden auf der Kommandozeile</h3>
+<pre>gotourney players add --pin 12345678                       # alles andere aus der EGD
+gotourney players add --pin 23456789 --gor 2300 --rounds 1-3
+gotourney players add --pin 34567890 -x "Fee paid=yes" -x "Age group=U11"
+gotourney players add Mustermann Max --rank 5k --club Mus --country DE --joker
+gotourney players list
+gotourney egd search "mueller a"                           # eine PIN finden</pre>
+<p>Optionen von <code>players add</code>: <code>--rank</code>, <code>--gor</code>, <code>--pin</code>,
+<code>--country</code>, <code>--club</code>, <code>--rounds</code> (<code>all</code>, <code>none</code>,
+<code>1,2,4</code>, <code>1-3</code>), <code>--joker</code>, <code>--notes</code> sowie
+<code>-x FELD=WERT</code> (mehrfach möglich) für zusätzliche Angaben. Ausdrücklich angegebene Werte haben
+Vorrang vor den EGD-Daten.</p>
+
+<h3>5.3 Die Datei players.ods</h3>
+<table>
+  <thead><tr><th style="width:22%">Spalte</th><th>Bedeutung</th></tr></thead>
+  <tr><td>ID</td><td>Laufende Nummer. Sie kennzeichnet den Spieler in den Rundendateien. Nie ändern oder wiederverwenden.</td></tr>
+  <tr><td>Surname, First name</td><td>Nachname, Vorname wie in der EGD.</td></tr>
+  <tr><td>Rank</td><td>Angegebener Rang (<code>5k</code>, <code>1d</code>, …).</td></tr>
+  <tr><td>GoR</td><td><b>Start-TGoR.</b> Aus der EGD oder aus dem Rang. Sie dürfen ihn überschreiben.</td></tr>
+  <tr><td>EGD PIN, Country, Club</td><td>EGD-Daten. Der Verein wird für die Vereinsregel der Auslosung verwendet.</td></tr>
+  <tr><td>Joker</td><td><code>x</code> = darf in Runden mit ungerader Spielerzahl aussetzen.</td></tr>
+  <tr><td>R1 … Rn</td><td><code>x</code> = spielt diese Runde. Leer = spielt nicht.</td></tr>
+  <tr><td>EGD GoR, Last EGD tournament</td><td>Nur zur Information: GoR und letztes Turnier in der EGD am Anmeldetag.</td></tr>
+  <tr><td><i>Zusätzliche Felder</i></td><td>Eine Spalte pro Eintrag in <code>extra_fields</code> (siehe 5.6).</td></tr>
+  <tr><td>Notes</td><td>Freier Text.</td></tr>
+</table>
+<p>Spieler, die später kommen, früher gehen oder eine Runde auslassen: Ändern Sie ihre Rundenspalten. Wer eine
+Runde nicht spielt, behält seine TGoR unverändert.</p>
+
+<h3>5.4 Die Anmeldung prüfen</h3>
+<pre>gotourney players check</pre>
+<p>Probleme werden in drei Stufen gemeldet:</p>
+<ul>
+  <li><b>Fehler</b> müssen vor der Auslosung behoben werden:
+  <ul>
+    <li>dieselbe PIN zweimal angemeldet;</li>
+    <li>ein Spieler ohne GoR und ohne Rang;</li>
+    <li>eine Runde mit ungerader Spielerzahl ohne Joker. Bestimmen Sie einen Joker, indem Sie einen Spieler
+    dieser Runde in der Joker-Spalte markieren.</li>
+  </ul></li>
+  <li><b>Warnungen</b> sollten geprüft werden: Rang und GoR weit auseinander, GoR möglicherweise veraltet,
+  ein Spieler für keine Runde angemeldet, zwei Spieler mit gleichem Namen.</li>
+  <li><b>Info</b> dient nur zur Kenntnis, etwa welche Joker in ungeraden Runden aussetzen können oder welche
+  Spieler auf der Obergrenze beginnen.</li>
+</ul>
+<p>Bei Fehlern endet der Befehl mit einem Fehlerstatus und lässt sich so auch in Skripten verwenden.</p>
+
+<h3>5.5 EGD-Daten aktualisieren</h3>
+<pre>gotourney players sync              # live aus der EGD
+gotourney players sync --offline    # nur aus der heruntergeladenen Spielerliste</pre>
+<p>Holt die aktuellen EGD-Daten aller angemeldeten Spieler und meldet, was sich geändert hat: Name, Land,
+Verein, EGD-GoR und letztes Turnier. Der angegebene Rang wird nie geändert. Die GoR-Spalte (Start-TGoR) wird
+nur gefüllt, wenn sie leer ist, damit Ihre Korrekturen nie überschrieben werden. Sobald Runde 1 ausgelost
+ist, stehen die Start-GoRs fest.</p>
+
+<h3>5.6 Zusätzliche Spielerangaben</h3>
+<p>Um mehr über jeden Spieler zu erfassen, etwa Startgeld, Altersklasse, E-Mail oder T-Shirt-Größe, tragen Sie
+die Felder in <code>tournament.toml</code> ein. Ein neues Turnier beginnt mit zwei Feldern, jeweils mit einer
+festen Werteliste:</p>
+<pre>[registration]
+extra_fields = ["Fee paid", "Age group"]
+
+[registration.field_values]
+"Fee paid"  = ["yes", "no"]
+"Age group" = ["U7", "U11", "U15", "U19", "Ü50"]</pre>
+<ul>
+  <li><b>Auswahlliste oder freier Text:</b> Ein Feld, das unter <code>[registration.field_values]</code> steht,
+  bekommt im Anmeldefenster eine Auswahlliste und nimmt nur diese Werte an (ein leerer Wert ist immer
+  erlaubt). Ein Feld, das dort nicht steht, ist freier Text. Für ein E-Mail-Feld nehmen Sie zum Beispiel
+  <code>"Email"</code> in <code>extra_fields</code> auf und geben ihm keine Werteliste.</li>
+  <li>Die Feldnamen dürfen Sie frei wählen, auch auf Deutsch, z. B. <code>"Startgeld bezahlt"</code> und
+  <code>"Altersklasse"</code>. Passen Sie dann auch die Namen in <code>field_values</code> und in den
+  Auslosungsregeln und Preisen an.</li>
+  <li>Das Anmeldefenster zeigt die Felder unter <i>Notes</i>, die Tabelle der angemeldeten Spieler zeigt sie als
+  Spalten.</li>
+  <li>Auf der Kommandozeile: <code>-x "Fee paid=yes"</code>. Bei Feldnamen und Listenwerten spielt die
+  Groß-/Kleinschreibung keine Rolle (<code>-x "age group=u11"</code> wird als <code>U11</code> gespeichert);
+  andere Werte werden abgelehnt.</li>
+  <li><code>players check</code> warnt bei Werten, die nicht in der Liste stehen, z. B. von Hand in
+  <code>players.ods</code> eingetragen.</li>
+  <li><code>players.ods</code> bekommt pro Feld eine Spalte vor <i>Notes</i>.</li>
+  <li><b>Spalten, die Sie von Hand in <code>players.ods</code> ergänzen,</b> werden genauso behandelt: Sie
+  bleiben erhalten, wenn die Werkzeuge die Datei neu schreiben, und erscheinen im Fenster (nach einem
+  Neustart) und in der Tabelle.</li>
+  <li><code>standings.ods</code> enthält alle zusätzlichen Felder nach der TGoR-Spalte, sodass Sie die Tabelle
+  zum Beispiel nach Altersklasse sortieren oder filtern können.</li>
+  <li>Die Werte beeinflussen nie die Wertung. Die Auslosung beeinflussen sie nur, wenn Sie für das Feld eine
+  Auslosungsregel schreiben (siehe 6.3).</li>
+</ul>
+
+<h2>6. Eine Runde auslosen</h2>
+
+<h3>6.1 Ablauf</h3>
+<ol>
+  <li><b>Optional – zuerst Paarungen von Hand.</b> Wenn Sie bestimmte Partien selbst festlegen möchten (zum
+  Beispiel eine Wiederholungspaarung oder Spieler, die früh spielen müssen), führen Sie
+  <code>gotourney pair 3 --template</code> aus. Das legt eine leere <code>round_3.ods</code> an. Tragen Sie
+  diese Bretter mit den beiden Spieler-IDs ein und markieren Sie sie mit <code>x</code> in der Spalte
+  <i>Manual</i>. Das Blatt <i>Participants</i> listet die Spieler der Runde mit ihrer TGoR als Hilfe auf.
+  Lassen Sie <b>Handicap</b> leer, werden Standard-Vorgabe, Komi und Farben eingetragen (Weiß und Schwarz
+  werden dabei ggf. getauscht, damit der Schwächere Schwarz hat). Tragen Sie eine Vorgabe ein, bleiben Ihre
+  Farben und Ihre Vorgabe unverändert. Handpaarungen dürfen Wiederholungen sein; Sie erhalten eine
+  Warnung.</li>
+  <li><b>Automatische Auslosung:</b> <code>gotourney pair 3</code> behält alle Bretter mit <code>x</code> in
+  der Spalte <i>Manual</i> und lost alle übrigen Spieler der Runde 3 aus. Bretter ohne Markierung werden neu
+  ausgelost; zweimal <code>pair</code> ergibt also eine neue Auslosung.</li>
+  <li><b>Prüfen und drucken.</b> <code>pair</code> schreibt auch <code>round_3.pdf</code>, eine druckbare
+  Auslosung nur mit Brettnummern, Spielern (Farbstein, Rang, Name), Ergebnisspalten und Vorgabe – fertig zum
+  Aushängen oder zum Sammeln der Ergebnisse auf Papier. Die Spieler dürfen eine andere Vorgabe vereinbaren;
+  ändern Sie dann einfach die Zellen Handicap/Komi dieses Bretts in <code>round_3.ods</code>. Die Werkzeuge
+  verwenden immer, was in der Datei steht. Nach Änderungen von Hand aktualisiert
+  <code>gotourney pairing-pdf 3</code> das PDF.</li>
+</ol>
+<div class="warn"><code>gotourney pair</code> überschreibt keine Rundendatei, die schon Ergebnisse enthält.
+Verwenden Sie <code>--force</code> nur, wenn Sie die Runde wirklich neu auslosen wollen. Eine Runde kann nur
+ausgelost werden, wenn alle Ergebnisse der vorherigen Runden eingetragen sind, und nicht mehr, wenn schon
+eine spätere Runde existiert.</div>
+
+<h3>6.2 So funktioniert die automatische Auslosung</h3>
+<ul>
+  <li><b>Teilnehmer:</b> die Spieler mit <code>x</code> in der Spalte dieser Runde, die nicht an einem
+  Handbrett sitzen.</li>
+  <li><b>Ungerade Spielerzahl:</b> Ein Joker setzt aus, und zwar der Joker mit den <b>meisten bereits
+  gespielten Partien</b>, bei Gleichstand ausgelost. Ist kein Joker vorhanden, bricht das Werkzeug ab und
+  bittet Sie, einen zu bestimmen.</li>
+  <li><b>Kosten einer Paarung:</b> Jede mögliche Paarung bekommt die Kosten
+  <code>(|TGoR-Unterschied| + Punkte der zutreffenden Auslosungsregeln)²</code> (siehe 6.3; standardmäßig
+  150 Punkte für zwei Spieler desselben Vereins). Paarungen, die in diesem Turnier schon gespielt haben (auch
+  kampflos), und durch eine Regel verbotene Paarungen sind ausgeschlossen.</li>
+  <li><b>Optimale Auslosung:</b> Der Blossom-Algorithmus (Maximum Weight Matching) wählt die Auslosung mit
+  den kleinsten Gesamtkosten. Durch das Quadrieren werden mehrere mittlere Unterschiede einer einzelnen sehr
+  ungleichen Paarung vorgezogen.</li>
+  <li><b>Keine Auslosung möglich:</b> Machen Wiederholungen eine vollständige Auslosung unmöglich (möglich bei
+  sehr wenigen Spielern), bricht das Werkzeug ab. Paaren Sie die betroffenen Spieler von Hand als Handbretter
+  und starten Sie die Auslosung erneut.</li>
+</ul>
+
+<h3>6.3 Auslosungsregeln</h3>
+<p>Auslosungsregeln verwenden die Spielerspalten, um bestimmte Paarungen teurer oder unmöglich zu machen.
+Sie stehen in <code>tournament.toml</code>. Ein neues Turnier hat eine aktive Regel, die Vereinsregel; die
+übrigen Beispiele in der Datei sind auskommentiert (aus):</p>
+<pre>[[pairing.rules]]
+field  = "Club"
+type   = "avoid_same"
+points = 150
+
+# Kinder (U7, U11, U15) spielen bevorzugt gegen andere Kinder (ausgeschaltet)
+# [[pairing.rules]]
+# field  = "Age group"
+# type   = "prefer_same"
+# points = 200
+# values = ["U7", "U11", "U15"]</pre>
+<table>
+  <thead><tr><th style="width:20%">Schlüssel</th><th>Bedeutung</th></tr></thead>
+  <tr><td><code>field</code></td><td><code>Club</code>, <code>Country</code>, <code>Rank</code> oder ein zusätzliches Feld (5.6), z. B. <code>Age group</code>.</td></tr>
+  <tr><td><code>type = "avoid_same"</code></td><td>Spieler mit <b>gleichem</b> Wert: Die Paarung zählt, als wäre der TGoR-Unterschied um <code>points</code> größer.</td></tr>
+  <tr><td><code>type = "prefer_same"</code></td><td>Spieler mit <b>verschiedenen</b> Werten: Die Paarung zählt, als wäre der TGoR-Unterschied um <code>points</code> größer.</td></tr>
+  <tr><td><code>type = "forbid_same"</code></td><td>Spieler mit gleichem Wert werden nie automatisch gepaart (z. B. ein Feld <i>Familie</i>).</td></tr>
+  <tr><td><code>type = "require_same"</code></td><td>Spieler mit verschiedenen Werten werden nie automatisch gepaart.</td></tr>
+  <tr><td><code>values</code></td><td>Optional. Diese Werte bilden <b>eine Gruppe</b> und gelten als gleicher Wert; alle anderen Werte bilden zusammen „den Rest“. Im Beispiel oben spielen Kinder frei gegeneinander (U11 gegen U15 kostet nichts), ein Kind gegen einen Erwachsenen kostet 200 Punkte, und Erwachsene untereinander (auch Ü50) sind nicht betroffen.</td></tr>
+  <tr><td><code>groups</code></td><td>Optional, statt <code>values</code>: mehrere Gruppen, z. B. <code>[["U7", "U11"], ["U15", "U19"]]</code>. Werte derselben Gruppe gelten als gleich; Werte aus verschiedenen Gruppen oder einer in und einer außerhalb einer Gruppe gelten als verschieden. Ein Wert darf nur in einer Gruppe stehen.</td></tr>
+</table>
+<ul>
+  <li><b>Leere Zellen:</b> Bei <code>avoid_same</code> und <code>forbid_same</code> gilt eine leere Zelle nie
+  als „gleich“ (zwei Spieler ohne Verein sind nicht im selben Verein). Bei <code>prefer_same</code> und
+  <code>require_same</code> gelten zwei leere Zellen als gleicher Wert (zwei Erwachsene ohne Altersklasse).</li>
+  <li><b>Gruppen bei avoid_same / forbid_same:</b> Die Regel gilt dann nur innerhalb einer Gruppe, und Werte einer
+  Gruppe gelten als gleich. <code>groups = [["HH", "HHA"]]</code> beim Feld Club behandelt die beiden Vereine
+  als einen und ignoriert alle anderen Vereine.</li>
+  <li>Werte werden ohne Rücksicht auf Groß-/Kleinschreibung und umgebende Leerzeichen verglichen.</li>
+  <li><b>Wie viele Punkte?</b> Die Punkte werden zum TGoR-Unterschied addiert; 200 Punkte bedeuten also „ein
+  Kind gegen einen Erwachsenen ist so schlecht wie 200 Punkte Unterschied“. Ein höherer Wert macht die Regel
+  stärker, aber die Auslosung nimmt dann größere Wertungsunterschiede in Kauf, um sie zu erfüllen. Ein
+  simuliertes Turnier hilft, einen guten Wert zu finden.</li>
+  <li>Um eine Regel abzuschalten, löschen Sie sie oder setzen Sie <code>#</code> vor ihre Zeilen. Ganz ohne
+  Regeln richtet sich die Auslosung nur nach dem TGoR-Unterschied.</li>
+  <li><code>gotourney pair</code> meldet, auf wie viele Bretter jede Regel zutrifft. Handbretter dürfen Regeln
+  verletzen; bei verbotenen Paarungen erhalten Sie eine Warnung.</li>
+  <li>Zu viele harte Regeln (<code>forbid_same</code>, <code>require_same</code>) können eine vollständige
+  Auslosung unmöglich machen; das Werkzeug bricht dann ab und bittet um Handbretter.</li>
+</ul>
+
+<h3>6.4 Vorgabe, Komi und Farben</h3>
+<table>
+  <thead><tr><th style="width:30%">TGoR-Unterschied</th><th style="width:20%">Volle Vorgabe</th><th>Partie</th></tr></thead>
+  <tr><td>0 – 50</td><td>0</td><td>Ohne Vorgabe, Komi <code>komi_even</code>, Farben ausgeglichen</td></tr>
+  <tr><td>51 – 150</td><td>1</td><td>Der Schwächere nimmt Schwarz, keine Steine, Komi <code>komi_handicap</code></td></tr>
+  <tr><td>151 – 250</td><td>2</td><td>Der Schwächere nimmt Schwarz mit 2 Steinen, Komi <code>komi_handicap</code></td></tr>
+  <tr><td>…</td><td>…</td><td>…</td></tr>
+  <tr><td>851 und mehr</td><td>9</td><td>Maximum</td></tr>
+</table>
+<ul>
+  <li>Der Unterschied wird durch 100 geteilt und gerundet, genaue Hälften werden <b>abgerundet</b> (150 → 1,
+  151 → 2).</li>
+  <li>Mit einer Reduzierung N ist die Vorgabe <code>min(voll, 9) − N</code>, aber nie unter 0. In einem
+  h2-Turnier ist die Standardvorgabe also höchstens 7. Bleibt nach der Reduzierung 1 übrig, ist das eine
+  Partie mit Vorgabe 1, keine Partie ohne Vorgabe.</li>
+  <li><b>Farben in Partien ohne Vorgabe</b> werden über das Turnier ausgeglichen: Wer in solchen Partien öfter
+  Weiß hatte, bekommt Schwarz. Bei Gleichstand wird die Farbe ausgelost. Vorgabepartien zählen dabei nicht.</li>
+  <li><b>Brettreihenfolge:</b> Brett 1 ist die Paarung mit der höchsten TGoR. Handbretter werden ebenfalls
+  einsortiert.</li>
+</ul>
+
+<h3>6.5 Die Rundendatei round_r.ods</h3>
+<table>
+  <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
+  <tr><td>1</td><td>1</td><td>2300</td><td>○ 5d Becker Anna</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Fischer Ben</td><td>2290</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
+  <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Klein Carla</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Wagner David</td><td>2158</td><td>6</td><td>0</td><td>6.5</td><td></td></tr>
+</table>
+<ul>
+  <li>Die Spaltennamen der Datei sind englisch (Brett, Weiß, Weiß gewinnt, Jigo, Schwarz gewinnt, Schwarz, …);
+  das druckbare PDF verwendet die eingestellte Sprache.</li>
+  <li>Die Spielerspalten zeigen die Farbe (○ Weiß, ● Schwarz), den angemeldeten Rang und den Namen. Sie dienen
+  nur zum Lesen. Die Werkzeuge erkennen die Spieler an <b>White ID</b> und <b>Black ID</b>.</li>
+  <li>Schwarz bekommt immer die Vorgabesteine. Angezeigt wird die TGoR vor der Runde.</li>
+  <li>Das zweite Blatt, <i>Not playing</i>, listet die Spieler auf, die in der Runde aussetzen (Joker, nicht
+  angemeldet).</li>
+  <li>Die Datei wird im Querformat auf Seitenbreite gedruckt, sodass eine Auslosung direkt gedruckt und
+  ausgehängt werden kann.</li>
+</ul>
+
+<h2>7. Ergebnisse und Tabelle</h2>
+<h3>7.1 Ergebnisse</h3>
+<p>Tragen Sie das Ergebnis in <code>round_r.ods</code> mit einem <b>x</b> in eine der drei Spalten zwischen
+den Spielernamen ein: <b>White win</b> (Weiß gewinnt), <b>Draw</b> (Jigo) oder <b>Black win</b> (Schwarz
+gewinnt).</p>
+<table>
+  <thead><tr><th style="width:12%">White win</th><th style="width:10%">Draw</th><th style="width:12%">Black win</th><th>Bedeutung</th><th style="width:30%">Wertung</th></tr></thead>
+  <tr><td><code>x</code></td><td></td><td></td><td>Weiß gewinnt</td><td>gewertet</td></tr>
+  <tr><td></td><td></td><td><code>x</code></td><td>Schwarz gewinnt</td><td>gewertet</td></tr>
+  <tr><td></td><td><code>x</code></td><td></td><td>Jigo (Unentschieden)</td><td>gewertet, je ½ Punkt</td></tr>
+  <tr><td><code>x!</code></td><td></td><td></td><td>Weiß gewinnt kampflos (<code>x!</code> unter Black win: Schwarz gewinnt kampflos)</td><td rowspan="2">nicht gewertet – als hätte die Partie nicht stattgefunden (zählt aber als „gespielt“ für das Wiederholungsverbot)</td></tr>
+  <tr><td><code>!</code></td><td></td><td><code>!</code></td><td>Beide verlieren kampflos</td></tr>
+  <tr><td></td><td></td><td></td><td>Noch kein Ergebnis</td><td>–</td></tr>
+</table>
+<p>Großes <code>X</code> und Häkchen (✓) werden ebenfalls akzeptiert. Alles andere, zum Beispiel Markierungen
+in zwei Spalten, wird mit der Zeilennummer gemeldet.</p>
+
+<h3>7.2 Ergebnisse prüfen</h3>
+<pre>gotourney results check 3</pre>
+<p>Meldet Bretter ohne gültiges Ergebnis, doppelt auftretende Spieler, Spieler, die für die Runde nicht
+angemeldet sind, und (als Warnung) Wiederholungspaarungen.</p>
+
+<h3>7.3 Tabelle</h3>
+<pre>gotourney standings            # alle bisher gespielten Runden
+gotourney standings --round 2  # nach Runde 2</pre>
+<p>Berechnet die TGoR jedes Spielers nach jeder Runde und schreibt <code>standings.ods</code>, zur Kontrolle
+und zum Bekanntgeben des Zwischenstands. Zusätzliche Spielerangaben (5.6) stehen in eigenen Spalten.</p>
+<p>Außerdem entsteht <code>standings.pdf</code> zum Drucken oder Aushängen, in der Sprache aus
+<code>[output]</code> (A4 quer): Platz, Name, Rang, TGoR mit Veränderung seit dem Start und eine Spalte pro
+Runde, die zeigt, gegen wen der Spieler gespielt hat. Eine Rundenzelle wie <code>○12+</code> bedeutet „mit
+Weiß gegen den Spieler auf Platz 12, gewonnen“, <code>●3− (2)</code> „mit Schwarz gegen Platz 3 mit
+2 Vorgabesteinen, verloren“; <code>=</code> ist ein Jigo, <code>!</code> kampflos, <code>?</code> ein
+fehlendes Ergebnis und <code>–</code> eine nicht gespielte Runde. Eine Legende unter der Tabelle erklärt das.
+Zusätzliche Felder erscheinen nicht im PDF. TGoRs werden mit voller Genauigkeit berechnet und auf ganze Zahlen
+gerundet angezeigt.</p>
+
+<h2>8. Wandtabelle und EGD-Upload</h2>
+<h3>8.1 Wandtabelle</h3>
+<pre>gotourney wall</pre>
+<p>Berechnet die End-TGoR und die Platzierungen und schreibt <code>wall_list.ods</code>. Die Plätze richten
+sich nach der (gerundeten) End-TGoR, dann nach dem niedrigeren echten Start-GoR, dann nach dem Los. Ein
+zweites Blatt, <i>TGoR history</i>, zeigt die TGoR jedes Spielers nach jeder Runde. Sie können die Wandtabelle
+noch von Hand korrigieren, zum Beispiel die Schreibweise eines Namens. Vorher müssen alle Ergebnisse
+eingetragen sein.</p>
+
+<h3>8.2 EGD-Ergebnisdatei</h3>
+<pre>gotourney h9                      # schreibt &lt;Turniercode oder Name&gt;.h9
+gotourney h9 -o fruehjahrsturnier.h9</pre>
+<p>Erzeugt die Ergebnisdatei im <code>.h9</code>-Format der EGD aus <code>wall_list.ods</code>, sodass Ihre
+Korrekturen von Hand enthalten sind. Senden Sie diese Datei an die EGD. Kopf (TC bleibt leer, die EGD trägt
+ihn ein):</p>
+<pre>; TC[]
+; CL[A]
+; EV[Frühjahrsturnier 2026]
+; PC[DE, Musterstadt]
+; DT[2026-09-26,2026-09-27]
+; HA[h0]
+; KM[6.5]
+; TM[75]
+; CM[(eingereicht von ...)]
+;.</pre>
+<p>Eine Zeile pro Spieler:</p>
+<pre class="wide"> 1 Becker Anna           5d DE  Mus   4  2480  2412  5+/b    6+/w    3+/w2   2+/w    4-/w     |12345678</pre>
+<ul>
+  <li>Platz, Name (Leerzeichen innerhalb eines Namensteils werden zu <code>_</code>, z. B.
+  <code>van_den_Berg</code>), Rang, Land (<code>XX</code>, wenn unbekannt), Verein (<code>XXXX</code>, wenn
+  keiner). Namen werden wie in der EGD geschrieben.</li>
+  <li>Siege (Jigo = ½), Start-GoR (der echte GoR, nicht durch die Obergrenze begrenzt), End-TGoR. Es gibt
+  keine McMahon-Spalten.</li>
+  <li>Ein Feld pro Runde: <code>Platz des Gegners</code>, <code>+</code> Sieg / <code>-</code> Niederlage /
+  <code>=</code> Jigo, <code>/w</code> oder <code>/b</code> für die Farbe, dann die Vorgabe (entfällt bei 0).
+  <code>0=</code> bedeutet nicht gespielt: Jokerrunde, abwesend oder kampflos.</li>
+  <li><code>|PIN</code> am Ende. Bei Spielern ohne PIN steht dort nichts.</li>
+</ul>
+
+<h3>8.3 Die Siegerehrung</h3>
+<pre>gotourney awards                 # schreibt awards.pdf
+gotourney awards -o siegerehrung.pdf</pre>
+<p>Erstellt eine Präsentation (PDF im Format 16:9, für einen Beamer) mit einer Titelfolie und einer Folie pro
+Preisträger: der Preis, Name, Rang, Verein und Land des Spielers sowie Platz, Siege und TGoR. Zeigen Sie sie
+im Vollbildmodus eines beliebigen PDF-Betrachters. Der Befehl listet die Preisträger auch im Terminal auf.
+Vorher müssen alle Ergebnisse eingetragen sein.</p>
+<p>Die Preise stehen im Abschnitt <code>[awards]</code> von <code>tournament.toml</code>. Die Folien folgen der
+Reihenfolge der Preise; Sie können also von Sonderpreisen zum 3., 2. und 1. Platz gehen. Ein neues Turnier
+(hier mit <code>--language de</code> angelegt) beginnt mit diesen Preisen:</p>
+<pre>[awards]
+title_slide = true
+
+[[awards.prizes]]
+type     = "wins"
+min_wins = 5                      # die Anzahl der Runden
+
+[[awards.prizes]]
+type   = "best_in_group"
+field  = "Age group"
+values = ["U7", "U11", "U15"]
+title  = "Bestes Kind"
+
+[[awards.prizes]]
+type   = "place"
+places = [3, 2, 1]</pre>
+<table>
+  <thead><tr><th style="width:20%">type</th><th style="width:40%">Wer den Preis bekommt</th><th>Einstellungen</th></tr></thead>
+  <tr><td><code>place</code></td><td>Die Spieler auf diesen Endplätzen, in der angegebenen Reihenfolge.</td><td><code>places = [3, 2, 1]</code></td></tr>
+  <tr><td><code>wins</code></td><td>Alle mit mindestens so vielen Siegen (Jigo = ½), nach Platz geordnet.</td><td><code>min_wins = 4</code></td></tr>
+  <tr><td><code>best_in_group</code></td><td>Der oder die bestplatzierten Spieler einer Gruppe, z. B. das stärkste Kind. Mit <code>groups</code> ein Preis pro Gruppe.</td><td><code>field</code>, <code>values = [...]</code> (eine Gruppe) oder <code>groups = [[...], [...]]</code>, <code>count = 1</code></td></tr>
+  <tr><td><code>rating_gain</code></td><td>Der größte TGoR-Zuwachs (End-TGoR minus Start-TGoR).</td><td><code>count = 1</code></td></tr>
+</table>
+<ul>
+  <li><b>title</b> ist die Folienüberschrift. Ohne Titel wird ein Standardtitel in der Ausgabesprache
+  verwendet (z. B. „3. Platz“, „5 Siege“). Ein Titel darf <code>{place}</code>, <code>{ordinal}</code>
+  (1., 2., … in der Ausgabesprache), <code>{wins}</code>, <code>{games}</code>, <code>{group}</code> und
+  <code>{n}</code> (1, 2, … innerhalb des Preises) enthalten, z. B.
+  <code>title = "Alle {games} Partien gewonnen"</code>.</li>
+  <li><b>exclusive = true</b> überspringt Spieler, die schon einen früheren Preis (weiter oben in der Liste)
+  bekommen haben, damit zum Beispiel der Turniersieger nicht auch noch den Preis für den größten Zuwachs
+  erhält.</li>
+  <li>Ein Preis, für den sich niemand qualifiziert (z. B. weil niemand alle Partien gewonnen hat), wird mit
+  einem Hinweis übersprungen.</li>
+  <li>„Bester“ heißt bestplatziert in der Endtabelle, also höchste End-TGoR.</li>
+</ul>
+
+<h2>9. So wird die Wertung berechnet</h2>
+<p>Die TGoR-Aktualisierung folgt dem 2021 überarbeiteten Wertungssystem der EGF. Für eine Partie zwischen A und
+B (Schwarz bekommt <i>H</i> Vorgabesteine):</p>
+<pre>h(H)      = 0 bei H = 0, sonst 100 · (H − 0.5)
+            (Vorgabe 1 ist 50 Punkte wert, 2 Steine 150, 3 Steine 250, ...)
+β(r)      = −7 · ln(3300 − r − h)
+            (h nur für den Spieler, der die Steine bekommt)
+SE_A      = 1 / (1 + exp(β_B − β_A))              erwartetes Ergebnis von A
+con(r)    = ((3300 − r) / 200) ^ 1.6
+r_A'      = r_A + k_factor · con(r_A) · (S_A − SE_A)
+            S = 1 Sieg, ½ Jigo, 0 Niederlage; nie unter −900;
+            der EGD-Bonus wird nicht verwendet; Komi geht nicht in die Formel ein</pre>
+<p><b>Beispiel</b> mit <code>k_factor = 3</code>. In der EGD (k = 1) wären die Änderungen ein Drittel davon.</p>
+<table>
+  <thead><tr><th>Partie</th><th>Erwartetes Ergebnis von Weiß</th><th>Ergebnis</th><th>Änderung Weiß</th><th>Änderung Schwarz</th></tr></thead>
+  <tr><td>Weiß 2000 – Schwarz 1900, ohne Vorgabe</td><td>0,63</td><td>Weiß gewinnt</td><td>+22,4</td><td>−25,2</td></tr>
+  <tr><td>Weiß 2000 – Schwarz 1900, ohne Vorgabe</td><td>0,63</td><td>Schwarz gewinnt</td><td>−37,6</td><td>+42,3</td></tr>
+  <tr><td>Weiß 2000 – Schwarz 1750, 2 Steine</td><td>0,63</td><td>Schwarz gewinnt</td><td>−37,6</td><td>+49,8</td></tr>
+</table>
+<p class="small">Die 2 Steine sind 150 Punkte wert, daher wird die Partie mit 250 Punkten Unterschied in der
+letzten Zeile wie eine Partie ohne Vorgabe mit 100 Punkten Unterschied gewertet. Schwächere Spieler haben ein
+größeres <code>con</code> und gewinnen oder verlieren pro Partie mehr Punkte. Die Formel wurde mit den
+Referenzwerten einer unabhängigen Umsetzung des EGF-Systems geprüft.</p>
+
+<h2>10. Dateien von Hand bearbeiten</h2>
+<ul>
+  <li>Öffnen Sie die <code>.ods</code>-Dateien in LibreOffice Calc, ändern Sie, was nötig ist, <b>speichern
+  Sie im .ods-Format</b> und <b>schließen Sie die Datei</b>.</li>
+  <li>Behalten Sie die Kopfzeile bei. Sie dürfen eigene Spalten ergänzen (sie werden ignoriert), Spalten
+  umsortieren oder die Formatierung ändern. Die Formatierung geht verloren, wenn ein Werkzeug die Datei neu
+  schreibt.</li>
+  <li><b>Schließen Sie die Datei, bevor Sie einen Befehl ausführen, der sie schreibt.</b> Die Werkzeuge
+  schreiben keine Datei, die in LibreOffice geöffnet ist, weil sonst eine der beiden Fassungen verloren
+  ginge.</li>
+  <li>Ändern Sie nie die <b>ID</b> eines Spielers, sobald Runden ausgelost sind. Die Rundendateien verweisen
+  über die ID auf die Spieler.</li>
+  <li>Das Anmeldefenster bemerkt, wenn sich <code>players.ods</code> auf der Festplatte ändert, und lädt die
+  Datei innerhalb von zwei Sekunden neu.</li>
+  <li>Fehlermeldungen nennen Datei und Zeile, zum Beispiel
+  <code>players.ods, row 7: invalid rank 'xx'</code>.</li>
+</ul>
+
+<h2>11. Fehlerbehebung</h2>
+<table>
+  <thead><tr><th style="width:38%">Meldung / Problem</th><th>Was tun</th></tr></thead>
+  <tr><td><code>… is open in LibreOffice</code></td><td>Datei in LibreOffice speichern und schließen, dann den Befehl erneut ausführen. Ist LibreOffice abgestürzt, löschen Sie die übrig gebliebene Sperrdatei <code>.~lock.players.ods#</code> im Turnierordner.</td></tr>
+  <tr><td><code>tournament.toml not found</code></td><td>Sie sind nicht im Turnierordner. Verwenden Sie <code>-d &lt;Ordner&gt;</code> oder wechseln Sie mit <code>cd</code> hinein.</td></tr>
+  <tr><td><code>round r: … players (odd) and no joker</code></td><td>Markieren Sie einen Spieler dieser Runde als Joker oder ändern Sie, wer diese Runde spielt.</td></tr>
+  <tr><td>EGD list not available</td><td>Kein Internet und noch keine heruntergeladene Liste. Melden Sie Spieler durch Eintippen ihrer Daten an und führen Sie <code>gotourney egd update</code> aus, sobald Sie online sind.</td></tr>
+  <tr><td><code>externally-managed-environment</code> bei der Installation</td><td>In die virtuelle Umgebung des Projekts installieren (<code>.venv/bin/pip</code>), siehe Abschnitt 3. Nicht <code>--break-system-packages</code> verwenden.</td></tr>
+  <tr><td>Falsches Ergebnis in einer früheren Runde</td><td>In der betreffenden <code>round_r.ods</code> korrigieren. Tabelle und Wandtabelle werden immer aus allen Rundendateien neu berechnet. Bereits ausgeloste Runden behalten ihre Auslosung.</td></tr>
+  <tr><td><code>translation.toml: '…' missing, using English</code></td><td>Ihre eigene Übersetzungsdatei ist älter als ein neuer Text. Ergänzen Sie den Eintrag oder schreiben Sie die Datei mit <code>gotourney translation-file --force</code> neu (das überschreibt Ihre Änderungen).</td></tr>
+</table>
+
+<h2>12. Befehlsübersicht</h2>
+<p class="small" style="margin-bottom:4pt">Alle Befehle verstehen <code>--help</code>, zum Beispiel <code>gotourney players add --help</code>.
+Befehle, Optionen, Einstellungsnamen und Meldungen der Werkzeuge sind englisch.</p>
+<table>
+  <thead><tr><th style="width:42%">Befehl</th><th>Zweck</th></tr></thead>
+  <tr><td><code>gotourney init &lt;Ordner&gt; [--name] [--rounds] [--language]</code></td><td>Turnierordner anlegen</td></tr>
+  <tr><td><code>gotourney gui [--update-list]</code></td><td>Anmeldefenster mit EGD-Autovervollständigung</td></tr>
+  <tr><td><code>gotourney players add …</code></td><td>Spieler anmelden (mit <code>--pin</code>: Daten aus der EGD)</td></tr>
+  <tr><td><code>gotourney players list</code></td><td>Angemeldete Spieler anzeigen</td></tr>
+  <tr><td><code>gotourney players check</code></td><td>Anmeldung prüfen</td></tr>
+  <tr><td><code>gotourney players sync [--offline]</code></td><td>EGD-Daten der angemeldeten Spieler aktualisieren</td></tr>
+  <tr><td><code>gotourney egd update</code></td><td>EGD-Spielerliste herunterladen</td></tr>
+  <tr><td><code>gotourney egd search &lt;Suche&gt;</code></td><td>In der EGD-Spielerliste suchen</td></tr>
+  <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Runde r auslosen (Handbretter bleiben erhalten)</td></tr>
+  <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Druckbare Auslosung → round_r.pdf (schreibt auch <code>pair</code>)</td></tr>
+  <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Ergebnisse der Runde r prüfen</td></tr>
+  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR nach jeder Runde → standings.ods und standings.pdf</td></tr>
+  <tr><td><code>gotourney wall</code></td><td>Wandtabelle → wall_list.ods</td></tr>
+  <tr><td><code>gotourney h9 [-o Datei]</code></td><td>EGD-Ergebnisdatei aus wall_list.ods</td></tr>
+  <tr><td><code>gotourney awards [-o Datei]</code></td><td>Folien für die Siegerehrung → awards.pdf</td></tr>
+  <tr><td><code>gotourney translation-file [--language] [--force]</code></td><td>Beispiel-Übersetzungsdatei für <code>language = "custom"</code></td></tr>
+  <tr><td><code>gotourney version</code></td><td>Version anzeigen</td></tr>
+</table>
+
+
+</body>
+</html>

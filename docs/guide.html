@@ -139,7 +139,7 @@ gotourney --help</pre>
 in every terminal without activating anything.</p>
 
 <h2>4. Setting up a tournament <span class="badge now">AVAILABLE</span></h2>
-<pre>gotourney init my_tournament --name "21. Schweriner Drachenschlacht" --rounds 5 --language de</pre>
+<pre>gotourney init my_tournament --name "Spring Go Cup 2026" --rounds 5 --language de</pre>
 <p>This creates the folder with <code>tournament.toml</code>, an empty <code>players.ods</code> and
 <code>translation.toml</code> (see 4.1). <code>--language</code> (<code>en</code>, <code>de</code> or
 <code>fr</code>, default <code>en</code>) sets the language of the PDFs. Open
@@ -149,15 +149,15 @@ in every terminal without activating anything.</p>
   <thead><tr><th style="width:24%">Setting</th><th style="width:14%">Example</th><th>Meaning</th></tr></thead>
   <tr><td colspan="3"><b>[tournament]</b> – EGD metadata, written to the header of the .h9 file</td></tr>
   <tr><td><code>code</code></td><td><code>""</code></td><td>EGD tournament code. Leave empty: the EGD assigns it after the upload.</td></tr>
-  <tr><td><code>name</code></td><td>"21. Schweriner…"</td><td>Tournament name (EV).</td></tr>
-  <tr><td><code>place</code></td><td>"DE, Schwerin"</td><td>Country and city (PC).</td></tr>
+  <tr><td><code>name</code></td><td>"Spring Go Cup 2026"</td><td>Tournament name (EV).</td></tr>
+  <tr><td><code>place</code></td><td>"DE, Sampletown"</td><td>Country and city (PC).</td></tr>
   <tr><td><code>dates</code></td><td>["2026-09-26", "2026-09-27"]</td><td>First and last day (DT).</td></tr>
   <tr><td><code>class</code></td><td>"A"</td><td>EGD tournament class (CL).</td></tr>
   <tr><td><code>time</code></td><td>75</td><td>Basic thinking time in minutes (TM).</td></tr>
   <tr><td><code>comment</code></td><td>"(submitted by …)"</td><td>Comment (CM).</td></tr>
   <tr><td><code>rounds</code></td><td>5</td><td>Number of rounds (also <code>init --rounds</code>).</td></tr>
   <tr><td colspan="3"><b>[output]</b></td></tr>
-  <tr><td><code>language</code></td><td>"de"</td><td>Language of the PDFs (pairing, award ceremony): <code>en</code>, <code>de</code>, <code>fr</code> or <code>custom</code> (see 4.1).</td></tr>
+  <tr><td><code>language</code></td><td>"de"</td><td>Language of the PDFs (pairing, standings, award ceremony): <code>en</code>, <code>de</code>, <code>fr</code> or <code>custom</code> (see 4.1).</td></tr>
   <tr><td><code>translation_file</code></td><td>"translation.toml"</td><td>The texts for <code>language = "custom"</code>.</td></tr>
   <tr><td colspan="3"><b>[rating]</b></td></tr>
   <tr><td><code>k_factor</code></td><td>3.0</td><td>Multiplies the EGD <code>con</code> factor. Higher values make ratings move faster during the tournament.</td></tr>
@@ -182,8 +182,8 @@ in every terminal without activating anything.</p>
 <code>players.ods</code> is written.</div>
 
 <h3>4.1 Language of the PDFs</h3>
-<p>The printable pairing (<code>round_r.pdf</code>) and the award ceremony slides (<code>awards.pdf</code>)
-are written in the language set in <code>tournament.toml</code>:</p>
+<p>The printable pairing (<code>round_r.pdf</code>), the standings (<code>standings.pdf</code>) and the award
+ceremony slides (<code>awards.pdf</code>) are written in the language set in <code>tournament.toml</code>:</p>
 <pre>[output]
 language = "de"                        # en, de, fr or custom
 translation_file = "translation.toml"</pre>
@@ -212,8 +212,8 @@ translation_file = "translation.toml"</pre>
 </figure>
 <ol>
   <li><b>Search:</b> type part of the name in the search field. Name parts can be in any order
-  (<i>"erik broek"</i> finds <i>van den Broek Erik</i>) and umlaut spellings are treated alike
-  (<i>"Lüthke"</i> finds <i>Luethke</i>). Typing digits searches by EGD PIN. Players who are already
+  (<i>"anna berg"</i> finds <i>van den Berg Anna</i>) and umlaut spellings are treated alike
+  (<i>"Müller"</i> finds <i>Mueller</i>). Typing digits searches by EGD PIN. Players who are already
   registered are marked <i>(registered)</i>.</li>
   <li><b>Choose a player:</b> press <b>↓</b> and <b>Enter</b>, or double-click. <b>Enter</b> in the search
   field takes the first match. The form is filled with name, rank, GoR, PIN, country and club. The window
@@ -243,12 +243,12 @@ than a day old. If there is no internet at the venue, the last downloaded list i
 <code>gotourney egd update</code> the evening before the tournament to be safe.</div>
 
 <h3>5.2 Registering on the command line <span class="badge now">AVAILABLE</span></h3>
-<pre>gotourney players add --pin 10774412                       # everything else from the EGD
-gotourney players add --pin 20633162 --gor 2500 --rounds 1-3
-gotourney players add --pin 10774412 -x "Fee paid=yes" -x "Email=hans@example.org"
-gotourney players add Doe John --rank 5k --club HH --country DE --joker
+<pre>gotourney players add --pin 12345678                       # everything else from the EGD
+gotourney players add --pin 23456789 --gor 2300 --rounds 1-3
+gotourney players add --pin 34567890 -x "Fee paid=yes" -x "Age group=U11"
+gotourney players add Doe John --rank 5k --club Mus --country DE --joker
 gotourney players list
-gotourney egd search "luethke h"                           # find a PIN</pre>
+gotourney egd search "mueller a"                           # find a PIN</pre>
 <p>Options of <code>players add</code>: <code>--rank</code>, <code>--gor</code>, <code>--pin</code>,
 <code>--country</code>, <code>--club</code>, <code>--rounds</code> (<code>all</code>, <code>none</code>,
 <code>1,2,4</code>, <code>1-3</code>), <code>--joker</code>, <code>--notes</code>, and
@@ -407,7 +407,7 @@ points = 150
   <li><b>How many points?</b> The points are added to the TGoR difference, so 200 points means "a child
   against an adult is as bad as a 200-point difference". A higher value makes the rule stronger, but the
   pairing will then accept larger rating differences to satisfy it. A simulated tournament
-  help to find a good value.</li>
+  helps to find a good value.</li>
   <li>To switch a rule off, delete it or put <code>#</code> in front of its lines. With no rule at all, the
   pairing uses only the TGoR difference.</li>
   <li><code>gotourney pair</code> reports how many boards each rule applies to. Manual boards may break
@@ -440,8 +440,8 @@ points = 150
 <h3>6.5 The round file round_r.ods</h3>
 <table>
   <thead><tr><th>Board</th><th>White ID</th><th>White TGoR</th><th>White</th><th>White win</th><th>Draw</th><th>Black win</th><th>Black</th><th>Black TGoR</th><th>Black ID</th><th>Handicap</th><th>Komi</th><th>Manual</th></tr></thead>
-  <tr><td>1</td><td>1</td><td>2543</td><td>○ 5d Maekawa Kaku</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Lewerenz Bernd</td><td>2297</td><td>3</td><td>2</td><td>0.5</td><td></td></tr>
-  <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Wolff Martin</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Moldovan Christian</td><td>2158</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
+  <tr><td>1</td><td>1</td><td>2300</td><td>○ 5d Becker Anna</td><td style="text-align:center">x</td><td></td><td></td><td>● 3d Fischer Ben</td><td>2290</td><td>2</td><td>0</td><td>6.5</td><td></td></tr>
+  <tr><td>2</td><td>5</td><td>2143</td><td>○ 1d Klein Carla</td><td></td><td style="text-align:center">x</td><td></td><td>● 1d Wagner David</td><td>2158</td><td>6</td><td>0</td><td>6.5</td><td></td></tr>
 </table>
 <ul>
   <li>The player columns show the colour (○ white, ● black), the registered rank and the name. They are
@@ -498,13 +498,13 @@ spelling. All results must be entered before the wall list can be made.</p>
 
 <h3>8.2 EGD result file</h3>
 <pre>gotourney h9                      # writes &lt;tournament code or name&gt;.h9
-gotourney h9 -o drachenschlacht.h9</pre>
+gotourney h9 -o spring_cup.h9</pre>
 <p>Generates the result file in the EGD's <code>.h9</code> format from <code>wall_list.ods</code>, so your hand
 corrections are included. Send this file to the EGD. Header (TC stays empty, the EGD fills it in):</p>
 <pre>; TC[]
 ; CL[A]
-; EV[21. Schweriner Drachenschlacht]
-; PC[DE, Schwerin]
+; EV[Spring Go Cup 2026]
+; PC[DE, Sampletown]
 ; DT[2026-09-26,2026-09-27]
 ; HA[h0]
 ; KM[6.5]
@@ -512,9 +512,9 @@ corrections are included. Send this file to the EGD. Header (TC stays empty, the
 ; CM[(submitted by ...)]
 ;.</pre>
 <p>One line per player:</p>
-<pre class="wide"> 1 Maekawa Kaku          5d DE  K     4  2543  2611  5+/b    6+/w    3+/w2   2+/w    4-/w     |20633162</pre>
+<pre class="wide"> 1 Becker Anna           5d DE  Mus   4  2480  2412  5+/b    6+/w    3+/w2   2+/w    4-/w     |12345678</pre>
 <ul>
-  <li>Place, name (spaces inside a name part become <code>_</code>, e.g. <code>van_den_Broek</code>),
+  <li>Place, name (spaces inside a name part become <code>_</code>, e.g. <code>van_den_Berg</code>),
   rank, country (<code>XX</code> if unknown), club (<code>XXXX</code> if none). Names are spelled as in the
   EGD.</li>
   <li>Wins (jigo = ½), starting GoR (the real GoR, not capped at the top bar), final TGoR. There are no
@@ -619,9 +619,11 @@ system.</p>
   <tr><td>EGD list not available</td><td>No internet and no downloaded list yet. Register players by typing their data, and run <code>gotourney egd update</code> when online.</td></tr>
   <tr><td><code>externally-managed-environment</code> when installing</td><td>Install into the project's virtual environment (<code>.venv/bin/pip</code>), see section 3. Do not use <code>--break-system-packages</code>.</td></tr>
   <tr><td>Wrong result in an earlier round</td><td>Correct it in that <code>round_r.ods</code>. Standings and wall list are always recalculated from all round files. Rounds that are already paired keep their pairing.</td></tr>
+  <tr><td><code>translation.toml: '…' missing, using English</code></td><td>Your own translation file is older than a new text. Add the entry, or write the file again with <code>gotourney translation-file --force</code> (this overwrites your changes).</td></tr>
 </table>
 
 <h2>12. Command reference</h2>
+<p class="small" style="margin-bottom:4pt">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>
 <table>
   <thead><tr><th style="width:38%">Command</th><th>Purpose</th><th style="width:13%">Status</th></tr></thead>
   <tr><td><code>gotourney init &lt;dir&gt; [--name] [--rounds] [--language]</code></td><td>Create a tournament folder</td><td><span class="badge now">AVAILABLE</span></td></tr>
@@ -642,7 +644,7 @@ system.</p>
   <tr><td><code>gotourney translation-file [--language] [--force]</code></td><td>Example translation file for <code>language = "custom"</code></td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney version</code></td><td>Show the version</td><td><span class="badge now">AVAILABLE</span></td></tr>
 </table>
-<p class="small">All commands accept <code>--help</code>, for example <code>gotourney players add --help</code>.</p>
+
 
 </body>
 </html>
