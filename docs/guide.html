@@ -117,6 +117,7 @@ database.</p>
   round_1.pdf         printable pairing of round 1                (step 3)
   round_2.ods         ...
   standings.ods       TGoR after each round                       (step 4)
+  standings.pdf       printable standings / cross table           (step 4)
   wall_list.ods       final wall list, editable                   (step 5)
   awards.pdf          slides for the award ceremony               (step 5)
   &lt;name&gt;.h9           result file for the EGD                     (step 6)</pre>
@@ -478,7 +479,13 @@ round, and (as a warning) rematches.</p>
 gotourney standings --round 2  # after round 2</pre>
 <p>Calculates the TGoR of every player after each round and writes <code>standings.ods</code>, for checking
 and for announcing the standings between rounds. Additional player data (5.6) is included as extra
-columns. TGoRs are calculated with full precision and shown
+columns.</p>
+<p>It also writes <code>standings.pdf</code> for printing or posting, in the language set in
+<code>[output]</code> (landscape A4): place, name, rank, TGoR with its change since the start, and one column
+per round showing whom the player played. A round cell such as <code>○12+</code> means "white against the
+player on place 12, won", <code>●3− (2)</code> "black against place 3 with 2 handicap stones, lost";
+<code>=</code> is a jigo, <code>!</code> a forfeit, <code>?</code> a missing result and <code>–</code> a round
+not played. A legend under the table explains this. Additional fields are not shown in the PDF. TGoRs are calculated with full precision and shown
 rounded to whole numbers.</p>
 
 <h2>8. The wall list and the EGD upload <span class="badge now">AVAILABLE</span></h2>
@@ -628,7 +635,7 @@ system.</p>
   <tr><td><code>gotourney pair &lt;r&gt; [--template] [--force]</code></td><td>Pair round r (keeps manual boards)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney pairing-pdf &lt;r&gt;</code></td><td>Printable pairing → round_r.pdf (also written by <code>pair</code>)</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney results check &lt;r&gt;</code></td><td>Check the results of round r</td><td><span class="badge now">AVAILABLE</span></td></tr>
-  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
+  <tr><td><code>gotourney standings [--round r]</code></td><td>TGoR after each round → standings.ods and standings.pdf</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney wall</code></td><td>Final wall list → wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney h9 [-o file]</code></td><td>EGD result file from wall_list.ods</td><td><span class="badge now">AVAILABLE</span></td></tr>
   <tr><td><code>gotourney awards [-o file]</code></td><td>Award ceremony slides → awards.pdf</td><td><span class="badge now">AVAILABLE</span></td></tr>

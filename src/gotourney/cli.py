@@ -506,7 +506,7 @@ def standings(
     round_no: int = typer.Option(None, "--round", "-r", help="Standings after this round (default: last)."),
     directory: Path = typer.Option(Path("."), "--dir", "-d", help=DIR_HELP),
 ) -> None:
-    """Show the TGoR standings and write standings.ods."""
+    """Show the TGoR standings and write standings.ods and standings.pdf."""
     from .wall import STANDINGS_FILE, standings_rows, write_standings
 
     t = load_tournament(directory)
@@ -525,6 +525,14 @@ def standings(
         typer.echo(f"{place:>3}  {name[:28]:<28} {rank:>4} {start:>5}  {games:>5} {wins:>4g}  {tgor:>5}")
     path = write_standings(t, r)
     typer.echo(f"Wrote {path}.")
+    from .printing import PrintError, standings_pdf
+    tr = translator(t)
+    try:
+        pdf = standings_pdf(t, r, directory / "standings.pdf", tr)
+    except (PrintError, OSError) as e:
+        warn(f"PDF not written: {e}")
+        return
+    typer.echo(f"Wrote {pdf} (printable standings).")
 
 
 @app.command()
