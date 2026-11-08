@@ -1,8 +1,10 @@
 [project]
 name = "gotourney"
 version = "0.2.0"
-description = "Command line tools for organising a TGoR Go tournament"
+description = "Run Go tournaments in the TGoR format: web interface and command line"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "odfpy>=1.4",
@@ -26,7 +28,7 @@ gotourney = "gotourney.cli:app"
 gotourney-app = "gotourney.app:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]

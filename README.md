@@ -198,3 +198,8 @@ PyInstaller builds only for the system it runs on. The GitHub Actions workflow
 like `v0.3.0` it also creates a release with the three archives. The program itself is
 `gotourney-app` (`src/gotourney/app.py`): without arguments it starts the web interface with its
 small window; with arguments it works like the `gotourney` command.
+
+## License
+
+MIT, see [LICENSE](LICENSE). The bundled DejaVu fonts have their own license
+(`src/gotourney/data/fonts/LICENSE-DejaVu.txt`).
