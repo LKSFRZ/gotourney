@@ -92,6 +92,7 @@ def test_alphabetical_pairing_pdf(tmp_path):
     first_column = [l.strip().split(" (5k)")[0] for l in text.splitlines()
                     if "(5k)" in l and l.strip().startswith(tuple(order))]
     assert first_column == ["Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe"]
-    assert "does not play this round" in text                # the joker sits out
-    joker_line = next(l for l in text.splitlines() if l.strip().startswith("Mueller Mia"))
-    assert "does not play" in joker_line
+    from gotourney.rounds import load_round
+    paired = {pid for g in load_round(tmp_path, 1).games for pid in g.players()}
+    assert paired == {1, 2, 3, 4}                            # the joker (ID 5) sits out ...
+    assert "does not play this round" in text, text          # ... and the PDF says so
