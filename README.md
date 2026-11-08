@@ -31,7 +31,11 @@ the short quick-start guide: [`Quickstart.pdf`](src/gotourney/data/docs/Quicksta
 ## The program (no installation)
 
 For tournament directors there is a ready-made program for **Windows**, **macOS** (Apple processor)
-and **Linux**. It needs no Python. Download the archive from the *Releases* page, unpack it and start
+and **Linux**. It needs no Python.
+
+**[⬇ Download the latest version](https://github.com/LKSFRZ/gotourney/releases/latest)**
+
+Pick the archive for your system, unpack it and start
 `GoTournament.exe` (Windows), `Go Tournament.app` (macOS) or `GoTournament/GoTournament` (Linux).
 The program shows a small window and opens the web interface (see below) in the browser.
 The quick-start guide is in the archive and behind *Help* in the menu.
