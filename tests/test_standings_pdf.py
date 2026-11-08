@@ -88,7 +88,9 @@ def test_alphabetical_pairing_pdf(tmp_path):
     order = [n for n in ("Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe")
              if n in text]
     assert len(order) == 5
-    first_column = [l.strip().split(" (5k)")[0] for l in text.splitlines() if "(5k)" in l]
+    # rows of the table start with the player's name (other lines: board and opponent columns)
+    first_column = [l.strip().split(" (5k)")[0] for l in text.splitlines()
+                    if "(5k)" in l and l.strip().startswith(tuple(order))]
     assert first_column == ["Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe"]
     assert "does not play this round" in text                # the joker sits out
     joker_line = next(l for l in text.splitlines() if l.strip().startswith("Mueller Mia"))
