@@ -38,7 +38,7 @@ def main() -> None:
         if doc.exists():
             shutil.copy2(doc, stage / doc.name)
     if system == "macos":
-        archive = stage.with_suffix(".zip")
+        archive = stage.parent / (stage.name + ".zip")      # not with_suffix: the version contains dots
         subprocess.run(["ditto", "-c", "-k", "--keepParent", str(stage), str(archive)], check=True)
     elif system == "windows":
         archive = Path(shutil.make_archive(str(stage), "zip", DIST, stage.name))
