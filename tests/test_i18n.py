@@ -45,7 +45,7 @@ def test_dates():
 
 def test_template_is_german_and_complete(tmp_path):
     path = tmp_path / "translation.toml"
-    path.write_text(translation_template("de"))
+    path.write_text(translation_template("de"), encoding="utf-8")
     tr, warnings = load_custom(path)
     assert warnings == []
     assert tr.t("awards_title") == "Siegerehrung"
@@ -55,13 +55,13 @@ def test_template_is_german_and_complete(tmp_path):
 
 def test_custom_file_fallback_and_errors(tmp_path):
     path = tmp_path / "translation.toml"
-    path.write_text('awards_title = "Prijsuitreiking"\nordinal = "{n}e"\n[ordinals]\n1 = "1ste"\n')
+    path.write_text('awards_title = "Prijsuitreiking"\nordinal = "{n}e"\n[ordinals]\n1 = "1ste"\n', encoding="utf-8")
     tr, warnings = load_custom(path)
     assert tr.t("awards_title") == "Prijsuitreiking"
     assert tr.t("col_board") == "Board"                      # missing -> English
     assert any("'col_board' missing" in w for w in warnings)
     assert tr.ordinal(1) == "1ste" and tr.ordinal(4) == "4e"
-    path.write_text('award_place = "Plaats {rank}"\n')
+    path.write_text('award_place = "Plaats {rank}"\n', encoding="utf-8")
     with pytest.raises(TranslationError, match="unknown placeholder"):
         load_custom(path)
     with pytest.raises(TranslationError, match="not found"):
@@ -75,10 +75,10 @@ def test_init_language_and_translation_file(tmp_path):
     cfg = load_config(d)
     assert cfg.output.language == "de"
     assert [p.title for p in cfg.awards.prizes] == ["", "Bestes Kind", ""]
-    assert "Siegerehrung" in (d / "translation.toml").read_text()
+    assert "Siegerehrung" in (d / "translation.toml").read_text(encoding="utf-8")
     assert runner.invoke(app, ["translation-file", "-d", str(d)]).exit_code == 1      # exists
     r = runner.invoke(app, ["translation-file", "-d", str(d), "--language", "fr", "--force"])
-    assert r.exit_code == 0 and "Remise des prix" in (d / "translation.toml").read_text()
+    assert r.exit_code == 0 and "Remise des prix" in (d / "translation.toml").read_text(encoding="utf-8")
 
 
 def test_default_prize_titles_follow_language(make_tournament):
@@ -95,14 +95,14 @@ def test_default_prize_titles_follow_language(make_tournament):
 def test_pdfs_in_german(make_tournament):
     d = make_tournament([(2000,), (1900,)], rounds=1, language='"de"')
     assert runner.invoke(app, ["pair", "1", "-d", str(d)]).exit_code == 0
-    text = subprocess.run(["pdftotext", str(d / "round_1.pdf"), "-"], capture_output=True, text=True).stdout
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(d / "round_1.pdf"), "-"], capture_output=True, text=True, encoding="utf-8").stdout
     assert "Runde 1" in text and "Brett" in text and "Vorgabe" in text
     t = Tournament.load(d)
     g = t.rounds[1].games
     g[0].result = Result.WHITE_WINS
     save_round(d / "round_1.ods", g, {1: "a", 2: "b"}, t.rating_before(1))
     assert runner.invoke(app, ["awards", "-d", str(d)]).exit_code == 0
-    text = subprocess.run(["pdftotext", str(d / "awards.pdf"), "-"], capture_output=True, text=True).stdout
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(d / "awards.pdf"), "-"], capture_output=True, text=True, encoding="utf-8").stdout
     assert "Siegerehrung" in text and "1. Platz" in text and "Partien gewonnen" in text
 
 

@@ -16,10 +16,10 @@ def set_fields(d, fields):
     """Set extra_fields and drop the dropdown lists of the template."""
     import re
     toml = d / "tournament.toml"
-    text = re.sub(r"^extra_fields\s*=.*$", f"extra_fields = {fields!r}".replace("'", '"'), toml.read_text(),
+    text = re.sub(r"^extra_fields\s*=.*$", f"extra_fields = {fields!r}".replace("'", '"'), toml.read_text(encoding="utf-8"),
                   flags=re.M)
     text = text[:text.index("[registration.field_values]")]
-    toml.write_text(text)
+    toml.write_text(text, encoding="utf-8")
 
 
 @pytest.mark.parametrize("fields, msg", [(["Club"], "standard column"), (["R2"], "standard column"),

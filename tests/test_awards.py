@@ -18,8 +18,8 @@ def play(d, r, games):
 
 def set_awards(d, text):
     toml = d / "tournament.toml"
-    s = toml.read_text()
-    toml.write_text(s[:s.index("[awards]")] + text)
+    s = toml.read_text(encoding="utf-8")
+    toml.write_text(s[:s.index("[awards]")] + text, encoding="utf-8")
 
 
 @pytest.fixture

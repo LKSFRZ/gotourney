@@ -95,7 +95,7 @@ def test_problems_are_explained(make_tournament):
     post(c, app, "/do/pair", round="1")
     r = post(c, app, "/do/pair", round="2")
     assert "cannot be paired yet" in page(r) and "Board 1:" in page(r)
-    (d / ".~lock.round_1.ods#").write_text("x")
+    (d / ".~lock.round_1.ods#").write_text("x", encoding="utf-8")
     r = post(c, app, "/do/pair", round="1")
     assert "is open in LibreOffice" in page(r)
 
@@ -170,7 +170,7 @@ def test_results_page_refuses_while_open_in_libreoffice(make_tournament):
     d = make_tournament([(2000,), (1990,)], rounds=1)
     app, c = client_for(d)
     post(c, app, "/do/pair", round="1")
-    (d / ".~lock.round_1.ods#").write_text("x")
+    (d / ".~lock.round_1.ods#").write_text("x", encoding="utf-8")
     assert "is open in LibreOffice" in page(c.get("/round/1"))
     r = c.post("/round/1/result", data={"csrf": app.config["CSRF"], "board": "1", "result": "white"},
                headers={"X-Requested-With": "fetch"})
@@ -260,7 +260,7 @@ def test_players_in_a_round_cannot_be_removed(make_tournament):
 def test_players_page_refuses_while_open_in_libreoffice(make_tournament):
     d = make_tournament([(2000,)], rounds=1)
     app, c = players_client(d)
-    (d / ".~lock.players.ods#").write_text("x")
+    (d / ".~lock.players.ods#").write_text("x", encoding="utf-8")
     assert "players.ods is open in LibreOffice" in page(c.get("/players"))
     r = post(c, app, "/players/save", surname="Neu", rank="5k")
     assert r.status_code == 422 and "LibreOffice" in page(r)
@@ -346,7 +346,7 @@ def test_settings_page(make_tournament):
     assert cfg.registration.extra_fields == ["Fee paid", "Age group", "Email"]
     assert cfg.registration.values_for("Email") is None
     assert [(p.type, p.title, p.places) for p in cfg.awards.prizes] == [("place", "{place}. Platz", [3, 2, 1])]
-    text = (d / "tournament.toml").read_text()
+    text = (d / "tournament.toml").read_text(encoding="utf-8")
     assert "# EGD metadata, written to the .h9 header" in text          # comments kept
     # invalid input is not saved and explained
     r = post(c, app, "/settings", **{**form, "version": re.search(r'name="version" value="([^"]+)"',

@@ -48,7 +48,7 @@ def test_problems_have_codes(make_tournament):
 
 def test_file_open_in_libreoffice(make_tournament):
     d = make_tournament([(2000,), (1990,)], rounds=1)
-    (d / ".~lock.round_1.ods#").write_text("x")
+    (d / ".~lock.round_1.ods#").write_text("x", encoding="utf-8")
     with pytest.raises(workflow.Problem) as e:
         workflow.pair(d, 1)
     assert e.value.code == "file_open"
@@ -139,6 +139,6 @@ def test_backups(make_tournament):
     for i in range(35):
         workflow.backup(d, f"test{i}")
     assert len(workflow.list_backups(d)) == workflow.BACKUP_KEEP
-    (d / ".~lock.players.ods#").write_text("x")
+    (d / ".~lock.players.ods#").write_text("x", encoding="utf-8")
     with zipfile.ZipFile(workflow.backup(d, "lock")) as z:
         assert not any(n.startswith(".~lock") for n in z.namelist())

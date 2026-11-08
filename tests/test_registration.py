@@ -110,10 +110,10 @@ def test_init_rounds_and_changing_rounds_later(tmp_path):
     runner.invoke(app, ["players", "add", "Doe", "John", "-r", "5k", "--rounds", "1,3", "-d", d])
     assert load_players(tmp_path, 3).players[0].rounds == {1, 3}
     toml = tmp_path / "tournament.toml"
-    toml.write_text(re.sub(r"rounds\s*=\s*3", "rounds = 4", toml.read_text()))
+    toml.write_text(re.sub(r"rounds\s*=\s*3", "rounds = 4", toml.read_text(encoding="utf-8")))
     # new round 4 counts as played; existing choices are kept
     assert load_players(tmp_path, 4).players[0].rounds == {1, 3, 4}
-    toml.write_text(re.sub(r"rounds = 4", "rounds = 2", toml.read_text()))
+    toml.write_text(re.sub(r"rounds = 4", "rounds = 2", toml.read_text(encoding="utf-8")))
     pl = load_players(tmp_path, 2)
     assert pl.players[0].rounds == {1} and any("R3" in w for w in pl.warnings)
     assert runner.invoke(app, ["init", str(tmp_path / "x"), "--rounds", "0"]).exit_code != 0

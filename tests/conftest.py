@@ -20,13 +20,13 @@ def make_tournament(tmp_path):
     def make(players, rounds=3, rules=None, **settings):
         write_template(tmp_path, "Test", rounds)
         toml = tmp_path / "tournament.toml"
-        text = toml.read_text()
+        text = toml.read_text(encoding="utf-8")
         for key, value in settings.items():
             text = re.sub(rf"^{key}\s*=.*$", f"{key} = {value}", text, flags=re.M)
         if rules is not None:
             assert DEFAULT_CLUB_RULE in text
             text = text.replace(DEFAULT_CLUB_RULE, "") + "\n" + rules
-        toml.write_text(text)
+        toml.write_text(text, encoding="utf-8")
         ps = []
         for i, spec in enumerate(players, start=1):
             gor, club, joker, rs, extra = (list(spec) + [None] * 5)[:5]

@@ -45,8 +45,8 @@ def test_standings_pdf(played):
     r = runner.invoke(app, ["standings", "-r", "1", "-d", str(played)])
     assert r.exit_code == 0, r.output
     assert "standings.pdf" in r.output
-    text = subprocess.run(["pdftotext", "-layout", str(played / "standings.pdf"), "-"],
-                          capture_output=True, text=True).stdout
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", "-layout", str(played / "standings.pdf"), "-"],
+                          capture_output=True, text=True, encoding="utf-8").stdout
     assert "Standings after round 1" in text
     assert "TGoR" in text and "R1" in text and "R2" not in text
     assert "(+" in text and "(-" in text                 # TGoR change since the start
@@ -83,7 +83,8 @@ def test_alphabetical_pairing_pdf(tmp_path):
     assert r.exit_code == 0, r.output
     pdf = tmp_path / "round_1_alphabetical.pdf"
     assert pdf.exists() and (tmp_path / "round_1.pdf").exists()
-    text = subprocess.run(["pdftotext", "-layout", str(pdf), "-"], capture_output=True, text=True).stdout
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", "-layout", str(pdf), "-"], capture_output=True, text=True,
+                          encoding="utf-8").stdout
     order = [n for n in ("Äbel Anna", "Becker Ben", "Mueller Mia", "Müller Max", "Zimmer Zoe")
              if n in text]
     assert len(order) == 5

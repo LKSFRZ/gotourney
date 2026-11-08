@@ -55,5 +55,5 @@ def test_award_slides_show_full_club_name(make_tournament):
                Tournament.load(d).rating_before(1))
     r = runner.invoke(app, ["awards", "-d", str(d)])
     assert r.exit_code == 0, r.output
-    text = subprocess.run(["pdftotext", str(d / "awards.pdf"), "-"], capture_output=True, text=True).stdout
+    text = subprocess.run(["pdftotext", "-enc", "UTF-8", str(d / "awards.pdf"), "-"], capture_output=True, text=True, encoding="utf-8").stdout
     assert "Köln" in text and "Hamburg" in text
